@@ -598,16 +598,22 @@ function gosterDurum(el, mesaj, tip) {
 odaOnizle();
 kullanicilariOlustur();
 
-// Enter tuşu ile devam
+// Enter tuşu ile devam — tüm adımlarda
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    // Textarea veya select değilse devam et
-    if (e.target.tagName === 'TEXTAREA') return;
-    e.preventDefault();
-    const aktifAdim = document.querySelector('.kart:not([style*="display:none"])');
-    if (!aktifAdim) return;
-    const btn = aktifAdim.querySelector('.btn-ileri');
-    if (btn) btn.click();
+  if (e.key !== 'Enter') return;
+  if (e.target.tagName === 'TEXTAREA') return;
+  if (e.target.tagName === 'SELECT') return;
+  e.preventDefault();
+
+  // Görünür kart içindeki ileri butonunu bul
+  for (let i = 1; i <= 5; i++) {
+    const kart = document.getElementById('adim-' + i);
+    if (!kart) continue;
+    if (kart.style.display === 'none' || kart.style.display === '') {
+      if (i !== mevcutAdim) continue;
+    }
+    const btn = kart.querySelector('.btn-ileri');
+    if (btn) { btn.click(); return; }
   }
 });
 </script>

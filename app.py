@@ -619,9 +619,11 @@ def api_oda_durumu():
     today = bugun().isoformat()
 
     rezervasyonlar = [r for r in db.get_rezervasyonlar() if r.get("durum") != "Kapora Yandı"]
-    cv_odalar  = list(range(1, 11))
-    leo_odalar = list(range(11, 30))
-    all_rooms  = leo_odalar
+    otel_cfg   = cfg.otel_bilgi()
+    bas        = otel_cfg.get('oda_baslangic', 1)
+    bit        = otel_cfg.get('oda_bitis', 20) + 1
+    kisa_ad    = otel_cfg.get('kisa_ad', 'OTEL')
+    all_rooms  = [(kisa_ad, o) for o in range(bas, bit)]
 
     grid = []
     for otel_label, oda_no in all_rooms:

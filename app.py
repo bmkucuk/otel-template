@@ -59,6 +59,9 @@ AKTIF_ESIK_DK = 10  # bu süre içinde istek atmayan kullanıcı "aktif" sayılm
 def _lisans_kontrol():
     acik_yollar = ['/login', '/kurulum', '/static', '/telegram-webhook', '/askida', '/demo-bitti']
     if not any(request.path.startswith(y) for y in acik_yollar):
+        # Kurulum tamamlanmamışsa sihirbaza yönlendir
+        if cfg.get('otel.ad', 'Otel Adı') == 'Otel Adı':
+            return redirect('/kurulum')
         durum = cfg.lisans_durumu()
         if durum == 'askida':
             return redirect('/askida')
@@ -1863,6 +1866,99 @@ def api_tema_kaydet():
     cfg.save_config(c)
     return jsonify({'ok': True, 'mod': mod})
 
+
+
+
+# ── Kurulum Sihirbazı ─────────────────────────────────────────────────────────
+
+def kurulum_tamamlandi_mi():
+    """config.json'da otel adı girilmişse kurulum tamamlanmış demektir."""
+    return cfg.get('otel.ad', 'Otel Adı') != 'Otel Adı'
+
+@app.route('/kurulum')
+def kurulum_sayfasi():
+    if kurulum_tamamlandi_mi():
+        return redirect('/login')
+    return render_template('kurulum.html')
+
+@app.route('/kurulum/telegram-test', methods=['POST'])
+def kurulum_telegram_test():
+    """Token ile getUpdates yapıp chat_id bulur."""
+    import urllib.request, json as _json
+    data  = request.get_json()
+    token = data.get('token', '').strip()
+    if not token:
+        return jsonify({'ok': False, 'hata': 'Token boş'})
+    try:
+        url = f'https://api.telegram.org/bot{token}/getUpdates'
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=8) as r:
+            resp = _json.loads(r.read())
+        if not resp.get('ok'):
+            return jsonify({'ok': False, 'hata': 'Geçersiz token'})
+        # Chat ID bul
+        for update in reversed(resp.get('result', [])):
+            chat = update.get('message', {}).get('chat', {})
+            if chat.get('type') in ('group', 'supergroup'):
+                return jsonify({'ok': True, 'chat_id': str(chat['id']),
+                                'chat_adi': chat.get('title', '')})
+        return jsonify({'ok': False,
+                        'hata': 'Grup mesajı bulunamadı. Botu gruba ekleyip bir mesaj yazın.'})
+    except Exception as e:
+        return jsonify({'ok': False, 'hata': str(e)})
+
+@app.route('/kurulum/kaydet', methods=['POST'])
+def kurulum_kaydet():
+    """Sihirbazdan gelen veriyi config.json ve DB'ye yazar."""
+    import hashlib
+    from datetime import date as _date
+
+    data  = request.get_json()
+    otel  = data.get('otel', {})
+    odalar = data.get('odalar', {})
+    kullanicilar = data.get('kullanicilar', [])
+    enteg = data.get('entegrasyon', {})
+
+    if not otel.get('ad') or not otel.get('kisa_ad'):
+        return jsonify({'ok': False, 'hata': 'Otel adı ve kısa kod zorunludur'})
+
+    # 1. config.json güncelle
+    c = cfg.load_config()
+    c['otel']['ad']            = otel.get('ad', '')
+    c['otel']['kisa_ad']       = otel.get('kisa_ad', '').upper()
+    c['otel']['sehir']         = otel.get('sehir', '')
+    c['otel']['telefon']       = otel.get('telefon', '')
+    c['otel']['toplam_oda']    = int(odalar.get('sayi', 20))
+    c['otel']['oda_baslangic'] = int(odalar.get('bas', 1))
+    c['otel']['oda_bitis']     = int(odalar.get('bitis', 20))
+    c['sistem']['yedek_mail_alici']  = enteg.get('yedek_mail', '')
+    c['sistem']['telegram_token']    = enteg.get('tg_token', '')
+    c['sistem']['telegram_chat_id']  = enteg.get('tg_chat', '')
+    c['sistem']['demo_baslangic']    = _date.today().isoformat()
+    c['sistem']['demo_sure_gun']     = 3
+    c['sistem']['lisans_aktif']      = False
+    c['sistem']['askiya_alindi']     = False
+    cfg.save_config(c)
+
+    # 2. Kullanıcıları DB'ye yaz
+    conn = db.get_conn()
+    conn.execute("DELETE FROM kullanicilar WHERE kullanici != 'superadmin'")
+    for u in kullanicilar:
+        h = hashlib.sha256(u['sifre'].encode()).hexdigest()
+        rol = u.get('rol', 'resepsiyon')
+        conn.execute(
+            "INSERT OR REPLACE INTO kullanicilar(kullanici, sifre_hash, rol, ad) VALUES(?,?,?,?)",
+            (u['kullanici'], h, rol, u['kullanici'])
+        )
+    conn.commit()
+    conn.close()
+
+    # 3. TELEGRAM_TOKEN env'e yaz (runtime için)
+    if enteg.get('tg_token'):
+        os.environ['TELEGRAM_TOKEN']   = enteg['tg_token']
+        os.environ['TELEGRAM_CHAT_ID'] = enteg.get('tg_chat', '')
+
+    return jsonify({'ok': True})
 
 # ── Lisans Sayfaları ──────────────────────────────────────────────────────────
 

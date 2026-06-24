@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="tr" data-tema="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kurulum Sihirbazı</title>
+<style>
+:root {
+  --bg:      #0a1326; --card:    #14213d; --card2:   #1d2c4e;
+  --border:  #2c3f66; --accent:  #ffc24d; --accent2: #43c6ff;
+  --accent3: #ff6f7d; --pos:     #2fdd9b;
+  --text:    #f2f6ff; --text2:   #9bb0d6; --radius:  10px;
+}
+[data-tema="light"] {
+  --bg:#f1f5f9; --card:#fff; --card2:#f8fafc; --border:#e2e8f0;
+  --accent:#d97706; --accent2:#0284c7; --accent3:#e11d48; --pos:#059669;
+  --text:#0f172a; --text2:#64748b;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif;
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  padding:32px 16px; }
+.logo { font-size:28px; font-weight:800; color:var(--accent); margin-bottom:6px; }
+.logo span { color:var(--text2); font-weight:400; font-size:14px; display:block; text-align:center; margin-top:2px; }
+
+/* Progress */
+.progress-bar { display:flex; gap:0; margin:28px 0 36px; width:100%; max-width:640px; }
+.step { flex:1; text-align:center; position:relative; }
+.step-circle { width:32px; height:32px; border-radius:50%; border:2px solid var(--border);
+  background:var(--card); color:var(--text2); font-size:13px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; margin:0 auto 6px;
+  position:relative; z-index:1; transition:.3s; }
+.step.done .step-circle  { background:var(--pos);    border-color:var(--pos);    color:#0a1326; }
+.step.aktif .step-circle { background:var(--accent); border-color:var(--accent); color:#0a1326; }
+.step-label { font-size:11px; color:var(--text2); }
+.step.aktif .step-label { color:var(--accent); font-weight:600; }
+.step.done .step-label  { color:var(--pos); }
+.step::before { content:''; position:absolute; top:15px; left:-50%; right:50%;
+  height:2px; background:var(--border); z-index:0; }
+.step:first-child::before { display:none; }
+.step.done::before { background:var(--pos); }
+
+/* Kart */
+.kart { background:var(--card); border:1px solid var(--border); border-radius:16px;
+  padding:36px 40px; width:100%; max-width:640px; }
+.kart h2 { font-size:18px; font-weight:700; margin-bottom:6px; }
+.kart .alt { font-size:13px; color:var(--text2); margin-bottom:28px; line-height:1.6; }
+
+/* Form */
+.form-grup { margin-bottom:20px; }
+.form-grup label { display:block; font-size:12px; font-weight:600; color:var(--text2);
+  margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+.form-grup input, .form-grup select {
+  width:100%; padding:10px 14px; background:var(--card2); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-size:14px; outline:none; transition:.2s; }
+.form-grup input:focus, .form-grup select:focus { border-color:var(--accent); }
+.form-grup .ipucu { font-size:12px; color:var(--text2); margin-top:5px; }
+.form-grup input.hata { border-color:var(--accent3); }
+
+/* Slider */
+.slider-wrap { display:flex; align-items:center; gap:14px; }
+.slider-wrap input[type=range] { flex:1; accent-color:var(--accent); }
+.slider-deger { font-size:22px; font-weight:800; color:var(--accent);
+  font-family:monospace; min-width:40px; text-align:center; }
+
+/* Kullanıcı kartları */
+.kullanici-kart { background:var(--card2); border:1px solid var(--border);
+  border-radius:10px; padding:16px; margin-bottom:12px; }
+.kullanici-kart .baslik { font-size:12px; font-weight:700; color:var(--text2);
+  margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px; }
+.iki-sutun { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* Telegram yardım */
+.yardim-kutu { background:var(--card2); border-left:3px solid var(--accent2);
+  border-radius:8px; padding:16px; margin:16px 0; }
+.yardim-kutu .adim { display:flex; gap:10px; margin-bottom:10px; font-size:13px; }
+.yardim-kutu .adim:last-child { margin-bottom:0; }
+.yardim-kutu .num { background:var(--accent2); color:#0a1326; width:20px; height:20px;
+  border-radius:50%; font-size:11px; font-weight:800; display:flex;
+  align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.yardim-kutu code { background:var(--card); padding:1px 6px; border-radius:4px;
+  font-size:12px; color:var(--accent); }
+
+/* Butonlar */
+.btn-row { display:flex; gap:12px; justify-content:flex-end; margin-top:28px; }
+.btn { padding:11px 24px; border-radius:9px; border:none; font-size:14px;
+  font-weight:600; cursor:pointer; transition:.2s; }
+.btn-ileri  { background:var(--accent);  color:#0a1326; }
+.btn-ileri:hover { opacity:.9; }
+.btn-geri   { background:var(--card2); color:var(--text2); border:1px solid var(--border); }
+.btn-geri:hover { color:var(--text); }
+.btn-kur    { background:var(--pos); color:#0a1326; font-size:15px; padding:13px 32px; }
+.btn-test   { background:var(--card2); color:var(--accent2); border:1px solid var(--accent2);
+  padding:8px 16px; font-size:13px; border-radius:7px; cursor:pointer; }
+
+/* Özet */
+.ozet-satir { display:flex; justify-content:space-between; padding:10px 0;
+  border-bottom:1px solid var(--border); font-size:13px; }
+.ozet-satir:last-child { border:none; }
+.ozet-satir .etiket { color:var(--text2); }
+.ozet-satir .deger  { font-weight:600; color:var(--text); }
+
+/* Durum */
+.durum { padding:10px 14px; border-radius:8px; font-size:13px; margin-top:12px; display:none; }
+.durum.ok    { background:rgba(47,221,155,.1); color:var(--pos); border:1px solid var(--pos); }
+.durum.hata  { background:rgba(255,111,125,.1); color:var(--accent3); border:1px solid var(--accent3); }
+
+/* Tema toggle */
+.tema-btn { position:fixed; top:20px; right:20px; background:var(--card);
+  border:1px solid var(--border); color:var(--text2); padding:6px 12px;
+  border-radius:20px; font-size:13px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<button class="tema-btn" onclick="temaDegistir()">🌙</button>
+
+<div class="logo">🏨 Otel Yönetim
+  <span>Kurulum Sihirbazı</span>
+</div>
+
+<!-- Progress -->
+<div class="progress-bar" id="progress">
+  <div class="step aktif" id="s1"><div class="step-circle">1</div><div class="step-label">Otel</div></div>
+  <div class="step"       id="s2"><div class="step-circle">2</div><div class="step-label">Odalar</div></div>
+  <div class="step"       id="s3"><div class="step-circle">3</div><div class="step-label">Kullanıcılar</div></div>
+  <div class="step"       id="s4"><div class="step-circle">4</div><div class="step-label">Entegrasyon</div></div>
+  <div class="step"       id="s5"><div class="step-circle">5</div><div class="step-label">Kur</div></div>
+</div>
+
+<!-- ADIM 1: Otel Bilgileri -->
+<div class="kart" id="adim-1">
+  <h2>🏨 Otel Bilgileri</h2>
+  <p class="alt">Otelinizin temel bilgilerini girin. Bu bilgiler sistemde ve raporlarda görünecektir.</p>
+
+  <div class="form-grup">
+    <label>Otel Adı *</label>
+    <input type="text" id="otel-ad" placeholder="örn: Park Otel" maxlength="60">
+    <div class="ipucu">Sistemde görünecek tam ad</div>
+  </div>
+  <div class="form-grup">
+    <label>Kısa Kod *</label>
+    <input type="text" id="otel-kisa" placeholder="örn: PARK" maxlength="6"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+    <div class="ipucu">2-6 harf, büyük harf — rezervasyon ve raporlarda kısaltma olarak kullanılır</div>
+  </div>
+  <div class="iki-sutun">
+    <div class="form-grup">
+      <label>Şehir</label>
+      <input type="text" id="otel-sehir" placeholder="örn: Ayvalık">
+    </div>
+    <div class="form-grup">
+      <label>Telefon</label>
+      <input type="text" id="otel-tel" placeholder="0266 000 00 00">
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-ileri" onclick="adim1Ileri()">Devam →</button>
+  </div>
+</div>
+
+<!-- ADIM 2: Oda Yapısı -->
+<div class="kart" id="adim-2" style="display:none">
+  <h2>🚪 Oda Yapısı</h2>
+  <p class="alt">Otelinizin kaç odası olduğunu ve oda numaralarının hangi sayıdan başladığını belirleyin.</p>
+
+  <div class="form-grup">
+    <label>Toplam Oda Sayısı</label>
+    <div class="slider-wrap">
+      <input type="range" id="oda-sayi" min="5" max="50" value="20"
+        oninput="odaSayiGuncelle(this.value)">
+      <div class="slider-deger" id="oda-sayi-deger">20</div>
+    </div>
+    <div class="ipucu">Demo modunda en fazla 5 oda aktif olur.</div>
+  </div>
+
+  <div class="form-grup">
+    <label>İlk Oda Numarası *</label>
+    <input type="number" id="oda-bas" value="1" min="1" max="900"
+      oninput="odaOnizle()">
+    <div class="ipucu">Oda numaraları bu sayıdan itibaren sıralanır</div>
+  </div>
+
+  <div class="form-grup">
+    <label>Oda Numarası Önizleme</label>
+    <div id="oda-onizle" style="font-size:13px;color:var(--text2);padding:10px;
+      background:var(--card2);border-radius:8px;letter-spacing:1px"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-geri" onclick="goster(1)">← Geri</button>
+    <button class="btn btn-ileri" onclick="adim2Ileri()">Devam →</button>
+  </div>
+</div>
+
+<!-- ADIM 3: Kullanıcılar -->
+<div class="kart" id="adim-3" style="display:none">
+  <h2>👥 Kullanıcılar</h2>
+  <p class="alt">Sisteme erişecek kullanıcıları tanımlayın. Admin hesabı (siz) her zaman mevcuttur.</p>
+
+  <!-- Admin -->
+  <div class="kullanici-kart">
+    <div class="baslik">⭐ Admin (Siz — Her Zaman Tam Yetki)</div>
+    <div class="iki-sutun">
+      <div class="form-grup" style="margin:0">
+        <label>Kullanıcı Adı</label>
+        <input type="text" id="admin-kullanici" value="admin">
+      </div>
+      <div class="form-grup" style="margin:0">
+        <label>Şifre *</label>
+        <input type="password" id="admin-sifre" placeholder="Güçlü şifre girin">
+      </div>
+    </div>
+  </div>
+
+  <!-- Partner sayısı -->
+  <div class="form-grup" style="margin:16px 0 8px">
+    <label>Muhasebe Erişimli Kullanıcı Sayısı</label>
+    <select id="partner-sayi" onchange="kullanicilariOlustur()">
+      <option value="0">Yok</option>
+      <option value="1">1 kişi</option>
+      <option value="2">2 kişi</option>
+      <option value="3" selected>3 kişi</option>
+    </select>
+  </div>
+  <div id="partner-list"></div>
+
+  <!-- Resepsiyonist sayısı -->
+  <div class="form-grup" style="margin:16px 0 8px">
+    <label>Sınırlı Erişimli Kullanıcı Sayısı (Resepsiyon)</label>
+    <select id="resep-sayi" onchange="kullanicilariOlustur()">
+      <option value="0">Yok</option>
+      <option value="1">1 kişi</option>
+      <option value="2">2 kişi</option>
+      <option value="3" selected>3 kişi</option>
+    </select>
+  </div>
+  <div id="resep-list"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-geri" onclick="goster(2)">← Geri</button>
+    <button class="btn btn-ileri" onclick="adim3Ileri()">Devam →</button>
+  </div>
+</div>
+
+<!-- ADIM 4: Entegrasyonlar -->
+<div class="kart" id="adim-4" style="display:none">
+  <h2>🔌 Entegrasyonlar</h2>
+  <p class="alt">Bu adımı şimdi atlayabilirsiniz. Kurulum sonrası da ayarlanabilir.</p>
+
+  <!-- Yedek Mail -->
+  <div class="form-grup">
+    <label>📧 Günlük Yedek Mail Adresi</label>
+    <input type="email" id="yedek-mail" placeholder="ornek@sirket.com">
+    <div class="ipucu">Her gece sistem yedeği bu adrese gönderilir. Boş bırakılabilir.</div>
+  </div>
+
+  <!-- Telegram -->
+  <div class="form-grup">
+    <label>💬 Telegram Bot Token</label>
+    <input type="text" id="tg-token" placeholder="1234567890:AAFxxxxxxxxxxxxxxxxxxxxxxxx">
+
+    <div class="yardim-kutu">
+      <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:10px">
+        📖 Telegram Bot Nasıl Oluşturulur?
+      </div>
+      <div class="adim">
+        <div class="num">1</div>
+        <div>Telefonunuzda veya bilgisayarınızda <strong>Telegram</strong> uygulamasını açın.</div>
+      </div>
+      <div class="adim">
+        <div class="num">2</div>
+        <div>Arama kutusuna <code>@BotFather</code> yazın ve ilk sonuca tıklayın.</div>
+      </div>
+      <div class="adim">
+        <div class="num">3</div>
+        <div>Sohbete <code>/newbot</code> yazıp gönderin.</div>
+      </div>
+      <div class="adim">
+        <div class="num">4</div>
+        <div>Bot adı sorar → istediğiniz bir isim yazın (örn: <strong>OtelimHK</strong>)</div>
+      </div>
+      <div class="adim">
+        <div class="num">5</div>
+        <div>Kullanıcı adı sorar → <strong>bot</strong> ile bitmeli (örn: <strong>OtelimHK_bot</strong>)</div>
+      </div>
+      <div class="adim">
+        <div class="num">6</div>
+        <div>BotFather size uzun bir kod verecek — bu sizin <strong>Token</strong>'ınız. Kopyalayıp yukarıya yapıştırın.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-grup">
+    <label>💬 Telegram Grup Chat ID</label>
+    <input type="text" id="tg-chat" placeholder="-1234567890">
+
+    <div class="yardim-kutu">
+      <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:10px">
+        📖 Grup Chat ID Nasıl Bulunur?
+      </div>
+      <div class="adim">
+        <div class="num">1</div>
+        <div>Telegram'da bir grup oluşturun (örn: <strong>Housekeeping</strong>)</div>
+      </div>
+      <div class="adim">
+        <div class="num">2</div>
+        <div>Oluşturduğunuz botu gruba ekleyin: <strong>Üyeler → Üye ekle → bot adınızı</strong> yazın</div>
+      </div>
+      <div class="adim">
+        <div class="num">3</div>
+        <div>Gruba herhangi bir mesaj yazın (örn: <strong>test</strong>)</div>
+      </div>
+      <div class="adim">
+        <div class="num">4</div>
+        <div>Token'ı girdikten sonra aşağıdaki <strong>"Chat ID Bul"</strong> butonuna tıklayın</div>
+      </div>
+      <div class="adim">
+        <div class="num">5</div>
+        <div>Chat ID otomatik olarak bulunacak ve aşağı yazılacaktır</div>
+      </div>
+    </div>
+
+    <button class="btn-test" onclick="chatIdBul()" style="margin-top:10px">
+      🔍 Chat ID Bul
+    </button>
+    <div class="durum" id="tg-durum"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-geri" onclick="goster(3)">← Geri</button>
+    <button class="btn btn-ileri" onclick="goster(5)">Devam →</button>
+  </div>
+</div>
+
+<!-- ADIM 5: Özet & Kur -->
+<div class="kart" id="adim-5" style="display:none">
+  <h2>✅ Kurulum Özeti</h2>
+  <p class="alt">Bilgileri kontrol edin ve kurulumu başlatın.</p>
+
+  <div id="ozet-icerik"></div>
+
+  <div class="durum" id="kur-durum"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-geri" onclick="goster(4)">← Geri</button>
+    <button class="btn btn-kur" onclick="kurulumBaslat()">🚀 Kurulumu Tamamla</button>
+  </div>
+</div>
+
+<script>
+// ── Tema ──────────────────────────────────────────────────────────────────
+function temayiUygula(mod) {
+  document.documentElement.setAttribute('data-tema', mod);
+  const btn = document.querySelector('.tema-btn');
+  if (btn) btn.textContent = mod === 'dark' ? '🌙' : '☀️';
+}
+function temaDegistir() {
+  const m = document.documentElement.getAttribute('data-tema') === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('otel-tema', m);
+  temayiUygula(m);
+}
+temayiUygula(localStorage.getItem('otel-tema') || 'dark');
+
+// ── Veri ──────────────────────────────────────────────────────────────────
+const veri = {
+  otel: {}, odalar: {}, kullanicilar: [], entegrasyon: {}
+};
+
+// ── Progress ──────────────────────────────────────────────────────────────
+let mevcutAdim = 1;
+
+function goster(n) {
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('adim-' + i).style.display = i === n ? 'block' : 'none';
+    const s = document.getElementById('s' + i);
+    s.className = 'step' + (i < n ? ' done' : i === n ? ' aktif' : '');
+  }
+  mevcutAdim = n;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// ── Adım 1 ────────────────────────────────────────────────────────────────
+function adim1Ileri() {
+  const ad    = document.getElementById('otel-ad').value.trim();
+  const kisa  = document.getElementById('otel-kisa').value.trim();
+  if (!ad)   { hata('otel-ad');   return; }
+  if (!kisa || kisa.length < 2) { hata('otel-kisa'); return; }
+  veri.otel = {
+    ad, kisa_ad: kisa,
+    sehir: document.getElementById('otel-sehir').value.trim(),
+    telefon: document.getElementById('otel-tel').value.trim()
+  };
+  goster(2);
+  odaOnizle();
+}
+
+// ── Adım 2 ────────────────────────────────────────────────────────────────
+function odaSayiGuncelle(v) {
+  document.getElementById('oda-sayi-deger').textContent = v;
+  odaOnizle();
+}
+
+function odaOnizle() {
+  const sayi = parseInt(document.getElementById('oda-sayi').value);
+  const bas  = parseInt(document.getElementById('oda-bas').value) || 1;
+  const bitis = bas + sayi - 1;
+  const numlar = [];
+  for (let i = bas; i <= Math.min(bas + 7, bitis); i++) numlar.push(i);
+  let metin = numlar.join(' · ');
+  if (sayi > 8) metin += ` · ... · ${bitis}`;
+  document.getElementById('oda-onizle').textContent = metin;
+}
+
+function adim2Ileri() {
+  const sayi = parseInt(document.getElementById('oda-sayi').value);
+  const bas  = parseInt(document.getElementById('oda-bas').value) || 1;
+  veri.odalar = { sayi, bas, bitis: bas + sayi - 1 };
+  kullanicilariOlustur();
+  goster(3);
+}
+
+// ── Adım 3 ────────────────────────────────────────────────────────────────
+function kullanicilariOlustur() {
+  const pSayi = parseInt(document.getElementById('partner-sayi').value);
+  const rSayi = parseInt(document.getElementById('resep-sayi').value);
+
+  let pHtml = '';
+  for (let i = 1; i <= pSayi; i++) {
+    const prev = veri.kullanicilar.find(u => u.rol === 'partner' && u.idx === i) || {};
+    pHtml += `
+    <div class="kullanici-kart">
+      <div class="baslik">👔 Muhasebe Kullanıcısı ${i}</div>
+      <div class="iki-sutun">
+        <div class="form-grup" style="margin:0">
+          <label>Kullanıcı Adı</label>
+          <input type="text" id="p-kullanici-${i}" value="${prev.kullanici || ''}" placeholder="ornek: muhasebe1">
+        </div>
+        <div class="form-grup" style="margin:0">
+          <label>Şifre</label>
+          <input type="password" id="p-sifre-${i}" placeholder="Şifre">
+        </div>
+      </div>
+    </div>`;
+  }
+
+  let rHtml = '';
+  for (let i = 1; i <= rSayi; i++) {
+    const prev = veri.kullanicilar.find(u => u.rol === 'resepsiyon' && u.idx === i) || {};
+    rHtml += `
+    <div class="kullanici-kart">
+      <div class="baslik">🖥️ Resepsiyon Kullanıcısı ${i}</div>
+      <div class="iki-sutun">
+        <div class="form-grup" style="margin:0">
+          <label>Kullanıcı Adı</label>
+          <input type="text" id="r-kullanici-${i}" value="${prev.kullanici || ''}" placeholder="ornek: resepsiyon1">
+        </div>
+        <div class="form-grup" style="margin:0">
+          <label>Şifre</label>
+          <input type="password" id="r-sifre-${i}" placeholder="Şifre">
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('partner-list').innerHTML = pHtml;
+  document.getElementById('resep-list').innerHTML   = rHtml;
+}
+
+function adim3Ileri() {
+  const adminK = document.getElementById('admin-kullanici').value.trim();
+  const adminS = document.getElementById('admin-sifre').value;
+  if (!adminS || adminS.length < 4) {
+    alert('Admin şifresi en az 4 karakter olmalıdır.');
+    return;
+  }
+
+  const pSayi = parseInt(document.getElementById('partner-sayi').value);
+  const rSayi = parseInt(document.getElementById('resep-sayi').value);
+  const kullanicilar = [{ rol: 'admin', kullanici: adminK || 'admin', sifre: adminS, idx: 0 }];
+
+  for (let i = 1; i <= pSayi; i++) {
+    const k = document.getElementById(`p-kullanici-${i}`)?.value.trim();
+    const s = document.getElementById(`p-sifre-${i}`)?.value;
+    if (k && s) kullanicilar.push({ rol: 'partner', kullanici: k, sifre: s, idx: i });
+  }
+  for (let i = 1; i <= rSayi; i++) {
+    const k = document.getElementById(`r-kullanici-${i}`)?.value.trim();
+    const s = document.getElementById(`r-sifre-${i}`)?.value;
+    if (k && s) kullanicilar.push({ rol: 'resepsiyon', kullanici: k, sifre: s, idx: i });
+  }
+
+  veri.kullanicilar = kullanicilar;
+  goster(4);
+}
+
+// ── Adım 4 ────────────────────────────────────────────────────────────────
+async function chatIdBul() {
+  const token = document.getElementById('tg-token').value.trim();
+  const durum = document.getElementById('tg-durum');
+  if (!token) { gosterDurum(durum, 'Önce Token girin.', 'hata'); return; }
+
+  gosterDurum(durum, '🔍 Aranıyor...', 'ok');
+
+  try {
+    const res = await fetch('/kurulum/telegram-test', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({token})
+    });
+    const d = await res.json();
+    if (d.ok && d.chat_id) {
+      document.getElementById('tg-chat').value = d.chat_id;
+      gosterDurum(durum, `✅ Bağlantı başarılı! Chat ID: ${d.chat_id}`, 'ok');
+    } else {
+      gosterDurum(durum, `❌ ${d.hata || 'Grup bulunamadı. Bota gruba eklediniz mi?'}`, 'hata');
+    }
+  } catch(e) {
+    gosterDurum(durum, '❌ Bağlantı hatası. Lütfen tekrar deneyin.', 'hata');
+  }
+}
+
+// ── Adım 5 — Özet ────────────────────────────────────────────────────────
+function ozetGoster() {
+  veri.entegrasyon = {
+    yedek_mail: document.getElementById('yedek-mail').value.trim(),
+    tg_token:   document.getElementById('tg-token').value.trim(),
+    tg_chat:    document.getElementById('tg-chat').value.trim()
+  };
+
+  const satirlar = [
+    ['Otel Adı',        veri.otel.ad],
+    ['Kısa Kod',        veri.otel.kisa_ad],
+    ['Şehir',           veri.otel.sehir || '—'],
+    ['Oda Sayısı',      veri.odalar.sayi + ' oda'],
+    ['Oda Numaraları',  veri.odalar.bas + ' — ' + veri.odalar.bitis],
+    ['Kullanıcılar',    veri.kullanicilar.map(u => u.kullanici + ' (' + u.rol + ')').join(', ')],
+    ['Yedek Mail',      veri.entegrasyon.yedek_mail || '—'],
+    ['Telegram',        veri.entegrasyon.tg_token ? '✅ Ayarlı' : '— (sonra ayarlanacak)'],
+  ];
+
+  document.getElementById('ozet-icerik').innerHTML = satirlar.map(([e, d]) =>
+    `<div class="ozet-satir"><span class="etiket">${e}</span><span class="deger">${d}</span></div>`
+  ).join('');
+}
+
+async function kurulumBaslat() {
+  const durum = document.getElementById('kur-durum');
+  gosterDurum(durum, '⏳ Kurulum yapılıyor...', 'ok');
+
+  try {
+    const res = await fetch('/kurulum/kaydet', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(veri)
+    });
+    const d = await res.json();
+    if (d.ok) {
+      gosterDurum(durum, '✅ Kurulum tamamlandı! Giriş sayfasına yönlendiriliyorsunuz...', 'ok');
+      setTimeout(() => window.location.href = '/login', 2000);
+    } else {
+      gosterDurum(durum, '❌ Hata: ' + (d.hata || 'Bilinmeyen hata'), 'hata');
+    }
+  } catch(e) {
+    gosterDurum(durum, '❌ Bağlantı hatası. Sayfayı yenileyin.', 'hata');
+  }
+}
+
+// ── Yardımcılar ───────────────────────────────────────────────────────────
+function hata(id) {
+  const el = document.getElementById(id);
+  el.classList.add('hata');
+  el.focus();
+  setTimeout(() => el.classList.remove('hata'), 2000);
+}
+
+function gosterDurum(el, mesaj, tip) {
+  el.textContent = mesaj;
+  el.className   = 'durum ' + tip;
+  el.style.display = 'block';
+}
+
+// Adım 5'e geçerken özet göster
+const origGoster = goster;
+function goster(n) {
+  origGoster(n);
+  if (n === 5) ozetGoster();
+}
+
+// Init
+odaOnizle();
+kullanicilariOlustur();
+</script>
+</body>
+</html>

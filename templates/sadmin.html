@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="tr" data-tema="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Süper Admin Paneli</title>
+<style>
+:root {
+  --bg:#0a1326; --card:#14213d; --card2:#1d2c4e; --border:#2c3f66;
+  --accent:#ffc24d; --accent2:#43c6ff; --accent3:#ff6f7d; --pos:#2fdd9b;
+  --text:#f2f6ff; --text2:#9bb0d6; --radius:10px;
+}
+[data-tema="light"] {
+  --bg:#f1f5f9; --card:#fff; --card2:#f8fafc; --border:#e2e8f0;
+  --accent:#d97706; --accent2:#0284c7; --accent3:#e11d48; --pos:#059669;
+  --text:#0f172a; --text2:#64748b;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif;
+  min-height:100vh; padding:28px 20px; }
+
+.topbar { display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+.topbar h1 { font-size:20px; font-weight:800; color:var(--accent); }
+.topbar .meta { font-size:13px; color:var(--text2); }
+
+.kart { background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:24px 28px; margin-bottom:20px; }
+.kart h2 { font-size:15px; font-weight:700; margin-bottom:16px;
+  padding-bottom:12px; border-bottom:1px solid var(--border); }
+
+/* Otel kartı */
+.otel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+.otel-kart { background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:20px; }
+.otel-kart .baslik { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.otel-kart .ad { font-size:16px; font-weight:700; }
+.otel-kart .kisa { font-size:11px; background:var(--accent); color:#0a1326;
+  padding:2px 8px; border-radius:20px; font-weight:700; }
+
+.badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px;
+  border-radius:20px; font-size:12px; font-weight:600; }
+.badge.aktif    { background:rgba(47,221,155,.15); color:var(--pos); border:1px solid var(--pos); }
+.badge.demo     { background:rgba(255,194,77,.15);  color:var(--accent); border:1px solid var(--accent); }
+.badge.askida   { background:rgba(255,111,125,.15); color:var(--accent3); border:1px solid var(--accent3); }
+.badge.bitti    { background:rgba(150,150,150,.1);  color:var(--text2); border:1px solid var(--border); }
+
+.info-satir { display:flex; justify-content:space-between; font-size:12px;
+  padding:5px 0; border-bottom:1px solid var(--border); }
+.info-satir:last-of-type { border:none; }
+.info-satir .etiket { color:var(--text2); }
+.info-satir .deger  { font-weight:600; }
+
+.butonlar { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+.btn { padding:7px 14px; border-radius:8px; border:none; font-size:12px;
+  font-weight:600; cursor:pointer; transition:.2s; }
+.btn:hover { opacity:.85; }
+.btn-aktif  { background:var(--pos);    color:#0a1326; }
+.btn-askiya { background:var(--accent3); color:#fff; }
+.btn-demo   { background:var(--accent); color:#0a1326; }
+.btn-site   { background:var(--card); color:var(--text2); border:1px solid var(--border); }
+
+/* Demo uzat modal */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100;
+  display:none; align-items:center; justify-content:center; }
+.overlay.goster { display:flex; }
+.modal { background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:28px 32px; width:360px; }
+.modal h3 { font-size:16px; font-weight:700; margin-bottom:16px; }
+.modal input { width:100%; padding:9px 12px; background:var(--card2);
+  border:1px solid var(--border); border-radius:8px; color:var(--text);
+  font-size:14px; margin-bottom:14px; }
+.modal .btn-row { display:flex; gap:10px; justify-content:flex-end; }
+
+/* Durum mesajı */
+.durum { padding:8px 14px; border-radius:8px; font-size:13px; display:none; margin-top:10px; }
+.durum.ok   { background:rgba(47,221,155,.1); color:var(--pos); }
+.durum.hata { background:rgba(255,111,125,.1); color:var(--accent3); }
+
+/* Giriş formu */
+.giris-wrap { max-width:400px; margin:80px auto; }
+.giris-wrap h2 { font-size:20px; font-weight:700; margin-bottom:20px; color:var(--accent); }
+.giris-wrap input { width:100%; padding:11px 14px; background:var(--card);
+  border:1px solid var(--border); border-radius:9px; color:var(--text);
+  font-size:14px; margin-bottom:12px; outline:none; }
+.giris-wrap input:focus { border-color:var(--accent); }
+.giris-wrap .btn-giris { width:100%; padding:12px; background:var(--accent);
+  color:#0a1326; border:none; border-radius:9px; font-size:15px;
+  font-weight:700; cursor:pointer; }
+
+.tema-btn { position:fixed; top:16px; right:16px; background:var(--card);
+  border:1px solid var(--border); color:var(--text2); padding:6px 12px;
+  border-radius:20px; font-size:13px; cursor:pointer; z-index:200; }
+
+/* Boş durum */
+.bos { text-align:center; padding:40px; color:var(--text2); font-size:14px; }
+</style>
+</head>
+<body>
+
+<button class="tema-btn" onclick="temaDegistir()">🌙</button>
+
+<!-- Giriş Ekranı -->
+<div id="giris-ekrani" class="giris-wrap">
+  <div style="font-size:32px;margin-bottom:8px">🔐</div>
+  <h2>Süper Admin</h2>
+  <p style="font-size:13px;color:var(--text2);margin-bottom:20px">
+    Bu panel yalnızca sistem yöneticisi içindir.
+  </p>
+  <input type="password" id="giris-key" placeholder="Admin anahtarı"
+    onkeydown="if(event.key==='Enter') girisYap()">
+  <div class="durum" id="giris-durum"></div>
+  <br>
+  <button class="btn-giris" onclick="girisYap()">Giriş Yap</button>
+</div>
+
+<!-- Ana Panel -->
+<div id="ana-panel" style="display:none">
+  <div class="topbar">
+    <h1>🏨 Süper Admin Paneli</h1>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="meta" id="son-guncelle">—</span>
+      <button class="btn btn-site" onclick="yukle()">🔄 Yenile</button>
+      <button class="btn btn-site" onclick="cikisYap()">Çıkış</button>
+    </div>
+  </div>
+
+  <!-- Özet Kartlar -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px">
+    <div class="kart" style="padding:16px;margin:0">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px">TOPLAM</div>
+      <div style="font-size:28px;font-weight:800;color:var(--text)" id="ozet-toplam">—</div>
+    </div>
+    <div class="kart" style="padding:16px;margin:0">
+      <div style="font-size:11px;color:var(--pos);margin-bottom:6px">AKTİF</div>
+      <div style="font-size:28px;font-weight:800;color:var(--pos)" id="ozet-aktif">—</div>
+    </div>
+    <div class="kart" style="padding:16px;margin:0">
+      <div style="font-size:11px;color:var(--accent);margin-bottom:6px">DEMO</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent)" id="ozet-demo">—</div>
+    </div>
+    <div class="kart" style="padding:16px;margin:0">
+      <div style="font-size:11px;color:var(--accent3);margin-bottom:6px">ASKIDA</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent3)" id="ozet-askida">—</div>
+    </div>
+  </div>
+
+  <!-- Otel Listesi -->
+  <div class="kart">
+    <h2>📋 Kurulu Sistemler</h2>
+    <div class="otel-grid" id="otel-grid">
+      <div class="bos">Yükleniyor...</div>
+    </div>
+  </div>
+
+  <!-- Not Ekle -->
+  <div class="kart">
+    <h2>📝 Sistem Notu</h2>
+    <div id="notlar-icerik" style="font-size:13px;color:var(--text2);white-space:pre-wrap"></div>
+    <textarea id="not-input" style="width:100%;padding:10px;background:var(--card2);
+      border:1px solid var(--border);border-radius:8px;color:var(--text);
+      font-size:13px;margin-top:10px;min-height:80px;resize:vertical"></textarea>
+    <button class="btn btn-demo" style="margin-top:8px" onclick="notKaydet()">Notu Kaydet</button>
+  </div>
+</div>
+
+<!-- Demo Uzat Modal -->
+<div class="overlay" id="demo-modal">
+  <div class="modal">
+    <h3>📅 Demo Süresini Uzat</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
+      Bugünden itibaren kaç gün demo süresi verilsin?
+    </p>
+    <input type="number" id="demo-gun" value="7" min="1" max="90">
+    <div class="btn-row">
+      <button class="btn btn-site" onclick="modalKapat()">İptal</button>
+      <button class="btn btn-demo" onclick="demoUzatOnayla()">Uzat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Tema ──────────────────────────────────────────────────────────────────
+function temayiUygula(m) {
+  document.documentElement.setAttribute('data-tema', m);
+  document.querySelector('.tema-btn').textContent = m==='dark'?'🌙':'☀️';
+}
+function temaDegistir() {
+  const m = document.documentElement.getAttribute('data-tema')==='dark'?'light':'dark';
+  localStorage.setItem('otel-tema', m); temayiUygula(m);
+}
+temayiUygula(localStorage.getItem('otel-tema')||'dark');
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+let adminKey = '';
+
+function girisYap() {
+  const k = document.getElementById('giris-key').value.trim();
+  if (!k) return;
+  adminKey = k;
+  yukle();
+}
+
+function cikisYap() {
+  adminKey = '';
+  document.getElementById('ana-panel').style.display = 'none';
+  document.getElementById('giris-ekrani').style.display = 'block';
+  document.getElementById('giris-key').value = '';
+}
+
+// ── Veri Yükleme ──────────────────────────────────────────────────────────
+async function yukle() {
+  try {
+    const res = await fetch('/sadmin/durum', {
+      headers: {'X-Admin-Key': adminKey}
+    });
+    if (res.status === 403) {
+      gosterDurum(document.getElementById('giris-durum'), '❌ Hatalı anahtar', 'hata');
+      return;
+    }
+    const d = await res.json();
+
+    document.getElementById('giris-ekrani').style.display = 'none';
+    document.getElementById('ana-panel').style.display = 'block';
+    document.getElementById('son-guncelle').textContent =
+      'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+
+    renderOteller([d]);
+
+    // Özet
+    const durum = d.durum;
+    document.getElementById('ozet-toplam').textContent = 1;
+    document.getElementById('ozet-aktif').textContent  = durum === 'aktif' ? 1 : 0;
+    document.getElementById('ozet-demo').textContent   = durum === 'demo'  ? 1 : 0;
+    document.getElementById('ozet-askida').textContent = durum === 'askida'? 1 : 0;
+
+    // Not
+    const not = d.config?.not || '';
+    document.getElementById('notlar-icerik').textContent = not;
+    document.getElementById('not-input').value = not;
+
+  } catch(e) {
+    gosterDurum(document.getElementById('giris-durum'), '❌ Bağlantı hatası', 'hata');
+  }
+}
+
+function renderOteller(oteller) {
+  const grid = document.getElementById('otel-grid');
+  if (!oteller.length) {
+    grid.innerHTML = '<div class="bos">Henüz kurulu sistem yok</div>';
+    return;
+  }
+
+  grid.innerHTML = oteller.map(o => {
+    const cfg    = o.config || {};
+    const otel   = cfg.otel || {};
+    const durum  = o.durum || 'bilinmiyor';
+    const kalan  = o.kalan ?? '—';
+
+    const badgeTxt = {
+      aktif:      '✅ Aktif',
+      demo:       `⏳ Demo (${kalan} gün)`,
+      demo_bitti: '⌛ Demo Bitti',
+      askida:     '🔒 Askıda'
+    }[durum] || durum;
+
+    return `
+    <div class="otel-kart">
+      <div class="baslik">
+        <div class="ad">${otel.ad || 'Kurulum Bekleniyor'}</div>
+        <div class="kisa">${otel.kisa_ad || '?'}</div>
+      </div>
+      <span class="badge ${durum === 'demo_bitti' ? 'bitti' : durum}">${badgeTxt}</span>
+
+      <div style="margin:14px 0">
+        <div class="info-satir">
+          <span class="etiket">Şehir</span>
+          <span class="deger">${otel.sehir || '—'}</span>
+        </div>
+        <div class="info-satir">
+          <span class="etiket">Oda Sayısı</span>
+          <span class="deger">${otel.toplam_oda || '—'} oda</span>
+        </div>
+        <div class="info-satir">
+          <span class="etiket">Demo Başlangıç</span>
+          <span class="deger">${cfg.sistem?.demo_baslangic || '—'}</span>
+        </div>
+        <div class="info-satir">
+          <span class="etiket">Telegram</span>
+          <span class="deger">${cfg.sistem?.telegram_token ? '✅ Ayarlı' : '—'}</span>
+        </div>
+      </div>
+
+      <div class="butonlar">
+        ${durum !== 'aktif' ? `<button class="btn btn-aktif" onclick="aksiyonYap('aktif')">✅ Aktif Et</button>` : ''}
+        ${durum !== 'askida' ? `<button class="btn btn-askiya" onclick="aksiyonYap('askiya')">🔒 Askıya Al</button>` : ''}
+        <button class="btn btn-demo" onclick="demoModalAc()">📅 Demo Uzat</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Aksiyonlar ────────────────────────────────────────────────────────────
+async function aksiyonYap(tip) {
+  const url = tip === 'aktif' ? '/sadmin/aktif' : '/sadmin/askiya-al';
+  const onay = tip === 'aktif'
+    ? 'Sistemi aktif etmek istiyor musunuz?'
+    : 'Sistemi askıya almak istiyor musunuz? Kullanıcılar giriş yapamayacak.';
+  if (!confirm(onay)) return;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'X-Admin-Key': adminKey, 'Content-Type': 'application/json'}
+    });
+    const d = await res.json();
+    if (d.ok) { yukle(); }
+  } catch(e) { alert('Hata oluştu'); }
+}
+
+let _demoGun = 7;
+
+function demoModalAc() {
+  document.getElementById('demo-modal').classList.add('goster');
+}
+
+function modalKapat() {
+  document.getElementById('demo-modal').classList.remove('goster');
+}
+
+async function demoUzatOnayla() {
+  const gun = parseInt(document.getElementById('demo-gun').value) || 7;
+  try {
+    const res = await fetch('/sadmin/demo-uzat', {
+      method: 'POST',
+      headers: {'X-Admin-Key': adminKey, 'Content-Type': 'application/json'},
+      body: JSON.stringify({gun})
+    });
+    const d = await res.json();
+    if (d.ok) { modalKapat(); yukle(); }
+  } catch(e) { alert('Hata'); }
+}
+
+async function notKaydet() {
+  const not = document.getElementById('not-input').value;
+  try {
+    await fetch('/sadmin/not-kaydet', {
+      method: 'POST',
+      headers: {'X-Admin-Key': adminKey, 'Content-Type': 'application/json'},
+      body: JSON.stringify({not})
+    });
+    document.getElementById('notlar-icerik').textContent = not;
+    alert('Not kaydedildi.');
+  } catch(e) { alert('Hata'); }
+}
+
+// ── Yardımcı ─────────────────────────────────────────────────────────────
+function gosterDurum(el, msg, tip) {
+  el.textContent = msg;
+  el.className = 'durum ' + tip;
+  el.style.display = 'block';
+}
+</script>
+</body>
+</html>

@@ -57,7 +57,7 @@ AKTIF_ESIK_DK = 10  # bu süre içinde istek atmayan kullanıcı "aktif" sayılm
 
 @app.before_request
 def _lisans_kontrol():
-    acik_yollar = ['/login', '/kurulum', '/static', '/telegram-webhook', '/askida', '/demo-bitti']
+    acik_yollar = ['/login', '/kurulum', '/static', '/telegram-webhook', '/askida', '/demo-bitti', '/sadmin']
     if not any(request.path.startswith(y) for y in acik_yollar):
         # Kurulum tamamlanmamışsa sihirbaza yönlendir
         if cfg.get('otel.ad', 'Otel Adı') == 'Otel Adı':
@@ -2012,6 +2012,10 @@ def sadmin_demo_uzat():
     cfg.save_config(c)
     return jsonify({'ok': True, 'gun': gun})
 
+@app.route('/sadmin')
+def sadmin_sayfa():
+    return render_template('sadmin.html')
+
 @app.route('/sadmin/durum')
 def sadmin_durum():
     if not superadmin_kontrol():
@@ -2021,5 +2025,15 @@ def sadmin_durum():
         'ok':     True,
         'durum':  cfg.lisans_durumu(),
         'kalan':  cfg.demo_kalan_gun(),
-        'config': c['sistem']
+        'config': c
     })
+
+@app.route('/sadmin/not-kaydet', methods=['POST'])
+def sadmin_not_kaydet():
+    if not superadmin_kontrol():
+        return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
+    data = request.get_json()
+    c = cfg.load_config()
+    c['sistem']['not'] = data.get('not', '')
+    cfg.save_config(c)
+    return jsonify({'ok': True})

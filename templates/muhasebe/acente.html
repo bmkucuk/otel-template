@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+{% set active = "muh-acente" %}
+{% block title %}Acenteler{% endblock %}
+{% block page_title %}🤝 Acente Cari{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+  <label style="color:var(--text2);font-size:12px">Yıl:</label>
+  <select class="filter" id="yil-sel" onchange="load()"></select>
+  <select class="filter" id="acente-sel" onchange="load()"><option value="">Tüm Acenteler</option></select>
+  <input type="text" id="arama" placeholder="🔍 Föy no, misafir, fatura no, banka ara..." oninput="aramaDegisti()"
+    style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:12px;min-width:240px">
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="openModal()">＋ Fatura Tahsilatı Ekle</button>
+</div>
+
+<div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
+<div style="font-size:11px;color:var(--text2);margin:-8px 0 16px">
+  Rezervasyon bazlı borç ve komisyon kayıtları artık Booking, JollyTur, TatilSepeti ve ETSTUR rezervasyonu girilirken otomatik oluşturuluyor.
+  Bu tablodan fatura kesilecek föyleri ve tutarları görebilirsin; alttaki "Fatura Tahsilatı" tablosu ise yalnızca bankaya gelen ödemeleri kaydetmek içindir.
+</div>
+
+<div class="table-wrap" id="detay-wrap" style="display:none;margin-bottom:24px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <div class="section-title" style="margin:0;border:0;font-size:13px">📋 Föy Bazlı Borç Dökümü (fatura kesmek için)</div>
+    <div style="flex:1"></div>
+    <span id="secim-ozet" style="font-size:12px;color:var(--text2)"></span>
+    <button class="btn btn-primary" id="fatura-kes-btn" style="font-size:12px;padding:6px 14px;display:none" onclick="openFaturaModal()">🧾 Seçilenleri Faturalandır</button>
+  </div>
+  <table>
+    <thead><tr>
+  <th style="width:34px"><input type="checkbox" id="detay-hepsi" onchange="toggleHepsi(this)" style="pointer-events:auto;cursor:pointer"></th>
+  <th style="width:95px;cursor:pointer;pointer-events:auto" onclick="sirala('detay','tarih')">Tarih <span id="sort-detay-tarih"></span></th>
+  <th style="width:70px;cursor:pointer;pointer-events:auto" onclick="sirala('detay','foy_no')">Föy <span id="sort-detay-foy_no"></span></th>
+  <th>Misafir</th>
+  <th style="text-align:right">Rez. Bedeli</th>
+  <th style="text-align:right">Komisyon (%15)</th>
+  <th style="text-align:right">Net (Faturalanacak)</th>
+  <th style="width:100px;text-align:center">Durum</th>
+</tr></thead>
+    <tbody id="detay-tbody"></tbody>
+  </table>
+</div>
+
+<div class="table-wrap" id="kesilen-wrap" style="display:none;margin-bottom:24px">
+  <div class="section-title" style="margin:0 0 8px;border:0;font-size:13px">🧾 Kesilen Faturalar (Geçmiş)</div>
+  <table>
+    <thead><tr>
+  <th style="width:95px;cursor:pointer;pointer-events:auto" onclick="sirala('kesilen','tarih')">Tarih <span id="sort-kesilen-tarih"></span></th>
+  <th style="width:120px">Fatura No</th>
+  <th style="width:70px;cursor:pointer;pointer-events:auto" onclick="sirala('kesilen','foy_no')">Föy <span id="sort-kesilen-foy_no"></span></th>
+  <th>Misafir</th>
+  <th style="width:140px">Banka</th>
+  <th style="text-align:right">Tutar</th>
+  <th style="width:70px"></th>
+</tr></thead>
+    <tbody id="kesilen-tbody"></tbody>
+  </table>
+</div>
+
+<!-- Fatura Düzenle Modalı -->
+<div class="modal-overlay" id="fatura-duzenle-modal">
+  <div class="modal">
+    <h2>Fatura Düzenle</h2>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Föy #<b id="fd-foy"></b> — <span id="fd-misafir"></span></div>
+    <div class="form-row">
+      <div class="form-group"><label>Fatura No</label><input type="text" id="fd-fatura-no"></div>
+      <div class="form-group"><label>Tarih</label><input type="date" id="fd-tarih"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Ödeme Bankası</label>
+        <select id="fd-banka">
+          <option value="IS">İş Bankası</option>
+          <option value="ZRH">Ziraat Bankası</option>
+          <option value="DNZ">Deniz Bank</option>
+        </select>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Not: Tutarı değiştirmek için önce "İptal Et" ile geri alıp föyü yeniden faturalandırın.</div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeFaturaDuzenleModal()">İptal</button>
+      <button class="btn btn-primary" onclick="confirmFaturaDuzenle()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fatura Kes Onay Modalı -->
+<div class="modal-overlay" id="fatura-modal">
+  <div class="modal">
+    <h2>Toplu Fatura Tahsilatı</h2>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Seçilen <b id="fm-adet">0</b> föy faturalandı olarak işaretlenecek.</div>
+    <div style="background:var(--card2);border-radius:9px;padding:12px;margin-bottom:14px;max-height:220px;overflow:auto">
+      <div id="fm-liste" style="font-size:12px;line-height:1.9"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-weight:700">
+        <span>Toplam</span><span id="fm-toplam" class="green">0 ₺</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fatura No</label><input type="text" id="fm-fatura-no" placeholder="Örn. JLY-2026-0042"></div>
+      <div class="form-group"><label>Tarih</label><input type="date" id="fm-tarih"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Ödeme Bankası</label>
+        <select id="fm-banka">
+          <option value="IS">İş Bankası</option>
+          <option value="ZRH">Ziraat Bankası</option>
+          <option value="DNZ">Deniz Bank</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeFaturaModal()">İptal</button>
+      <button class="btn btn-primary" onclick="confirmFaturaKes()">✅ Tamam, Faturalandır</button>
+    </div>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr>
+  <th style="width:95px">Tarih</th>
+  <th style="width:160px">Acente</th>
+  <th style="width:120px">Fatura No</th>
+  <th style="text-align:right">Tutar</th>
+  <th style="width:60px;text-align:center">Otel</th>
+  <th style="width:100px"></th>
+</tr></thead>
+    <tbody id="tbody"><tr class="loading-row"><td colspan="6"><span class="spinner"></span></td></tr></tbody>
+  </table>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modal-baslik">Fatura Tahsilatı Ekle</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="f-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
+      <div class="form-group"><label>Acente</label><select id="f-acente"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-gelen" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+      <div class="form-group"><label>Fatura No</label><input type="text" id="f-fatura-no" placeholder="Örn. JLY-2026-0042"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Ödeme Bankası</label>
+        <select id="f-odeme-banka">
+          <option value="IS">İş Bankası</option>
+          <option value="ZRH">Ziraat Bankası</option>
+          <option value="DNZ">Deniz Bank</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Otel</label><select id="f-otel"><option>LEO</option><option>CV</option></select></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal()">İptal</button>
+      <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const thisYear = new Date().getFullYear();
+const yilSel = document.getElementById('yil-sel');
+for (let y = thisYear-2; y <= thisYear+1; y++) {
+  const o = document.createElement('option');
+  o.value = y; o.textContent = y;
+  if (y === thisYear) o.selected = true;
+  yilSel.appendChild(o);
+}
+
+let acenteler = [];
+let editId = null;
+let allData = [];
+let allDataRaw = [];
+let detayFoyler = [];
+let detayFoylerRaw = [];
+let kesilenListesi = [];
+let kesilenListesiRaw = [];
+let secilenFoylar = new Set();
+let aramaTerimi = '';
+let sortDurum = {
+  detay:   { alan: 'tarih', yon: 'desc' },
+  kesilen: { alan: 'tarih', yon: 'desc' },
+};
+
+function aramaDegisti() {
+  aramaTerimi = document.getElementById('arama').value.trim().toLowerCase();
+  uygulaFiltreVeSirala();
+}
+
+function metinEslesir(...alanlar) {
+  if (!aramaTerimi) return true;
+  return alanlar.some(a => (a||'').toString().toLowerCase().includes(aramaTerimi));
+}
+
+function sirala(tablo, alan) {
+  const s = sortDurum[tablo];
+  if (s.alan === alan) { s.yon = s.yon === 'asc' ? 'desc' : 'asc'; }
+  else { s.alan = alan; s.yon = 'desc'; }
+  uygulaFiltreVeSirala();
+}
+
+function sortOklariniGuncelle() {
+  ['detay','kesilen'].forEach(tablo => {
+    ['tarih','foy_no'].forEach(alan => {
+      const el = document.getElementById(`sort-${tablo}-${alan}`);
+      if (!el) return;
+      const s = sortDurum[tablo];
+      el.textContent = (s.alan === alan) ? (s.yon === 'asc' ? '▲' : '▼') : '';
+    });
+  });
+}
+
+function sirala2(liste, alan, yon) {
+  const kopya = [...liste];
+  kopya.sort((a, b) => {
+    let av = a[alan], bv = b[alan];
+    if (alan === 'foy_no') { av = parseInt(av)||0; bv = parseInt(bv)||0; }
+    if (av < bv) return yon === 'asc' ? -1 : 1;
+    if (av > bv) return yon === 'asc' ? 1 : -1;
+    return 0;
+  });
+  return kopya;
+}
+
+function uygulaFiltreVeSirala() {
+  // Föy bazlı borç dökümü
+  let filtreliDetay = detayFoylerRaw.filter(f => metinEslesir(f.foy_no, f.misafir));
+  detayFoyler = sirala2(filtreliDetay, sortDurum.detay.alan, sortDurum.detay.yon);
+  renderDetayTablosu();
+
+  // Kesilen faturalar
+  let filtreliKesilen = kesilenListesiRaw.filter(k => metinEslesir(k.foy_no, k.misafir, k.fatura_no, k.banka));
+  kesilenListesi = sirala2(filtreliKesilen, sortDurum.kesilen.alan, sortDurum.kesilen.yon);
+  renderKesilenTablosu();
+
+  // Alt "Fatura Tahsilatı" tablosu (sadece arama, en yeni en üstte sabit)
+  allData = allDataRaw.filter(r => metinEslesir(r.acente_kod, r.fatura_no, r.otel));
+  renderAltTablo();
+
+  sortOklariniGuncelle();
+}
+
+async function load() {
+  const yil = yilSel.value;
+  const acenteSecili = document.getElementById('acente-sel').value;
+  const d = await api(`/api/muhasebe/acente?yil=${yil}&acente=${acenteSecili}`);
+
+  acenteler = d.acenteler;
+  const sel = document.getElementById('acente-sel');
+  if (sel.options.length <= 1) {
+    acenteler.forEach(a => {
+      const o = document.createElement('option');
+      o.value = a.kod; o.textContent = `${a.kod} — ${a.ad}`;
+      sel.appendChild(o);
+    });
+  }
+
+  const rows = d.rows;
+  let toplamGelen = 0;
+  rows.forEach(r => { toplamGelen += r.gelen_odeme||0; });
+  allDataRaw = rows;
+
+  // Gerçek cari bakiye (yevmiyeden) — sadece tek acente seçiliyken anlamlı
+  let bakiyeHtml = '';
+  const detayWrap = document.getElementById('detay-wrap');
+  const kesilenWrap = document.getElementById('kesilen-wrap');
+  detayFoylerRaw = [];
+  kesilenListesiRaw = [];
+  secilenFoylar.clear();
+
+  if (acenteSecili) {
+    const b = await api(`/api/muhasebe/acente-bakiye?kod=${acenteSecili}`);
+    bakiyeHtml = `<div class="stat-card"><div class="label">${acenteSecili} Bakiye (bize borçlu)</div>
+      <div class="value ${b.bakiye>0?'red':'green'}">${fmt(b.bakiye)}</div></div>`;
+
+    const det = await api(`/api/muhasebe/acente-detay?kod=${acenteSecili}&yil=${yil}`);
+    detayFoylerRaw = det.foyler || [];
+    kesilenListesiRaw = det.kesilen_faturalar || [];
+    detayWrap.style.display = detayFoylerRaw.length ? '' : 'none';
+    kesilenWrap.style.display = kesilenListesiRaw.length ? '' : 'none';
+  } else {
+    detayWrap.style.display = 'none';
+    kesilenWrap.style.display = 'none';
+  }
+
+  document.getElementById('kartlar').innerHTML = `
+    <div class="stat-card"><div class="label">Toplam Fatura Tahsilatı</div><div class="value green">${fmt(toplamGelen)}</div></div>
+    ${bakiyeHtml}
+  `;
+
+  uygulaFiltreVeSirala();
+}
+
+function renderKesilenTablosu() {
+  document.getElementById('kesilen-tbody').innerHTML = kesilenListesi.map(k => `<tr>
+      <td>${fmtDate(k.tarih)}</td>
+      <td>${k.fatura_no||'—'}</td>
+      <td>${k.foy_no ? '<a href="/rezervasyonlar?q='+k.foy_no+'" style="color:var(--accent)">'+k.foy_no+'</a>' : '—'}</td>
+      <td>${k.misafir||'—'}</td>
+      <td>${k.banka||'—'}</td>
+      <td class="green" style="text-align:right;font-weight:600">${fmt(k.tutar)}</td>
+      <td><button class="btn" style="padding:3px 8px;font-size:11px;background:var(--accent4);color:#000" onclick="openFaturaDuzenleModal('${k.foy_no}')">Düzenle</button></td>
+    </tr>`).join('') || (aramaTerimi ? '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px">Aramayla eşleşen kayıt yok</td></tr>' : '');
+}
+
+function renderAltTablo() {
+  document.getElementById('tbody').innerHTML = allData.map(r => `<tr>
+      <td>${fmtDate(r.tarih)}</td>
+      <td>${r.acente_kod}</td>
+      <td>${r.fatura_no||'—'}</td>
+      <td class="green" style="text-align:right">${fmt(r.gelen_odeme)}</td>
+      <td style="text-align:center">${r.otel||''}</td>
+      <td style="white-space:nowrap"><button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="duzenle(${r.id})">Düzenle</button><button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="sil(${r.id})">Sil</button></td>
+    </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:24px">${aramaTerimi ? 'Aramayla eşleşen kayıt yok' : 'Kayıt yok'}</td></tr>`;
+}
+
+function renderDetayTablosu() {
+  document.getElementById('detay-tbody').innerHTML = detayFoyler.map(f => {
+    if (f.fatura_edildi) {
+      return `<tr style="opacity:.55">
+        <td></td>
+        <td>${fmtDate(f.tarih)}</td>
+        <td>${f.foy_no ? '<a href="/rezervasyonlar?q='+f.foy_no+'" style="color:var(--accent)">'+f.foy_no+'</a>' : '—'}</td>
+        <td>${f.misafir||'—'}</td>
+        <td style="text-align:right">${fmt(f.rez_tutari)}</td>
+        <td class="red" style="text-align:right">${fmt(f.komisyon)}</td>
+        <td style="text-align:right;font-weight:600">${fmt(f.net)}</td>
+        <td style="text-align:center"><span style="font-size:10px;background:#163a23;color:#4ade80;padding:2px 8px;border-radius:10px">✓ Faturalandı</span>
+          <button onclick="faturaIptal('${f.foy_no}')" title="Faturayı iptal et" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;margin-left:6px;text-decoration:underline">İptal Et</button>
+        </td>
+      </tr>`;
+    }
+    return `<tr>
+      <td><input type="checkbox" class="detay-chk" data-foy="${f.foy_no}" ${secilenFoylar.has(f.foy_no)?'checked':''} onchange="toggleFoy('${f.foy_no}',this.checked)"></td>
+      <td>${fmtDate(f.tarih)}</td>
+      <td>${f.foy_no ? '<a href="/rezervasyonlar?q='+f.foy_no+'" style="color:var(--accent)">'+f.foy_no+'</a>' : '—'}</td>
+      <td>${f.misafir||'—'}</td>
+      <td style="text-align:right">${fmt(f.rez_tutari)}</td>
+      <td class="red" style="text-align:right">${fmt(f.komisyon)}</td>
+      <td class="green" style="text-align:right;font-weight:600">${fmt(f.net)}</td>
+      <td style="text-align:center"><span style="font-size:10px;color:var(--text2)">Bekliyor</span></td>
+    </tr>`;
+  }).join('') || (aramaTerimi ? '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:16px">Aramayla eşleşen kayıt yok</td></tr>' : '');
+  guncelleSecimOzeti();
+}
+
+function toggleFoy(foyNo, checked) {
+  if (checked) secilenFoylar.add(foyNo); else secilenFoylar.delete(foyNo);
+  guncelleSecimOzeti();
+}
+
+async function faturaIptal(foyNo) {
+  if (!confirm(`Föy #${foyNo} için kesilmiş faturayı iptal etmek istediğinize emin misiniz?\n\nFöy yeniden "Bekliyor" durumuna dönecek ve tekrar faturalandırılabilecek.`)) return;
+  const r = await api('/api/muhasebe/acente-fatura-iptal', { foy_no: foyNo });
+  if (r.ok) { toast('Fatura iptal edildi, föy yeniden aktif ✓'); load(); }
+  else toast(r.error, 'error');
+}
+
+const BANKA_KODU_TERS = { '102-1': 'IS', '102-2': 'ZRH', '102-3': 'DNZ' };
+
+function openFaturaDuzenleModal(foyNo) {
+  const k = kesilenListesi.find(x => x.foy_no === foyNo);
+  if (!k) return;
+  document.getElementById('fd-foy').textContent = k.foy_no;
+  document.getElementById('fd-misafir').textContent = k.misafir || '';
+  document.getElementById('fd-fatura-no').value = k.fatura_no || '';
+  document.getElementById('fd-tarih').value = k.tarih || '';
+  document.getElementById('fd-banka').value = BANKA_KODU_TERS[k.banka_kodu] || 'IS';
+  document.getElementById('fatura-duzenle-modal').dataset.foy = foyNo;
+  document.getElementById('fatura-duzenle-modal').classList.add('open');
+}
+function closeFaturaDuzenleModal() { document.getElementById('fatura-duzenle-modal').classList.remove('open'); }
+
+async function confirmFaturaDuzenle() {
+  const foyNo = document.getElementById('fatura-duzenle-modal').dataset.foy;
+  const data = {
+    foy_no: foyNo,
+    tarih: document.getElementById('fd-tarih').value,
+    fatura_no: document.getElementById('fd-fatura-no').value.trim(),
+    odeme_banka: document.getElementById('fd-banka').value,
+  };
+  const r = await api('/api/muhasebe/acente-fatura-duzenle', data);
+  if (r.ok) { toast('Fatura güncellendi ✓'); closeFaturaDuzenleModal(); load(); }
+  else toast(r.error, 'error');
+}
+
+function toggleHepsi(cb) {
+  secilenFoylar.clear();
+  if (cb.checked) {
+    detayFoyler.forEach(f => { if (!f.fatura_edildi) secilenFoylar.add(f.foy_no); });
+  }
+  renderDetayTablosu();
+}
+
+function guncelleSecimOzeti() {
+  const n = secilenFoylar.size;
+  const toplam = detayFoyler.filter(f => secilenFoylar.has(f.foy_no)).reduce((s,f)=>s+f.net, 0);
+  document.getElementById('secim-ozet').textContent = n ? `${n} föy seçildi — Toplam: ${fmt(toplam)}` : '';
+  document.getElementById('fatura-kes-btn').style.display = n ? '' : 'none';
+}
+
+function openFaturaModal() {
+  const secilenler = detayFoyler.filter(f => secilenFoylar.has(f.foy_no));
+  if (!secilenler.length) return;
+  document.getElementById('fm-adet').textContent = secilenler.length;
+  document.getElementById('fm-liste').innerHTML = secilenler.map(f =>
+    `<div style="display:flex;justify-content:space-between"><span>Föy #${f.foy_no} — ${f.misafir||''}</span><span>${fmt(f.net)}</span></div>`
+  ).join('');
+  const toplam = secilenler.reduce((s,f)=>s+f.net, 0);
+  document.getElementById('fm-toplam').textContent = fmt(toplam);
+  document.getElementById('fm-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fm-fatura-no').value = '';
+  document.getElementById('fatura-modal').classList.add('open');
+}
+function closeFaturaModal() { document.getElementById('fatura-modal').classList.remove('open'); }
+
+async function confirmFaturaKes() {
+  const acenteSecili = document.getElementById('acente-sel').value;
+  const data = {
+    acente_kod: acenteSecili,
+    foy_nolar: Array.from(secilenFoylar),
+    tarih: document.getElementById('fm-tarih').value,
+    odeme_banka: document.getElementById('fm-banka').value,
+    fatura_no: document.getElementById('fm-fatura-no').value.trim(),
+  };
+  const r = await api('/api/muhasebe/acente-fatura-kes', data);
+  if (r.ok) {
+    toast(`${r.detaylar.length} föy faturalandı, toplam ${fmt(r.toplam)} ✓`);
+    closeFaturaModal();
+    load();
+  } else {
+    toast(r.error, 'error');
+  }
+}
+
+async function openModal() {
+  editId = null;
+  document.getElementById('modal-baslik').textContent = 'Fatura Tahsilatı Ekle';
+  const sel = document.getElementById('f-acente');
+  sel.innerHTML = acenteler.map(a => `<option value="${a.kod}">${a.kod} — ${a.ad}</option>`).join('');
+  document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-gelen').value = 0;
+  document.getElementById('f-fatura-no').value = '';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function save() {
+  if (!validateForm([
+    {id:'f-tarih',  label:'Tarih'},
+    {id:'f-acente', label:'Acente'},
+    {id:'f-gelen',  label:'Tutar'},
+  ])) return;
+  const data = {
+    tarih: document.getElementById('f-tarih').value,
+    acente_kod: document.getElementById('f-acente').value,
+    gelen_odeme: parseFloat(document.getElementById('f-gelen').value)||0,
+    otel: document.getElementById('f-otel').value,
+    odeme_banka: document.getElementById('f-odeme-banka').value,
+    fatura_no: document.getElementById('f-fatura-no').value.trim(),
+  };
+  const url = editId ? '/api/muhasebe/acente/guncelle' : '/api/muhasebe/acente/ekle';
+  if (editId) data.id = editId;
+  const r = await api(url, data);
+  if (r.ok) { toast(editId ? 'Güncellendi ✓' : 'Kayıt eklendi ✓'); closeModal(); load(); }
+  else toast(r.error, 'error');
+}
+
+async function duzenle(id) {
+  const r = allData.find(x => x.id === id);
+  if (!r) return;
+  editId = id;
+  document.getElementById('modal-baslik').textContent = 'Fatura Tahsilatı Düzenle';
+  const sel = document.getElementById('f-acente');
+  sel.innerHTML = acenteler.map(a => `<option value="${a.kod}" ${a.kod==r.acente_kod?'selected':''}>${a.kod} — ${a.ad}</option>`).join('');
+  document.getElementById('f-tarih').value = r.tarih || '';
+  document.getElementById('f-gelen').value = r.gelen_odeme || 0;
+  document.getElementById('f-otel').value = r.otel || 'LEO';
+  document.getElementById('f-fatura-no').value = r.fatura_no || '';
+  document.getElementById('modal').classList.add('open');
+}
+
+async function sil(id) {
+  if (!confirm('Bu fatura tahsilatı kaydını silmek istediğinize emin misiniz?')) return;
+  const r = await api('/api/muhasebe/acente/sil', {id});
+  if (r.ok) { toast('Silindi ✓'); load(); }
+  else toast(r.error, 'error');
+}
+
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id==='modal') closeModal(); });
+document.getElementById('fatura-modal').addEventListener('click', e => { if (e.target.id==='fatura-modal') closeFaturaModal(); });
+document.getElementById('fatura-duzenle-modal').addEventListener('click', e => { if (e.target.id==='fatura-duzenle-modal') closeFaturaDuzenleModal(); });
+load();
+</script>
+{% endblock %}

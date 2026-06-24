@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% set active = "muh-gosterge" %}
+{% block title %}Muhasebe Gösterge{% endblock %}
+{% block page_title %}📊 Muhasebe Gösterge Tablosu{% endblock %}
+
+{% block content %}
+<div class="toolbar" style="margin-bottom:16px">
+  <label style="color:var(--text2);font-size:13px">Yıl:</label>
+  <select class="filter" id="yil-sel" onchange="load()">
+    <option>2024</option><option selected>2026</option><option>2027</option>
+  </select>
+  <div style="flex:1"></div>
+
+</div>
+
+<!-- Gelir Kartları -->
+<div class="section-title">💰 Gelirler</div>
+<div class="cards-row" id="gelir-kartlar" style="margin-bottom:20px"></div>
+
+<!-- Gider Kartları -->
+<div class="section-title">💸 Giderler</div>
+<div class="cards-row" id="gider-kartlar" style="margin-bottom:20px"></div>
+
+<!-- Aylık Özet -->
+<div class="section-title">📅 Aylık Özet</div>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Ay</th><th>Leo Kon.</th><th>CV Kon.</th><th>Adisyon</th><th>Toplam Gelir</th><th>Personel</th><th>Vergi</th><th>Net</th></tr>
+    </thead>
+    <tbody id="aylik-tbody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span></td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load() {
+  const yil = document.getElementById('yil-sel').value;
+  const d = await api(`/api/muhasebe/gosterge?yil=${yil}`);
+  const k = d.kartlar;
+
+  document.getElementById('gelir-kartlar').innerHTML = `
+    <div class="stat-card"><div class="label">Leo Konaklama</div><div class="value leo-tag">${fmt(k.leo_kon)}</div></div>
+    <div class="stat-card"><div class="label">CV Konaklama</div><div class="value cv-tag">${fmt(k.cv_kon)}</div></div>
+    <div class="stat-card"><div class="label">Adisyon</div><div class="value yellow">${fmt(k.restoran)}</div></div>
+    <div class="stat-card"><div class="label">Toplam Tahsilat</div><div class="value green">${fmt(k.tahsilat)}<div style="font-size:11px;color:var(--text2);margin-top:4px">Nakit:${fmt(k.nakit)} KK:${fmt(k.kk)}</div></div></div>
+    <div class="stat-card"><div class="label">Toplam Kapora</div><div class="value green">${fmt(k.kapora)}</div></div>
+    <div class="stat-card"><div class="label">Açık Bakiye</div><div class="value red">${fmt(k.acik)}</div></div>
+  `;
+
+  const netRenk = k.net >= 0 ? 'green' : 'red';
+  document.getElementById('gider-kartlar').innerHTML = `
+    <div class="stat-card"><div class="label">Personel</div><div class="value red">${fmt(k.maas)}</div></div>
+    <div class="stat-card"><div class="label">Stok/Market</div><div class="value yellow">${fmt(k.stok)}</div></div>
+    <div class="stat-card"><div class="label">Demirbaş</div><div class="value yellow">${fmt(k.dem)}</div></div>
+    <div class="stat-card"><div class="label">Vergi</div><div class="value red">${fmt(k.vergi)}</div></div>
+    <div class="stat-card"><div class="label">Acenteler</div><div class="value yellow">${fmt(k.acente_kom)}</div></div>
+    <div class="stat-card"><div class="label">Ortak Gideri LK</div><div class="value yellow">${fmt(k.ortak_lk)}</div></div>
+    <div class="stat-card"><div class="label">Ortak Gideri BT</div><div class="value yellow">${fmt(k.ortak_bt)}</div></div>
+    <div class="stat-card"><div class="label">Ortak Gideri FK</div><div class="value yellow">${fmt(k.ortak_fk)}</div></div>
+    <div class="stat-card"><div class="label">Toplam Gider</div><div class="value red">${fmt(k.toplam_gider)}</div></div>
+    <div class="stat-card"><div class="label">NET KÂR</div><div class="value ${netRenk}" style="font-size:20px">${fmt(k.net)}</div></div>
+  `;
+
+  const tbody = document.getElementById('aylik-tbody');
+  tbody.innerHTML = d.aylik.map(r => {
+    const netRenk = r.net > 0 ? 'green' : r.net < 0 ? 'red' : '';
+    return `<tr>
+      <td>${r.ay}</td>
+      <td>${r.leo > 0 ? fmt(r.leo) : '—'}</td>
+      <td>${r.cv > 0 ? fmt(r.cv) : '—'}</td>
+      <td>${r.rest > 0 ? fmt(r.rest) : '—'}</td>
+      <td>${r.gel > 0 ? fmt(r.gel) : '—'}</td>
+      <td>${r.pers > 0 ? fmt(r.pers) : '—'}</td>
+      <td>${r.vergi > 0 ? fmt(r.vergi) : '—'}</td>
+      <td class="${netRenk}">${r.gel > 0 || r.pers > 0 ? fmt(r.net) : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function gelirAktar() {
+  const yil = document.getElementById('yil-sel').value;
+  if (!confirm(`${yil} yılı otel gelirleri muhasebe veritabanına aktarılsın mı?`)) return;
+  const r = await api('/api/muhasebe/gelir-aktar', {yil: parseInt(yil)});
+  if (r.ok) { toast(`${r.kayit} kayıt aktarıldı ✓`); load(); }
+  else toast(r.error, 'error');
+}
+
+// Yıl seçeneğini bugünün yılına ayarla
+const thisYear = new Date().getFullYear().toString();
+document.querySelectorAll('#yil-sel option').forEach(o => {
+  if (o.value === thisYear) o.selected = true;
+});
+
+load();
+</script>
+{% endblock %}

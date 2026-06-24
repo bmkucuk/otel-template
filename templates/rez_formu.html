@@ -1,0 +1,1111 @@
+{% extends "base.html" %}
+{% set active = "rez-formu" %}
+{% block title %}Rez. Formu{% endblock %}
+{% block page_title %}📝 Konaklama Kayıt Formu{% endblock %}
+
+{% block content %}
+<style>
+.kf-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 24px;margin-bottom:18px}
+.kf-section-head{display:flex;align-items:center;gap:9px;margin-bottom:18px}
+.kf-section-head .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.kf-section-head .lbl{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2)}
+.kf-grid{display:grid;gap:16px}
+.kf-grid.c2{grid-template-columns:1fr 1fr}
+.kf-grid.c3{grid-template-columns:1fr 1fr 1fr}
+.kf-field{display:flex;flex-direction:column;gap:7px}
+.kf-field label{font-size:12px;font-weight:600;color:var(--text2)}
+.kf-field input, .kf-field select, .kf-field textarea{
+  background:var(--card2);border:1px solid var(--border);color:var(--text);
+  padding:11px 13px;border-radius:10px;font-size:13.5px;outline:none;font-family:Geist,sans-serif;
+}
+.kf-field input[type=date]{font-family:'Geist Mono',monospace;color-scheme:dark}
+.kf-field textarea{resize:vertical;min-height:60px;font-family:Geist,sans-serif}
+.kf-readout{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;
+  display:flex;align-items:baseline;gap:6px}
+.kf-readout .v{font-family:'Geist Mono',monospace;font-size:16px;font-weight:600;color:var(--accent2)}
+.kf-readout .u{font-size:12px;color:var(--text2)}
+.kf-kisi-row{display:grid;grid-template-columns:1fr 1fr 36px;gap:10px;align-items:center;margin-bottom:8px}
+.kf-kisi-row input{background:var(--card2);border:1px solid var(--border);color:var(--text);
+  padding:9px 12px;border-radius:9px;font-size:13px;outline:none;font-family:Geist,sans-serif}
+.kf-kisi-del{display:flex;align-items:center;justify-content:center;color:var(--text2);cursor:pointer;
+  font-size:16px;border-radius:8px;height:36px}
+.kf-kisi-del:hover{color:var(--accent3);background:var(--card2)}
+.kf-add-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;
+  font-size:12.5px;font-weight:600;color:var(--text2);background:var(--card2);border:1px solid var(--border);
+  cursor:pointer;margin-top:4px}
+.kf-add-btn:hover{color:var(--text)}
+.kf-taahhut{font-size:11.5px;line-height:1.65;color:var(--text2);background:var(--card2);
+  border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.kf-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:24px}
+.kf-btn{padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none}
+.kf-btn-def{background:var(--card);color:var(--text2);border:1px solid var(--border)}
+.kf-btn-gold{background:linear-gradient(150deg,#ffc24d,#f0a52e);color:#1a1206}
+.kf-btn-blue{background:var(--card2);color:var(--accent2);border:1px solid var(--border)}
+.kf-mod-rozet{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:9px;font-size:12.5px;font-weight:600}
+.kf-mod-rozet.duzenle{background:rgba(67,198,255,.14);color:var(--accent2);border:1px solid rgba(67,198,255,.4)}
+
+/* ── Ekran formu = yazdirma goruntusuyle AYNI YERLESIM, mevcut koyu tema renkleriyle ── */
+.kf-paper{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:16px;padding:26px 24px;margin:0 auto 18px;width:794px;max-width:100%;box-sizing:border-box}
+.kf-phead{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:16px}
+.kf-plogo{width:46px;height:46px;border-radius:8px;background:linear-gradient(150deg,#ffc24d,#f0a52e);color:#1a1206;display:flex;
+  align-items:center;justify-content:center;font-weight:700;font-size:16px;font-family:'Geist Mono',monospace;flex:none}
+.kf-ptitle{font-size:15px;font-weight:700;letter-spacing:.3px;color:var(--text)}
+.kf-psub{font-size:11px;color:var(--text2);margin-top:2px}
+
+.kf-pbig-row{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);margin-bottom:8px;border-radius:10px;overflow:hidden}
+.kf-pbig-cell{border-right:1px solid var(--border);padding:10px 12px;text-align:center;background:var(--card2)}
+.kf-pbig-cell:last-child{border-right:none}
+.kf-pbig-cell b{display:block;font-size:9.5px;text-transform:uppercase;color:var(--text2);margin-bottom:4px;font-weight:600;letter-spacing:.4px}
+.kf-pbig-cell select,.kf-pbig-cell input{border:none;background:transparent;font-size:30px;font-weight:700;
+  font-family:'Geist Mono',monospace;text-align:center;width:100%;color:var(--accent);outline:none;cursor:pointer}
+.kf-pbig-cell input[readonly]{cursor:not-allowed;opacity:.85}
+
+.kf-prow{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px}
+.kf-prow.c3{grid-template-columns:1fr 1fr 1fr}
+.kf-pcell{border-right:1px solid var(--border);padding:9px 12px;background:var(--card2)}
+.kf-pcell:last-child{border-right:none}
+.kf-pcell b{display:block;font-size:9.5px;text-transform:uppercase;color:var(--text2);margin-bottom:4px;font-weight:600;letter-spacing:.3px}
+.kf-pcell input,.kf-pcell select{border:none;background:transparent;font-size:13.5px;width:100%;color:var(--text);
+  outline:none;font-family:Geist,sans-serif;padding:0}
+.kf-pcell select{color-scheme:dark}
+.kf-pcell select option{background:var(--card2);color:var(--text)}
+.kf-pcell input[type=date]{font-family:'Geist Mono',monospace;color-scheme:dark}
+.kf-pcell input[type=date]::-webkit-calendar-picker-indicator,
+.kf-ptable input[type=date]::-webkit-calendar-picker-indicator{
+  opacity:0;position:absolute;right:0;top:0;width:100%;height:100%;cursor:pointer;margin:0;padding:0;
+}
+.kf-pcell input[type=date],.kf-ptable input[type=date]{position:relative}
+.kf-pcell input::placeholder{color:var(--text2)}
+.kf-pcell .ro{font-size:13.5px;color:var(--text)}
+
+.kf-pbig-cell select{color-scheme:dark}
+.kf-pbig-cell select option{background:var(--card2);color:var(--text)}
+
+.kf-ptaahhut{font-size:11px;line-height:1.6;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;color:var(--text2);background:var(--card2)}
+
+.kf-ptable{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px}
+.kf-ptable th{background:var(--card2);font-size:10px;text-transform:uppercase;border:1px solid var(--border);padding:7px 10px;text-align:left;color:var(--text2);letter-spacing:.4px}
+.kf-ptable td{border:1px solid var(--border);padding:0;background:var(--card2)}
+.kf-ptable td input{border:none;background:transparent;width:100%;padding:8px 10px;font-size:12.5px;color:var(--text);outline:none;font-family:Geist,sans-serif}
+.kf-ptable td input[type=date]{font-family:'Geist Mono',monospace;color-scheme:dark}
+.kf-ptable td.borc-in input{color:var(--accent3);font-family:'Geist Mono',monospace;text-align:right}
+.kf-ptable .ptbl-del{text-align:center;cursor:pointer;color:var(--text2);width:32px}
+.kf-ptable .ptbl-del:hover{color:var(--accent3)}
+.kf-ptable .ptbl-bakiye{text-align:right;font-family:'Geist Mono',monospace;font-weight:600;padding:8px 10px}
+.kf-palacak{cursor:pointer;text-align:right;font-family:'Geist Mono',monospace;font-size:12.5px;padding:8px 10px;color:var(--text2)}
+.kf-palacak.filled{color:var(--pos);font-weight:600}
+.kf-palacak .rozet{display:block;font-size:9px;color:var(--accent2);font-weight:600;text-transform:uppercase;font-family:Geist,sans-serif}
+
+.kf-psign{display:flex;justify-content:space-between;margin-top:20px}
+.kf-psign div{width:45%;text-align:center;border-top:1px solid var(--border);padding-top:6px;font-size:11px;color:var(--text2)}
+
+.kf-pkisi-add{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:9px;
+  font-size:12.5px;font-weight:600;color:var(--text2);background:var(--card2);border:1px solid var(--border);cursor:pointer;margin-bottom:8px}
+.kf-pkisi-add:hover{color:var(--text)}
+
+/* ── TAB ile gezinirken odaklanilan hucreyi belirgin "aydinlatma" ile gosterir ── */
+.kf-pcell input:focus,.kf-pcell select:focus,
+.kf-pbig-cell input:focus,.kf-pbig-cell select:focus,
+.kf-ptable td input:focus,
+.kf-palacak:focus,
+#kf-cagir-no:focus{
+  outline:none;
+  box-shadow:0 0 0 2px var(--accent),0 0 14px 3px rgba(255,194,77,.55);
+  background:rgba(255,194,77,.08);
+  border-radius:5px;
+  position:relative;
+  z-index:2;
+}
+.kf-pbig-cell:has(input:focus),.kf-pbig-cell:has(select:focus){
+  box-shadow:0 0 0 2px var(--accent),0 0 16px 4px rgba(255,194,77,.5);
+  border-radius:10px;
+}
+
+.kf-hareket-tablo{border:1px solid var(--border);border-radius:10px;overflow:hidden;width:max-content;max-width:100%}
+.kf-hareket-head{display:grid;grid-template-columns:150px 230px 110px 140px 120px 34px;background:var(--card2)}
+.kf-hareket-head div{padding:9px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);font-weight:600;border-right:1px solid var(--border)}
+.kf-hareket-head div:last-child{border-right:none}
+.kf-hareket-row{display:grid;grid-template-columns:150px 230px 110px 140px 120px 34px;border-top:1px solid var(--border);align-items:center}
+.kf-hareket-row > *{border-right:1px solid var(--border)}
+.kf-hareket-row > *:last-child{border-right:none}
+.kf-hareket-row input{background:transparent;border:none;color:var(--text);padding:8px 12px;font-size:12.5px;outline:none;font-family:Geist,sans-serif;width:100%}
+.kf-hareket-row input[type=date]{font-family:'Geist Mono',monospace;color-scheme:dark}
+.kf-hareket-row .borc-in{color:var(--accent3);font-family:'Geist Mono',monospace;text-align:right}
+.kf-hareket-row .alacak-in{color:var(--pos);font-family:'Geist Mono',monospace;text-align:right}
+.kf-hareket-row .bakiye-out{padding:8px 12px;text-align:right;font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600}
+.kf-hareket-del{display:flex;align-items:center;justify-content:center;color:var(--text2);cursor:pointer;font-size:15px;height:100%}
+.kf-hareket-del:hover{color:var(--accent3)}
+.kf-hareket-toplam{display:grid;grid-template-columns:150px 230px 110px 140px 120px 34px;border-top:1px solid var(--border);background:var(--card2)}
+.kf-hareket-toplam div{padding:10px 12px;font-size:12px;font-weight:600;color:var(--text2);border-right:1px solid var(--border)}
+.kf-hareket-toplam div:last-child{border-right:none}
+
+.kf-alacak-cell{padding:8px 12px;cursor:pointer;text-align:right;font-family:'Geist Mono',monospace;font-size:12.5px;color:var(--text2);transition:.12s}
+.kf-alacak-cell:hover{background:var(--card2);color:var(--text)}
+.kf-alacak-cell.filled{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.kf-alacak-cell.filled .tutar{color:var(--pos);font-weight:600}
+.kf-alacak-cell.filled .odeme-rozet{font-size:9.5px;font-weight:600;color:var(--accent2);text-transform:uppercase;letter-spacing:.3px;font-family:Geist,sans-serif}
+
+.am-overlay{display:none;position:fixed;inset:0;background:rgba(5,9,20,.72);z-index:300;align-items:center;justify-content:center}
+.am-overlay.open{display:flex}
+.am-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:360px}
+.am-title{font-size:15px;font-weight:700;margin-bottom:18px}
+.am-label{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text2);margin-bottom:9px}
+.am-chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.am-chip{padding:11px 10px;border-radius:10px;background:var(--card2);border:1px solid var(--border);
+  color:var(--text2);font-size:12.5px;font-weight:600;text-align:center;cursor:pointer;transition:.12s}
+.am-chip:hover{color:var(--text)}
+.am-chip.selected{background:rgba(255,194,77,.16);color:var(--accent);border-color:var(--accent)}
+.am-tutar-input{width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);
+  padding:11px 13px;border-radius:10px;font-size:15px;outline:none;font-family:'Geist Mono',monospace;margin-bottom:20px}
+.am-footer{display:flex;align-items:center;gap:8px}
+
+/* ── Yazdırma — fiziki form görünümü ── */
+#kf-print{display:none}
+@media print {
+  #kf-screen{display:none !important}
+  #kf-print{display:block !important}
+  body{background:white !important;color:#000 !important}
+  #content{padding:0 !important}
+  #topbar{display:none !important}
+}
+#kf-print{color:#000;font-family:Geist,sans-serif;max-width:780px;margin:0 auto}
+.kfp-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px}
+.kfp-logo{width:46px;height:46px;border-radius:8px;background:#1a1206;color:#ffc24d;display:flex;
+  align-items:center;justify-content:center;font-weight:700;font-size:16px;font-family:'Geist Mono',monospace}
+.kfp-title{font-size:15px;font-weight:700;letter-spacing:.3px}
+.kfp-sub{font-size:11px;color:#444}
+.kfp-row{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;margin-bottom:8px}
+.kfp-cell{border-right:1px solid #000;padding:7px 10px;font-size:13.5px}
+.kfp-cell:last-child{border-right:none}
+.kfp-cell b{display:block;font-size:11.5px;text-transform:uppercase;color:#555;margin-bottom:3px;font-weight:600}
+.kfp-taahhut{font-size:9.5px;line-height:1.5;border:1px solid #000;padding:10px;margin-bottom:10px}
+.kfp-sign{display:flex;justify-content:space-between;margin:14px 0}
+.kfp-sign div{width:45%;text-align:center;border-top:1px solid #000;padding-top:4px;font-size:10px}
+.kfp-table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:10px}
+.kfp-kisiler-table{margin-bottom:8px}
+.kfp-kisiler-table td{font-size:11.5px}
+.kfp-table th,.kfp-table td{border:1px solid #000;padding:5px 8px;text-align:left}
+.kfp-table th{background:#eee;font-size:9px;text-transform:uppercase}
+.kfp-big-row{display:grid;grid-template-columns:1fr 1fr;border:2px solid #000;margin-bottom:8px}
+.kfp-big-cell{border-right:2px solid #000;padding:8px 12px;text-align:center}
+.kfp-big-cell:last-child{border-right:none}
+.kfp-big-cell b{display:block;font-size:9.5px;text-transform:uppercase;color:#555;margin-bottom:4px;font-weight:600;letter-spacing:.4px}
+.kfp-big-cell span{display:block;font-size:34px;font-weight:700;font-family:'Geist Mono',monospace;line-height:1}
+</style>
+
+<div id="kf-screen">
+
+  <!-- Föy Çağır -->
+  <div class="kf-section" style="padding:16px 24px">
+    <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+      <div class="kf-field" style="flex:none;width:160px">
+        <label>Föy No ile Getir</label>
+        <input type="number" id="kf-cagir-no" placeholder="örn. 1042" onkeydown="if(event.key==='Enter')cagirFoy()">
+      </div>
+      <div class="kf-btn kf-btn-blue" onclick="cagirFoy()">🔍 Getir</div>
+      <div id="kf-mod-rozet" style="display:none;margin-left:auto;align-self:center"></div>
+    </div>
+  </div>
+
+  <div class="kf-paper">
+
+    <div class="kf-phead">
+      <div>
+        <div class="kf-ptitle">OTEL KONAKLAMA VE KAYIT FORMU</div>
+        <div class="kf-psub">Otel Leo &amp; Cunda Villa</div>
+      </div>
+    </div>
+
+    <div class="kf-pbig-row">
+      <div class="kf-pbig-cell">
+        <b>Föy No</b>
+        <input id="kf-foy" readonly tabindex="-1">
+      </div>
+      <div class="kf-pbig-cell">
+        <b>Oda No</b>
+        <select id="kf-oda" onchange="onOdaChange()"></select>
+      </div>
+    </div>
+
+    <div class="kf-prow">
+      <div class="kf-pcell">
+        <b>Giriş Tarihi / Check-in</b>
+        <input type="date" id="kf-giris" onchange="autoSetCikis();recalc()">
+      </div>
+      <div class="kf-pcell">
+        <b>Çıkış Tarihi / Check-out</b>
+        <input type="date" id="kf-cikis" onchange="recalc()">
+      </div>
+    </div>
+    <div class="kf-prow">
+      <div class="kf-pcell">
+        <b>Konaklama Gün Sayısı</b>
+        <span class="ro"><span id="kf-gun">0</span> gün</span>
+      </div>
+      <div class="kf-pcell">
+        <b>Otel</b>
+        <input id="kf-otel-readout" readonly tabindex="-1" class="ro">
+        <input type="hidden" id="kf-otel">
+      </div>
+    </div>
+
+    <div class="kf-ptaahhut">
+      Otelden ayrılış saati 12:00. Yukarıda belirtilen çıkış tarihinde değişiklik yapmam durumunda erken çıkış için para iadesi talep etmeyeceğimi taahhüt ederim. Erken çıkış durumunda yukarıda belirtilen gün sayısı kadar ücreti ödeyeceğimi kabul ederim. Otel dışından temin edilmiş yiyecek ve içeceklerin faturama otel fiyatlarıyla yansıtılacağını kabul ederim. Otelin 22:30–09:00 arası olan sessiz saatlerine riayet edeceğim. Beraberimdeki küçük çocuklara konaklama süresince eşlik edeceğim. Otel havuzunun çocuklar için olmadığı konusunda bilgilendirildim, bu konuda sorumluluk tamamen bendedir. Otel odalarında sigara içmenin yasak olduğu konusunda bilgilendirildim; sigara içilmesi durumunda 2.500,00 TL ekstra temizlik ücretinin faturama yansıtılacağını onaylarım. Otel eşyalarında ve odadaki demirbaş ve mefruşatta tarafımca oluşturulabilecek zararın faturama yansıtılmasını kabul ediyorum. Oda bakımının her gün ve tekstil değişiminin üç günde bir yapılacağı konusunda bilgilendirildim.
+    </div>
+
+    <div class="kf-prow">
+      <div class="kf-pcell">
+        <b>Adı Soyadı</b>
+        <input id="kf-ad" placeholder="İbrahim Yalçın">
+      </div>
+      <div class="kf-pcell">
+        <b>T.C. Kimlik No</b>
+        <input id="kf-tc" placeholder="11111111111" maxlength="11">
+      </div>
+    </div>
+    <div class="kf-prow">
+      <div class="kf-pcell">
+        <b>Araç Marka-Model-Plaka / Şehir</b>
+        <input id="kf-arac" placeholder="Fiat Egea · 10 ABC 123 · Balıkesir">
+      </div>
+      <div class="kf-pcell">
+        <b>Cep Telefonu</b>
+        <input id="kf-tel" placeholder="0532 000 00 00">
+      </div>
+    </div>
+
+    <table class="kf-ptable">
+      <thead><tr><th colspan="3">Beraberinde Konaklayacak Kişiler</th></tr></thead>
+      <tbody id="kf-kisiler"></tbody>
+    </table>
+    <div class="kf-pkisi-add" onclick="addKisi()">+ Kişi Ekle</div>
+
+    <div class="kf-prow c3">
+      <div class="kf-pcell">
+        <b>Gün Fiyatı (₺)</b>
+        <input type="number" id="kf-gunfiyat" value="0" min="0" step="any" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0';recalc()" oninput="recalc()">
+      </div>
+      <div class="kf-pcell">
+        <b>Kişi Sayısı (Yetişkin / Çocuk)</b>
+        <span class="ro" style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="kf-yetiskin" value="2" min="1" style="width:40px">
+          /
+          <input type="number" id="kf-cocuk" value="0" min="0" style="width:40px">
+        </span>
+      </div>
+      <div class="kf-pcell">
+        <b>Kanal / Acente</b>
+        <select id="kf-kanal">
+          <option value="">— Seçin —</option>
+          <option value="Telefon">Telefon</option>
+          <option value="Kapıdan">Kapıdan</option>
+          <option value="Booking">Booking</option>
+          <option value="EXP">Expedia</option>
+          <option value="JLY">JollyTur</option>
+          <option value="TTS">TatilSepeti</option>
+          <option value="ETS">ETSTUR</option>
+        </select>
+      </div>
+    </div>
+    <div class="kf-prow c3">
+      <div class="kf-pcell">
+        <b>Toplam Tutar</b>
+        <span class="ro" id="kf-toplam" style="color:var(--accent);font-weight:700">0 ₺</span>
+      </div>
+      <div class="kf-pcell">
+        <b>Kahvaltı</b>
+        <select id="kf-kahvalti"><option>Kahvaltılı</option><option>Kahvaltısız</option></select>
+      </div>
+      <div class="kf-pcell">
+        <b>Ek Yatak</b>
+        <select id="kf-ek"><option>Yok</option><option>Var</option></select>
+      </div>
+    </div>
+    <div class="kf-prow">
+      <div class="kf-pcell">
+        <b>Kapora (₺)</b>
+        <input type="number" id="kf-kapora" value="0" min="0" step="any" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0';recalc()" oninput="recalc()">
+      </div>
+      <div class="kf-pcell">
+        <b>Kapora Tarihi</b>
+        <input type="date" id="kf-kapora-tarihi">
+      </div>
+    </div>
+
+    <table class="kf-ptable">
+      <thead>
+        <tr>
+          <th colspan="7" id="kf-cari-baslik" style="text-align:left;background:var(--card);border:none;padding:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text2)">Cari Hareketler</th>
+        </tr>
+        <tr>
+          <th style="width:90px">Tarih</th>
+          <th style="width:52px">ADS No</th>
+          <th>Açıklama</th>
+          <th style="width:72px;text-align:right">Borç</th>
+          <th style="width:140px;text-align:right">Alacak</th>
+          <th style="width:78px;text-align:right">Bakiye +/-</th>
+          <th style="width:30px"></th>
+        </tr>
+      </thead>
+      <tbody id="kf-hareketler"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" style="font-weight:600;padding:8px 10px">Genel Bakiye</td>
+          <td class="ptbl-bakiye" id="kf-h-borc">0 ₺</td>
+          <td class="ptbl-bakiye" id="kf-h-alacak">0 ₺</td>
+          <td class="ptbl-bakiye" id="kf-h-net" style="font-weight:700">0 ₺</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="kf-pkisi-add" id="kf-hareket-ekle-btn" onclick="addHareket()">+ Satır Ekle</div>
+    <div id="kf-gercek-btns" style="display:none;gap:8px;margin-bottom:4px">
+      <div class="kf-pkisi-add" onclick="openAdisyonEkleModal()">+ Adisyon Ekle</div>
+      <div class="kf-pkisi-add" onclick="openOdemeAlModal()">💰 Ödeme Al</div>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin:6px 0 16px" id="kf-cari-not">
+      Not: Cari Hareketler bölümü yalnızca bilgi/yazdırma amaçlıdır — Adisyon ve Yevmiye'ye otomatik işlenmez.
+    </div>
+
+    <div class="kf-psign">
+      <div>Misafir İmza</div>
+      <div>Resepsiyon</div>
+    </div>
+  </div>
+
+  <div class="kf-actions">
+    <div class="kf-btn kf-btn-def" onclick="resetForm()">Temizle</div>
+    <div class="kf-btn kf-btn-blue" onclick="yazdir()">🖨️ Yazdır</div>
+    <div class="kf-btn kf-btn-gold" onclick="kaydet()" id="kf-kaydet-btn">💾 Kaydet</div>
+  </div>
+</div>
+
+<!-- ░ Alacak / Ödeme Şekli Modalı ░ -->
+<div class="am-overlay" id="alacak-modal">
+  <div class="am-box">
+    <div class="am-title">Ödeme Şekli Ekle</div>
+    <div class="am-label">Ödeme Şekli</div>
+    <div class="am-chips">
+      <div class="am-chip" data-sekil="Nakit" onclick="selectOdemeSekli('Nakit',this)">💵 Nakit</div>
+      <div class="am-chip" data-sekil="Kredi Kartı" onclick="selectOdemeSekli('Kredi Kartı',this)">💳 Kredi Kartı</div>
+      <div class="am-chip" data-sekil="İş Bankası" onclick="selectOdemeSekli('İş Bankası',this)">🏦 İş Bankası</div>
+      <div class="am-chip" data-sekil="Denizbank" onclick="selectOdemeSekli('Denizbank',this)">🏦 Denizbank</div>
+    </div>
+    <div class="am-label">Tutar (₺)</div>
+    <input type="number" id="am-tutar" class="am-tutar-input" placeholder="0" min="0" step="any">
+    <div class="am-footer">
+      <div class="kf-btn kf-btn-def" onclick="clearAlacak()">Temizle</div>
+      <div style="flex:1"></div>
+      <div class="kf-btn kf-btn-def" onclick="closeAlacakModal()">İptal</div>
+      <div class="kf-btn kf-btn-gold" onclick="confirmAlacak()">Tamam</div>
+    </div>
+  </div>
+</div>
+
+<!-- ░ Adisyon Ekle Modalı ░ -->
+<div class="am-overlay" id="adisyon-ekle-modal">
+  <div class="am-box">
+    <div class="am-title">Adisyon Kalemi Ekle</div>
+    <div class="am-label">Tarih</div>
+    <input type="date" id="ae-tarih" class="am-tutar-input" style="font-size:14px;font-weight:600;margin-bottom:14px">
+    <div class="am-label">Açıklama</div>
+    <input type="text" id="ae-aciklama" class="am-tutar-input" placeholder="Minibar, Restoran, vb." style="font-size:14px;font-weight:600;font-family:Geist,sans-serif;margin-bottom:14px">
+    <div class="am-label">Tutar (₺)</div>
+    <input type="number" id="ae-tutar" class="am-tutar-input" placeholder="0" min="0" step="any">
+    <div class="am-footer">
+      <div style="flex:1"></div>
+      <div class="kf-btn kf-btn-def" onclick="closeAdisyonEkleModal()">İptal</div>
+      <div class="kf-btn kf-btn-gold" onclick="confirmAdisyonEkle()">Ekle</div>
+    </div>
+  </div>
+</div>
+
+<!-- ░ Ödeme Al Modalı ░ -->
+<div class="am-overlay" id="odeme-al-modal">
+  <div class="am-box">
+    <div class="am-title">Ödeme Al</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding:10px 12px;background:var(--card2);border-radius:9px">
+      <span style="font-size:12px;color:var(--text2);font-weight:600">Toplam Açık Borç</span>
+      <span id="oa-toplam-borc" style="font-size:16px;font-weight:800;color:var(--accent3)">0 ₺</span>
+    </div>
+    <div class="am-label">Ödeme Şekli</div>
+    <div class="am-chips">
+      <div class="am-chip oa-chip" data-sekil="Nakit" onclick="selectOdemeAlSekli('Nakit',this)">💵 Nakit</div>
+      <div class="am-chip oa-chip" data-sekil="Kredi Kartı" onclick="selectOdemeAlSekli('Kredi Kartı',this)">💳 Kredi Kartı</div>
+      <div class="am-chip oa-chip" data-sekil="İş Bankası" onclick="selectOdemeAlSekli('İş Bankası',this)">🏦 İş Bankası</div>
+      <div class="am-chip oa-chip" data-sekil="Denizbank" onclick="selectOdemeAlSekli('Denizbank',this)">🏦 Denizbank</div>
+    </div>
+    <div class="am-label">Alınan Tutar (₺)</div>
+    <input type="number" id="oa-tutar" class="am-tutar-input" placeholder="0" min="0" step="any">
+    <div style="font-size:11px;color:var(--text2);margin:8px 0 16px">
+      Tutar önce rezervasyon bakiyesine, kalanı sırayla adisyon kalemlerine düşülür.
+    </div>
+    <div class="am-footer">
+      <div style="flex:1"></div>
+      <div class="kf-btn kf-btn-def" onclick="closeOdemeAlModal()">İptal</div>
+      <div class="kf-btn kf-btn-gold" onclick="confirmOdemeAl()">💾 Ödeme Al</div>
+    </div>
+  </div>
+</div>
+
+<!-- ░ Yazdırma görünümü (yalnız print) ░ -->
+<div id="kf-print">
+  <div class="kfp-head">
+    <div>
+      <div class="kfp-title">OTEL KONAKLAMA VE KAYIT FORMU</div>
+      <div class="kfp-sub">Otel Leo &amp; Cunda Villa</div>
+    </div>
+  </div>
+
+  <div class="kfp-big-row">
+    <div class="kfp-big-cell"><b>Föy No</b><span id="kfp-foy"></span></div>
+    <div class="kfp-big-cell"><b>Oda No</b><span id="kfp-oda"></span></div>
+  </div>
+  <div class="kfp-row">
+    <div class="kfp-cell"><b>Giriş Tarihi / Check-in</b><span id="kfp-giris"></span></div>
+    <div class="kfp-cell"><b>Çıkış Tarihi / Check-out</b><span id="kfp-cikis"></span></div>
+  </div>
+  <div class="kfp-row">
+    <div class="kfp-cell"><b>Konaklama Gün Sayısı</b><span id="kfp-gun"></span></div>
+    <div class="kfp-cell"><b>Otel</b><span id="kfp-otel-adi"></span></div>
+  </div>
+
+  <div class="kfp-taahhut" id="kfp-taahhut"></div>
+
+  <div class="kfp-row">
+    <div class="kfp-cell"><b>Adı Soyadı</b><span id="kfp-ad"></span></div>
+    <div class="kfp-cell"><b>T.C. Kimlik No</b><span id="kfp-tc"></span></div>
+  </div>
+  <div class="kfp-row">
+    <div class="kfp-cell"><b>Araç Marka-Model-Plaka / Şehir</b><span id="kfp-arac"></span></div>
+    <div class="kfp-cell"><b>Cep Telefonu</b><span id="kfp-tel"></span></div>
+  </div>
+  <table class="kfp-table kfp-kisiler-table">
+    <thead><tr><th colspan="2">Beraberinde Konaklayacak Kişiler</th></tr></thead>
+    <tbody id="kfp-kisiler-body"></tbody>
+  </table>
+  <div class="kfp-row">
+    <div class="kfp-cell"><b>Oda Fiyatı / Gün Sayısı</b><span id="kfp-fiyat"></span></div>
+    <div class="kfp-cell"><b>Kanal / Acente</b><span id="kfp-kanal"></span></div>
+  </div>
+
+  <table class="kfp-table" id="kfp-hareket-tablo">
+    <thead>
+      <tr><th style="width:70px">Tarih</th><th style="width:42px">ADS No</th><th>Açıklama</th><th style="width:50px;text-align:right">Borç</th><th style="width:70px;text-align:right">Alacak</th><th style="width:58px;text-align:right">Bakiye +/-</th></tr>
+    </thead>
+    <tbody id="kfp-hareket-body"></tbody>
+  </table>
+
+  <div class="kfp-sign">
+    <div>Misafir İmza</div>
+    <div>Resepsiyon</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const today = new Date().toISOString().split('T')[0];
+const ODA_OTEL = {}; // oda_no -> 'CV' | 'LEO'
+for (let i=1;i<=10;i++)  ODA_OTEL[i] = 'CV';
+for (let i=11;i<=29;i++) ODA_OTEL[i] = 'LEO';
+const OTEL_ADI = {CV:'Cunda Villa', LEO:'Otel Leo'};
+
+function fillOdaSelect() {
+  const sel = document.getElementById('kf-oda');
+  let html = '<option value="">Seçin...</option>';
+  for (let i=1;i<=29;i++) html += `<option value="${i}">${i}</option>`;
+  sel.innerHTML = html;
+  onOdaChange();
+}
+function onOdaChange() {
+  const oda = parseInt(document.getElementById('kf-oda').value);
+  const otel = ODA_OTEL[oda] || '';
+  document.getElementById('kf-otel').value = otel;
+  document.getElementById('kf-otel-readout').value = otel ? OTEL_ADI[otel] : '';
+}
+
+let kisiId = 1;
+let kisiler = [];
+
+function renderKisiler() {
+  const wrap = document.getElementById('kf-kisiler');
+  if (kisiler.length === 0) {
+    wrap.innerHTML = '<tr><td colspan="3" style="font-size:12px;color:var(--text2);padding:8px 10px">Beraberinde misafir yok.</td></tr>';
+    return;
+  }
+  wrap.innerHTML = kisiler.map(k => `
+    <tr data-id="${k.id}">
+      <td><input placeholder="Adı Soyadı" value="${k.ad||''}" oninput="updKisi(${k.id},'ad',this.value)"></td>
+      <td><input placeholder="T.C. Kimlik No" maxlength="11" value="${k.tc||''}" oninput="updKisi(${k.id},'tc',this.value)"></td>
+      <td class="ptbl-del" onclick="delKisi(${k.id})">×</td>
+    </tr>
+  `).join('');
+}
+function addKisi() { kisiler.push({id: kisiId++, ad:'', tc:''}); renderKisiler(); }
+function updKisi(id, field, val) { const k = kisiler.find(x=>x.id===id); if (k) k[field]=val; }
+function delKisi(id) { kisiler = kisiler.filter(x=>x.id!==id); renderKisiler(); }
+
+let hareketId = 1;
+let hareketler = [];
+let cariReadOnly = false;
+
+function fmtSign(n) { return n<0 ? '-'+fmt(Math.abs(n)) : fmt(n); }
+
+function updateCariModUI() {
+  const baslik = document.getElementById('kf-cari-baslik');
+  const btn = document.getElementById('kf-hareket-ekle-btn');
+  const not = document.getElementById('kf-cari-not');
+  const gercekBtns = document.getElementById('kf-gercek-btns');
+  if (cariReadOnly) {
+    baslik.innerHTML = '🔒 Cari Hareketler — Gerçek Adisyon / Cari Verisi';
+    baslik.style.color = 'var(--accent2)';
+    btn.style.display = 'none';
+    gercekBtns.style.display = 'flex';
+    not.textContent = 'Bu liste Adisyon ve Cari sayfalarıyla aynı, canlı veriyi gösterir. Aşağıdaki butonlarla buradan da işlem girebilirsin.';
+  } else {
+    baslik.textContent = 'Cari Hareketler';
+    baslik.style.color = 'var(--text2)';
+    btn.style.display = 'inline-flex';
+    gercekBtns.style.display = 'none';
+    not.textContent = "Not: Bu bölüm yalnızca bilgi/yazdırma amaçlıdır — Adisyon ve Yevmiye'ye otomatik işlenmez.";
+  }
+}
+
+function recomputeBakiye() {
+  let run = 0, totBorc = 0, totAlacak = 0;
+  hareketler.forEach(h => {
+    const borc = parseFloat(h.borc) || 0;
+    const alacak = parseFloat(h.alacak) || 0;
+    run += borc - alacak;
+    totBorc += borc; totAlacak += alacak;
+    const el = document.querySelector(`tr[data-hid="${h.id}"] .ptbl-bakiye`);
+    if (el) {
+      el.textContent = fmtSign(run);
+      el.style.color = run > 0 ? 'var(--accent3)' : (run < 0 ? 'var(--pos)' : 'var(--text2)');
+    }
+  });
+  document.getElementById('kf-h-borc').textContent = fmt(totBorc);
+  document.getElementById('kf-h-alacak').textContent = fmt(totAlacak);
+  const net = totBorc - totAlacak;
+  const netEl = document.getElementById('kf-h-net');
+  netEl.textContent = fmtSign(net);
+  netEl.style.color = net > 0 ? 'var(--accent3)' : (net < 0 ? 'var(--pos)' : 'var(--text2)');
+}
+
+function alacakCellHtml(h) {
+  const tutar = parseFloat(h.alacak) || 0;
+  if (cariReadOnly) {
+    if (tutar > 0) {
+      return `<div class="kf-palacak filled">${fmt(tutar)}<span class="rozet">${h.odeme_sekli || ''}</span></div>`;
+    }
+    return `<div class="kf-palacak">—</div>`;
+  }
+  const kbd = `tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAlacakModal(${h.id})}"`;
+  if (tutar > 0) {
+    return `<div class="kf-palacak filled" ${kbd} onclick="openAlacakModal(${h.id})">
+        ${fmt(tutar)}<span class="rozet">${h.odeme_sekli || ''}</span>
+      </div>`;
+  }
+  return `<div class="kf-palacak" ${kbd} onclick="openAlacakModal(${h.id})">+ Ödeme Şekli</div>`;
+}
+
+function renderHareketler() {
+  const wrap = document.getElementById('kf-hareketler');
+  if (cariReadOnly) {
+    wrap.innerHTML = hareketler.length ? hareketler.map(h => `
+      <tr data-hid="${h.id}">
+        <td style="padding:8px 10px">${h.tarih ? fmtDate(h.tarih) : ''}</td>
+        <td style="padding:8px 10px">${h.ads_no||''}</td>
+        <td style="padding:8px 10px">${h.aciklama||''}</td>
+        <td class="borc-in" style="padding:8px 10px">${h.borc ? fmt(parseFloat(h.borc)) : ''}</td>
+        <td style="padding:0">${alacakCellHtml(h)}</td>
+        <td class="ptbl-bakiye">0 ₺</td>
+        <td></td>
+      </tr>`).join('') : `<tr><td colspan="7" style="padding:10px;color:var(--text2);font-size:12px">Bu föy için Adisyon/Cari hareketi bulunmuyor.</td></tr>`;
+    recomputeBakiye();
+    return;
+  }
+  wrap.innerHTML = hareketler.map(h => `
+      <tr data-hid="${h.id}">
+        <td><input type="date" value="${h.tarih||''}" oninput="updHareket(${h.id},'tarih',this.value)"></td>
+        <td><input placeholder="—" value="${h.ads_no||''}" oninput="updHareket(${h.id},'ads_no',this.value)"></td>
+        <td><input placeholder="Açıklama girin…" value="${h.aciklama||''}" oninput="updHareket(${h.id},'aciklama',this.value)"></td>
+        <td class="borc-in"><input placeholder="0" value="${h.borc||''}" oninput="updHareket(${h.id},'borc',this.value)"></td>
+        <td style="padding:0">${alacakCellHtml(h)}</td>
+        <td class="ptbl-bakiye">0 ₺</td>
+        <td class="ptbl-del" onclick="delHareket(${h.id})">×</td>
+      </tr>`).join('');
+  recomputeBakiye();
+}
+function addHareket(prefill) {
+  hareketler.push(Object.assign({id: hareketId++, tarih:'', ads_no:'', aciklama:'', borc:'', alacak:'', odeme_sekli:''}, prefill||{}));
+  renderHareketler();
+}
+function updHareket(id, field, val) {
+  const h = hareketler.find(x=>x.id===id);
+  if (!h) return;
+  h[field] = val;
+  // Satır/sütun yapısını yeniden kurmadan sadece bakiyeleri güncelle —
+  // boylece yazarken input focus'u kaybolmaz (her tusta 'tek harf' sorunu).
+  recomputeBakiye();
+}
+function delHareket(id) { hareketler = hareketler.filter(x=>x.id!==id); renderHareketler(); }
+
+// ── Alacak / Ödeme Şekli Modalı ──
+let alacakModalId = null;
+const ODEME_SEKILLERI = ['Nakit', 'Kredi Kartı', 'İş Bankası', 'Deniz Bank'];
+
+function openAlacakModal(id) {
+  alacakModalId = id;
+  const h = hareketler.find(x => x.id === id);
+  if (!h) return;
+  document.getElementById('am-tutar').value = h.alacak || '';
+  document.querySelectorAll('.am-chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.sekil === (h.odeme_sekli || ''));
+  });
+  document.getElementById('alacak-modal').classList.add('open');
+  setTimeout(() => document.getElementById('am-tutar').focus(), 50);
+}
+function closeAlacakModal() {
+  document.getElementById('alacak-modal').classList.remove('open');
+  alacakModalId = null;
+}
+function selectOdemeSekli(sekil, btn) {
+  document.querySelectorAll('.am-chip').forEach(c => c.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+function confirmAlacak() {
+  const h = hareketler.find(x => x.id === alacakModalId);
+  if (!h) return;
+  const tutar = document.getElementById('am-tutar').value;
+  const secili = document.querySelector('.am-chip.selected');
+  if (parseFloat(tutar) > 0 && !secili) {
+    toast('Lütfen ödeme şekli seçin', 'error');
+    return;
+  }
+  h.alacak = tutar || '';
+  h.odeme_sekli = secili ? secili.dataset.sekil : '';
+  closeAlacakModal();
+  renderHareketler();
+}
+function clearAlacak() {
+  const h = hareketler.find(x => x.id === alacakModalId);
+  if (h) { h.alacak = ''; h.odeme_sekli = ''; }
+  closeAlacakModal();
+  renderHareketler();
+}
+
+// ── Form'dan dogrudan Adisyon Ekle ──
+function openAdisyonEkleModal() {
+  if (!editFoy) { toast('Önce bir föy çağırın', 'error'); return; }
+  document.getElementById('ae-tarih').value = today;
+  document.getElementById('ae-aciklama').value = '';
+  document.getElementById('ae-tutar').value = '';
+  document.getElementById('adisyon-ekle-modal').classList.add('open');
+}
+function closeAdisyonEkleModal() {
+  document.getElementById('adisyon-ekle-modal').classList.remove('open');
+}
+async function confirmAdisyonEkle() {
+  const tarih = document.getElementById('ae-tarih').value;
+  const aciklama = document.getElementById('ae-aciklama').value.trim();
+  const tutar = parseFloat(document.getElementById('ae-tutar').value);
+  if (!tarih) { toast('Tarih girin', 'error'); return; }
+  if (!aciklama) { toast('Açıklama girin', 'error'); return; }
+  if (!(tutar > 0)) { toast('Tutar > 0 olmalı', 'error'); return; }
+
+  const next = await api('/api/next-adisyon');
+  const r = await api('/api/adisyon/ekle', {
+    adisyon_no: next.adisyon_no, foy_no: editFoy, tarih, tutar, odeme: 'Oda Hesabına', aciklama
+  });
+  if (r.ok) {
+    toast(`Adisyon eklendi ✓ (#${next.adisyon_no})`);
+    closeAdisyonEkleModal();
+    await reloadGercekCari();
+  } else {
+    toast(r.error || 'Adisyon eklenemedi', 'error');
+  }
+}
+
+// ── Form'dan dogrudan Odeme Al ──
+let odemeAlSekli = '';
+function openOdemeAlModal() {
+  if (!editFoy || !gercekRez) { toast('Önce bir föy çağırın', 'error'); return; }
+  const rezBakiye = Math.max(0, gercekRez.rez_bakiye || 0);
+  let adisBakiye = 0;
+  gercekAdisyonlar.forEach(a => { adisBakiye += Math.max(0, a.tutar - (a.odenen_tutar||0)); });
+  const toplam = rezBakiye + adisBakiye;
+
+  document.getElementById('oa-toplam-borc').textContent = fmt(toplam);
+  document.getElementById('oa-tutar').value = toplam || '';
+  odemeAlSekli = '';
+  document.querySelectorAll('.oa-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('odeme-al-modal').classList.add('open');
+}
+function closeOdemeAlModal() {
+  document.getElementById('odeme-al-modal').classList.remove('open');
+}
+function selectOdemeAlSekli(sekil, btn) {
+  document.querySelectorAll('.oa-chip').forEach(c => c.classList.remove('selected'));
+  btn.classList.add('selected');
+  odemeAlSekli = sekil;
+}
+async function confirmOdemeAl() {
+  const tutar = parseFloat(document.getElementById('oa-tutar').value);
+  if (!(tutar > 0)) { toast('Tutar > 0 olmalı', 'error'); return; }
+  if (!odemeAlSekli) { toast('Ödeme şekli seçin', 'error'); return; }
+
+  let kalan = tutar;
+  const rezBakiye = Math.max(0, gercekRez.rez_bakiye || 0);
+
+  if (rezBakiye > 0 && kalan > 0) {
+    const rezPay = Math.min(kalan, rezBakiye);
+    const rr = await api('/api/tahsilat/rez', {foy_no: editFoy, tutar: rezPay, odeme: odemeAlSekli});
+    if (!rr.ok) { toast(rr.error || 'Rezervasyon ödemesi kaydedilemedi', 'error'); return; }
+    kalan -= rezPay;
+  }
+
+  if (kalan > 0) {
+    const adisyon_nolar = [];
+    const adis_tutarlar = {};
+    for (const a of [...gercekAdisyonlar].sort((x,y)=>x.adisyon_no-y.adisyon_no)) {
+      if (kalan <= 0) break;
+      const bakiye = a.tutar - (a.odenen_tutar||0);
+      if (bakiye <= 0) continue;
+      const pay = Math.min(kalan, bakiye);
+      adisyon_nolar.push(a.adisyon_no);
+      adis_tutarlar[a.adisyon_no] = pay;
+      kalan -= pay;
+    }
+    if (adisyon_nolar.length) {
+      const ar = await api('/api/tahsilat/adis', {foy_no: editFoy, odeme: odemeAlSekli, adisyon_nolar, adis_tutarlar});
+      if (!ar.ok) { toast(ar.error || 'Adisyon ödemesi kaydedilemedi', 'error'); return; }
+    }
+  }
+
+  toast(kalan > 0 ? `Ödeme alındı ✓ — ${fmt(kalan)} fazla girildi` : 'Ödeme alındı ✓');
+  closeOdemeAlModal();
+  await reloadGercekCari();
+}
+
+function resetHareketler() {
+  hareketler = []; hareketId = 1;
+  for (let i=0;i<15;i++) addHareket();
+  updateCariModUI();
+}
+
+function updateRezBedeliRow() {
+  if (cariReadOnly) return; // gercek veri modunda yerel hesaplamayla ezilmesin
+  if (!hareketler.length) return;
+  const giris = document.getElementById('kf-giris').value;
+  const cikis = document.getElementById('kf-cikis').value;
+  const gunFiyat = parseFloat(document.getElementById('kf-gunfiyat').value) || 0;
+  const kapora = parseFloat(document.getElementById('kf-kapora').value) || 0;
+  let gun = 0;
+  if (giris && cikis) gun = Math.max(0, Math.round((new Date(cikis)-new Date(giris))/86400000));
+  const toplam = gun * gunFiyat;
+  const kalan = Math.max(0, toplam - kapora);
+
+  const row = hareketler[0];
+  row.tarih = giris || '';
+  row.aciklama = 'Rez Bedeli';
+  row.borc = kalan > 0 ? String(kalan) : '';
+  row.alacak = '';
+  renderHareketler();
+}
+
+function recalc() {
+  const giris = document.getElementById('kf-giris').value;
+  const cikis = document.getElementById('kf-cikis').value;
+  const gunFiyat = parseFloat(document.getElementById('kf-gunfiyat').value) || 0;
+  let gun = 0;
+  if (giris && cikis) gun = Math.max(0, Math.round((new Date(cikis)-new Date(giris))/86400000));
+  document.getElementById('kf-gun').textContent = gun;
+  document.getElementById('kf-toplam').textContent = fmt(gun*gunFiyat);
+  updateRezBedeliRow();
+}
+
+function autoSetCikis() {
+  const giris = document.getElementById('kf-giris').value;
+  if (!giris) return;
+  const p = giris.split('-');
+  const d = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2])+1);
+  document.getElementById('kf-cikis').value =
+    d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+async function resetForm() {
+  editFoy = null;
+  cariReadOnly = false;
+  document.getElementById('kf-mod-rozet').style.display = 'none';
+  document.getElementById('kf-kaydet-btn').textContent = '💾 Kaydet';
+  document.getElementById('kf-foy').readOnly = true;
+  fillOdaSelect();
+  const d = await api('/api/next-foy');
+  document.getElementById('kf-foy').value = d.foy_no;
+  document.getElementById('kf-oda').value = '';
+  onOdaChange();
+  document.getElementById('kf-giris').value = today;
+  autoSetCikis();
+  document.getElementById('kf-ad').value = '';
+  document.getElementById('kf-tc').value = '';
+  document.getElementById('kf-arac').value = '';
+  document.getElementById('kf-tel').value = '';
+  document.getElementById('kf-yetiskin').value = 2;
+  document.getElementById('kf-cocuk').value = 0;
+  document.getElementById('kf-kanal').value = '';
+  document.getElementById('kf-kahvalti').value = 'Kahvaltılı';
+  document.getElementById('kf-gunfiyat').value = 0;
+  document.getElementById('kf-kapora').value = 0;
+  document.getElementById('kf-kapora-tarihi').value = today;
+  document.getElementById('kf-ek').value = 'Yok';
+  kisiler = []; kisiId = 1;
+  renderKisiler();
+  resetHareketler();
+  recalc();
+}
+
+// ── Föy Çağır / Düzenleme Modu ──
+let editFoy = null;
+
+function parseBeraberindekiler(str) {
+  if (!str) return [];
+  return str.split(';').map(s => s.trim()).filter(Boolean).map(s => {
+    const m = s.match(/^(.*?)\s*\(TC:\s*([0-9]*)\)\s*$/);
+    return m ? { id: kisiId++, ad: m[1].trim(), tc: m[2].trim() } : { id: kisiId++, ad: s, tc: '' };
+  });
+}
+
+async function cagirFoy() {
+  const no = document.getElementById('kf-cagir-no').value;
+  if (!no) { toast('Föy numarası girin', 'error'); return; }
+  const allRez = await api(`/api/rezervasyonlar?q=${encodeURIComponent(no)}&otel=Tümü`);
+  const r = allRez.find(x => String(x.foy_no) === String(no));
+  if (!r) { toast(`Föy #${no} bulunamadı`, 'error'); return; }
+
+  editFoy = r.foy_no;
+  document.getElementById('kf-foy').readOnly = true;
+  document.getElementById('kf-foy').value = r.foy_no;
+  document.getElementById('kf-oda').value = r.oda_no;
+  onOdaChange();
+  document.getElementById('kf-giris').value = r.giris || '';
+  document.getElementById('kf-cikis').value = r.cikis || '';
+  document.getElementById('kf-ad').value = r.musteri || '';
+  document.getElementById('kf-tc').value = r.tc_kimlik || '';
+  document.getElementById('kf-arac').value = r.arac_plaka || '';
+  document.getElementById('kf-tel').value = r.telefon || '';
+  document.getElementById('kf-yetiskin').value = r.yetiskin || 2;
+  document.getElementById('kf-cocuk').value = r.cocuk || 0;
+  document.getElementById('kf-kanal').value = r.kanal || '';
+  document.getElementById('kf-kahvalti').value = r.kahvalti || 'Kahvaltılı';
+  document.getElementById('kf-gunfiyat').value = r.gun_fiyat || 0;
+  document.getElementById('kf-kapora').value = r.kapora || 0;
+  document.getElementById('kf-kapora-tarihi').value = r.kapora_tarihi || '';
+  document.getElementById('kf-ek').value = r.ek_yatak || 'Yok';
+
+  kisiler = parseBeraberindekiler(r.beraberindekiler);
+  renderKisiler();
+  gercekRez = r;
+  await loadGercekCariHareketler(r.foy_no, parseFloat(r.toplam_fiyat)||0, r.giris);
+  recalc();
+
+  const rozet = document.getElementById('kf-mod-rozet');
+  rozet.style.display = 'block';
+  rozet.innerHTML = `<span class="kf-mod-rozet duzenle">✎ Föy #${r.foy_no} düzenleniyor</span>`;
+  document.getElementById('kf-kaydet-btn').textContent = '💾 Güncelle';
+  toast(`Föy #${r.foy_no} yüklendi`);
+}
+
+// ── Gercek Adisyon + Cari (tahsilat) verisini cek, salt-okunur goster ──
+let gercekRez = null;
+let gercekAdisyonlar = [];
+
+async function loadGercekCariHareketler(foyNo, toplamFiyat, giris) {
+  cariReadOnly = true;
+  let satirlar = [];
+
+  if (toplamFiyat > 0) {
+    satirlar.push({id: hareketId++, tarih: giris||'', ads_no:'', aciklama:'Rez Bedeli', borc: String(toplamFiyat), alacak:'', odeme_sekli:''});
+  }
+  try {
+    const adisRes = await api(`/api/adisyonlar?foy=${foyNo}`);
+    gercekAdisyonlar = adisRes.adisyonlar || [];
+    gercekAdisyonlar.forEach(a => {
+      satirlar.push({
+        id: hareketId++, tarih: a.tarih||'', ads_no: a.adisyon_no||'',
+        aciklama: a.aciklama || 'Adisyon', borc: String(a.tutar||0), alacak:'', odeme_sekli:''
+      });
+    });
+  } catch(e) {}
+  try {
+    const tahData = await api(`/api/tahsilat/gecmis?foy_no=${foyNo}`);
+    (tahData||[]).forEach(t => {
+      satirlar.push({
+        id: hareketId++, tarih: t.tarih||'', ads_no:'',
+        aciklama: t.tur || 'Tahsilat', borc:'', alacak: String(t.tutar||0), odeme_sekli: t.odeme||''
+      });
+    });
+  } catch(e) {}
+
+  satirlar.sort((a,b) => (a.tarih||'').localeCompare(b.tarih||''));
+  hareketler = satirlar;
+  renderHareketler();
+  updateCariModUI();
+}
+
+async function reloadGercekCari() {
+  if (!editFoy) return;
+  const allRez = await api(`/api/rezervasyonlar?q=${encodeURIComponent(editFoy)}&otel=Tümü`);
+  const r = allRez.find(x => String(x.foy_no) === String(editFoy));
+  gercekRez = r || null;
+  await loadGercekCariHareketler(editFoy, parseFloat(r?.toplam_fiyat)||0, r?.giris);
+}
+
+async function kaydet() {
+  if (!validateForm([
+    {id:'kf-ad',       label:'Adı Soyadı'},
+    {id:'kf-oda',      label:'Oda No'},
+    {id:'kf-kanal',    label:'Kanal / Acente'},
+    {id:'kf-giris',    label:'Giriş Tarihi'},
+    {id:'kf-cikis',    label:'Çıkış Tarihi'},
+    {id:'kf-gunfiyat', label:'Gün Fiyatı'},
+  ])) return;
+
+  const giris = document.getElementById('kf-giris').value;
+  const cikis = document.getElementById('kf-cikis').value;
+  if (cikis <= giris) { toast('Çıkış tarihi girişten sonra olmalı!', 'error'); return; }
+
+  const gunFiyat = parseFloat(document.getElementById('kf-gunfiyat').value) || 0;
+  const gun = Math.max(0, Math.round((new Date(cikis)-new Date(giris))/86400000));
+
+  const beraberindekiler = kisiler
+    .filter(k => (k.ad||'').trim())
+    .map(k => `${k.ad}${k.tc ? ' (TC: '+k.tc+')' : ''}`)
+    .join('; ');
+
+  const data = {
+    foy_no:            document.getElementById('kf-foy').value,
+    oda_no:             document.getElementById('kf-oda').value,
+    otel:               document.getElementById('kf-otel').value,
+    kanal:              document.getElementById('kf-kanal').value,
+    musteri:            document.getElementById('kf-ad').value,
+    yetiskin:           document.getElementById('kf-yetiskin').value,
+    cocuk:              document.getElementById('kf-cocuk').value,
+    ek_yatak:           document.getElementById('kf-ek').value,
+    kahvalti:           document.getElementById('kf-kahvalti').value,
+    gun_fiyat:          gunFiyat,
+    toplam_fiyat:       gun*gunFiyat,
+    giris, cikis,
+    kapora:             document.getElementById('kf-kapora').value,
+    kapora_tarihi:      document.getElementById('kf-kapora-tarihi').value || null,
+    tc_kimlik:          document.getElementById('kf-tc').value,
+    arac_plaka:         document.getElementById('kf-arac').value,
+    telefon:            document.getElementById('kf-tel').value,
+    beraberindekiler,
+  };
+
+  // Çifte rezervasyon kontrolü (düzenlerken kendi kaydını çakışma saymaz)
+  const allRez = await api(`/api/rezervasyonlar?q=&otel=Tümü`);
+  const odaNo = parseInt(data.oda_no);
+  const conflict = allRez.find(r =>
+    r.oda_no === odaNo && r.otel === data.otel &&
+    r.foy_no !== (editFoy ? parseInt(editFoy) : -1) &&
+    r.giris && r.cikis &&
+    data.giris < r.cikis && data.cikis > r.giris
+  );
+  if (conflict) {
+    toast(`Oda ${odaNo} bu tarihlerde ${conflict.musteri} adına dolu!`, 'error');
+    return;
+  }
+
+  const url = editFoy ? '/api/rezervasyon/guncelle' : '/api/rezervasyon/yeni';
+  const r = await api(url, data);
+  if (r.ok) {
+    toast(editFoy ? `Föy #${data.foy_no} güncellendi ✓` : `Föy #${data.foy_no} kaydedildi ✓ — Rezervasyonlar'a eklendi`);
+    fillPrintView(data, gun);
+    resetForm();
+  } else {
+    toast(r.error || 'Hata oluştu', 'error');
+  }
+}
+
+function fillPrintView(data, gun) {
+  document.getElementById('kfp-foy').textContent = data.foy_no;
+  document.getElementById('kfp-giris').textContent = fmtDate(data.giris);
+  document.getElementById('kfp-cikis').textContent = fmtDate(data.cikis);
+  document.getElementById('kfp-gun').textContent = gun + ' gün';
+  document.getElementById('kfp-oda').textContent = data.oda_no || '—';
+  document.getElementById('kfp-otel-adi').textContent = data.otel === 'LEO' ? 'Otel Leo' : 'Cunda Villa';
+  document.getElementById('kfp-ad').textContent = data.musteri || '—';
+  document.getElementById('kfp-tc').textContent = data.tc_kimlik || '—';
+  document.getElementById('kfp-arac').textContent = data.arac_plaka || '—';
+  document.getElementById('kfp-tel').textContent = data.telefon || '—';
+  const kBody = document.getElementById('kfp-kisiler-body');
+  const doluKisiler = kisiler.filter(k => (k.ad||'').trim() || (k.tc||'').trim());
+  kBody.innerHTML = doluKisiler.length
+    ? doluKisiler.map(k => `<tr><td>${k.ad||'—'}</td><td>${k.tc||'—'}</td></tr>`).join('')
+    : `<tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr>`;
+  document.getElementById('kfp-fiyat').textContent = fmt(data.gun_fiyat) + ' x ' + gun + ' gün = ' + fmt(data.toplam_fiyat);
+  document.getElementById('kfp-kanal').textContent = data.kanal || '—';
+  document.getElementById('kfp-taahhut').textContent = document.querySelector('.kf-ptaahhut').textContent.trim();
+
+  // Cari hareketler — sadece doldurulmuş satırlar yazdırılır
+  let run = 0;
+  const rows = hareketler.filter(h => (h.tarih||h.ads_no||h.aciklama||h.borc||h.alacak));
+  const body = document.getElementById('kfp-hareket-body');
+  body.innerHTML = rows.map(h => {
+    const borc = parseFloat(h.borc)||0, alacak = parseFloat(h.alacak)||0;
+    run += borc - alacak;
+    return `<tr>
+      <td>${h.tarih ? fmtDate(h.tarih) : ''}</td>
+      <td>${h.ads_no||''}</td>
+      <td>${h.aciklama||''}</td>
+      <td style="text-align:right">${borc?fmt(borc):''}</td>
+      <td style="text-align:right">${alacak?fmt(alacak):''}</td>
+      <td style="text-align:right">${fmtSign(run)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function yazdir() {
+  // Ekrandaki güncel verilerle yazdırma görünümünü doldur (henüz kaydedilmemiş olabilir)
+  const giris = document.getElementById('kf-giris').value;
+  const cikis = document.getElementById('kf-cikis').value;
+  const gunFiyat = parseFloat(document.getElementById('kf-gunfiyat').value) || 0;
+  const gun = giris && cikis ? Math.max(0, Math.round((new Date(cikis)-new Date(giris))/86400000)) : 0;
+  const beraberindekiler = kisiler
+    .filter(k => (k.ad||'').trim())
+    .map(k => `${k.ad}${k.tc ? ' (TC: '+k.tc+')' : ''}`)
+    .join('; ');
+  fillPrintView({
+    foy_no: document.getElementById('kf-foy').value,
+    giris, cikis,
+    oda_no: document.getElementById('kf-oda').value,
+    otel: document.getElementById('kf-otel').value,
+    musteri: document.getElementById('kf-ad').value,
+    tc_kimlik: document.getElementById('kf-tc').value,
+    arac_plaka: document.getElementById('kf-arac').value,
+    telefon: document.getElementById('kf-tel').value,
+    beraberindekiler,
+    gun_fiyat: gunFiyat,
+    toplam_fiyat: gun*gunFiyat,
+    kanal: document.getElementById('kf-kanal').value,
+  }, gun);
+  window.print();
+}
+
+(async function init() {
+  fillOdaSelect();
+  renderKisiler();
+  await resetForm();
+  const params = new URLSearchParams(window.location.search);
+  const foyParam = params.get('foy');
+  if (foyParam) {
+    document.getElementById('kf-cagir-no').value = foyParam;
+    await cagirFoy();
+  }
+})();
+</script>
+{% endblock %}

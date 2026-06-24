@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% set active = "muh-vergi" %}
+{% block title %}Vergi{% endblock %}
+{% block page_title %}🧾 Vergi Takibi{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+  <label style="color:var(--text2);font-size:12px">Yıl:</label>
+  <select class="filter" id="yil-sel" onchange="load()"></select>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="openModal()">＋ Vergi Ekle</button>
+</div>
+
+<div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div>
+    <div class="section-title">⏳ Ödenecek Vergiler</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Dönem</th><th>Vergi Türü</th><th>Matrah</th><th>Tutar</th><th>Onayla</th></tr></thead>
+        <tbody id="bekleyen-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    <div class="section-title">✅ Ödenen Vergiler</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tarih</th><th>Dönem</th><th>Vergi Türü</th><th>Tutar</th><th>Ödeme</th></tr></thead>
+        <tbody id="odenen-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modal-baslik">Vergi Kaydı Ekle</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Dönem Yılı</label><input type="number" id="f-yil" min="2020" max="2030"></div>
+      <div class="form-group"><label>Dönem Ayı</label>
+        <select id="f-ay">
+          <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
+          <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
+          <option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option>
+          <option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Vergi Türü</label>
+      <select id="f-tur">
+        <option>KDV Beyannamesi</option><option>Muhtasar Beyanname</option>
+        <option>Kurumlar Vergisi</option><option>Gelir Vergisi</option>
+        <option>Damga Vergisi</option><option>Diğer</option>
+      </select>
+    </div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Matrah (₺)</label><input type="number" id="f-matrah" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+      <div class="form-group"><label>Vergi Tutarı (₺)</label><input type="number" id="f-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Durum</label><select id="f-durum"><option>Bekliyor</option><option>Ödendi</option></select></div>
+      <div class="form-group"><label>Ödeme Bankası</label><select id="f-banka"></select></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="f-aciklama"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal()">İptal</button>
+      <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let editId = null;
+let allData = [];
+const thisYear = new Date().getFullYear();
+const yilSel = document.getElementById('yil-sel');
+for (let y = thisYear-2; y <= thisYear+1; y++) {
+  const o = document.createElement('option');
+  o.value = y; o.textContent = y;
+  if (y === thisYear) o.selected = true;
+  yilSel.appendChild(o);
+}
+document.getElementById('f-yil').value = thisYear;
+document.getElementById('f-ay').value = new Date().getMonth() + 1;
+
+async function load() {
+  const yil = yilSel.value;
+  const data = await api(`/api/muhasebe/vergi?yil=${yil}`);
+  const bekleyen = data.filter(r => r.durum !== 'Ödendi');
+  const odenen = data.filter(r => r.durum === 'Ödendi');
+
+  const toplamBekleyen = bekleyen.reduce((s, r) => s + (r.tutar||0), 0);
+  const toplamOdenen = odenen.reduce((s, r) => s + (r.tutar||0), 0);
+
+  document.getElementById('kartlar').innerHTML = `
+    <div class="stat-card"><div class="label">⏳ Ödenecek</div><div class="value red">${fmt(toplamBekleyen)}</div></div>
+    <div class="stat-card"><div class="label">✅ Ödenen</div><div class="value green">${fmt(toplamOdenen)}</div></div>
+    <div class="stat-card"><div class="label">Toplam</div><div class="value yellow">${fmt(toplamBekleyen+toplamOdenen)}</div></div>
+  `;
+
+  allData = data;
+  document.getElementById('bekleyen-tbody').innerHTML = bekleyen.map(r => `<tr>
+    <td>${r.donem_ay_adi||''} ${r.donem_yil}</td>
+    <td>${r.vergi_turu}</td>
+    <td style="text-align:right">${fmt(r.matrah)}</td>
+    <td class="red" style="text-align:right">${fmt(r.tutar)}</td>
+    <td style="white-space:nowrap"><button class="btn btn-primary" style="padding:3px 10px;font-size:11px" onclick="onayla(${r.id})">✓ Öde</button> <button class="btn" style="padding:3px 8px;font-size:11px;background:var(--accent4);color:#000" onclick="duzenle(${r.id})">Düzenle</button> <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="sil(${r.id})">Sil</button></td>
+  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px">Bekleyen vergi yok</td></tr>';
+
+  document.getElementById('odenen-tbody').innerHTML = odenen.map(r => `<tr>
+    <td>${r.tarih||'—'}</td>
+    <td>${r.donem_ay_adi||''} ${r.donem_yil}</td>
+    <td>${r.vergi_turu}</td>
+    <td class="green" style="text-align:right">${fmt(r.tutar)}</td>
+    <td style="font-size:11px">${r.odeme_banka==='100'?'Nakit':r.odeme_banka==='102-1'?'İş Bankası':r.odeme_banka==='102-2'?'Ziraat':r.odeme_banka==='102-3'?'Deniz Bank':r.odeme_banka||'—'}</td>
+    <td style="white-space:nowrap"><button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="duzenle(${r.id})">Düzenle</button><button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="sil(${r.id})">Sil</button></td>
+  </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px">—</td></tr>';
+}
+
+async function onayla(id) {
+  const tarih = new Date().toISOString().split('T')[0];
+  const r = await api('/api/muhasebe/vergi/onayla', {id, tarih});
+  if (r.ok) { toast('Vergi ödendi olarak işaretlendi ✓'); load(); }
+  else toast(r.error, 'error');
+}
+
+async function openModal() {
+  editId = null;
+  document.getElementById('modal-baslik').textContent = 'Vergi Kaydı Ekle';
+  const bankalar = await api('/api/muhasebe/bankalar');
+  document.getElementById('f-banka').innerHTML = `
+    <option value="100">Nakit (Kasa)</option>
+    <option value="102-1">İş Bankası</option>
+    <option value="102-2">Ziraat Bankası</option>
+    <option value="102-3">Deniz Bank</option>`;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function save() {
+  if (!validateForm([
+    {id:'f-yil',   label:'Dönem Yılı'},
+    {id:'f-ay',    label:'Dönem Ayı'},
+    {id:'f-tur',   label:'Vergi Türü'},
+    {id:'f-tutar', label:'Vergi Tutarı'},
+  ])) return;
+  const data = {
+    donem_yil: parseInt(document.getElementById('f-yil').value),
+    donem_ay: parseInt(document.getElementById('f-ay').value),
+    vergi_turu: document.getElementById('f-tur').value,
+    matrah: parseFloat(document.getElementById('f-matrah').value)||0,
+    tutar: parseFloat(document.getElementById('f-tutar').value)||0,
+    durum: document.getElementById('f-durum').value,
+    odeme_banka: document.getElementById('f-banka').value,
+    aciklama: document.getElementById('f-aciklama').value,
+  };
+  const url = editId ? '/api/muhasebe/vergi/guncelle' : '/api/muhasebe/vergi/ekle';
+  if (editId) data.id = editId;
+  const r = await api(url, data);
+  if (r.ok) { toast(editId ? 'Güncellendi ✓' : 'Vergi kaydedildi ✓'); closeModal(); load(); }
+  else toast(r.error, 'error');
+}
+
+async function duzenle(id) {
+  const r = allData.find(x => x.id === id);
+  if (!r) return;
+  editId = id;
+  document.getElementById('modal-baslik').textContent = 'Vergi Düzenle';
+  document.getElementById('f-yil').value = r.donem_yil || new Date().getFullYear();
+  document.getElementById('f-ay').value = r.donem_ay || 1;
+  document.getElementById('f-tur').value = r.vergi_turu || '';
+  document.getElementById('f-matrah').value = r.matrah || 0;
+  document.getElementById('f-tutar').value = r.tutar || 0;
+  document.getElementById('f-durum').value = r.durum || 'Bekliyor';
+  document.getElementById('f-aciklama').value = r.aciklama || '';
+  document.getElementById('modal').classList.add('open');
+}
+
+async function sil(id) {
+  if (!confirm('Bu vergi kaydını silmek istediğinize emin misiniz?')) return;
+  const r = await api('/api/muhasebe/vergi/sil', {id});
+  if (r.ok) { toast('Silindi ✓'); load(); }
+  else toast(r.error, 'error');
+}
+
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id==='modal') closeModal(); });
+load();
+</script>
+{% endblock %}

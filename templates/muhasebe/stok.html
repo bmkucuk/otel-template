@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% set active = "muh-stok" %}
+{% block title %}Stok{% endblock %}
+{% block page_title %}📦 Stok / Market Alımları{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+  <label style="color:var(--text2);font-size:12px">Yıl:</label>
+  <select class="filter" id="yil-sel" onchange="load()"></select>
+  <select class="filter" id="kat-sel" onchange="load()">
+    <option value="">Tüm Kategoriler</option>
+    <option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option>
+    <option>Kırtasiye</option><option>Diğer</option>
+  </select>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="openModal()">＋ Alım Ekle</button>
+</div>
+
+<div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th style="width:100px">Tarih</th><th>Açıklama</th><th style="width:110px">Kategori</th><th style="width:90px;text-align:right">Tutar</th><th style="width:120px">Ödeme Hesabı</th><th style="width:60px;text-align:center">Fatura</th><th style="width:80px">Not</th><th style="width:130px"></th></tr></thead>
+    <tbody id="tbody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span></td></tr></tbody>
+  </table>
+</div>
+<div id="info" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modal-baslik">Stok Alımı Ekle</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="f-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
+      <div class="form-group"><label>Belge No</label><input type="text" id="f-belge"></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="f-aciklama"></div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Kategori</label>
+        <select id="f-kat"><option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option><option>Kırtasiye</option><option>Diğer</option></select>
+      </div>
+      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Ödeme Hesabı</label><select id="f-hesap"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Not</label><input type="text" id="f-not"></div>
+      <div class="form-group" style="justify-content:flex-end;padding-top:20px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="f-fatura"> Fatura Var
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal()">İptal</button>
+      <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allData = [];
+const thisYear = new Date().getFullYear();
+const yilSel = document.getElementById('yil-sel');
+for (let y = thisYear-2; y <= thisYear+1; y++) {
+  const o = document.createElement('option');
+  o.value = y; o.textContent = y;
+  if (y === thisYear) o.selected = true;
+  yilSel.appendChild(o);
+}
+
+async function load() {
+  const yil = yilSel.value;
+  const kat = document.getElementById('kat-sel').value;
+  const data = await api(`/api/muhasebe/stok?yil=${yil}&kat=${encodeURIComponent(kat)}`);
+
+  // Kategori toplamları
+  const katTop = {};
+  let toplam = 0;
+  data.forEach(r => {
+    const k = r.kategori || 'Diğer';
+    katTop[k] = (katTop[k] || 0) + r.tutar;
+    toplam += r.tutar;
+  });
+  document.getElementById('kartlar').innerHTML =
+    `<div class="stat-card"><div class="label">Toplam Alım</div><div class="value red">${fmt(toplam)}</div><div class="sub">${data.length} kayıt</div></div>` +
+    Object.entries(katTop).slice(0,4).map(([k,t]) =>
+      `<div class="stat-card"><div class="label">${k}</div><div class="value yellow">${fmt(t)}</div></div>`
+    ).join('');
+
+  document.getElementById('tbody').innerHTML = data.map(r => `<tr>
+    <td>${r.tarih}</td><td>${r.aciklama}</td><td>${r.kategori||'—'}</td>
+    <td class="red" style="text-align:right;white-space:nowrap">${fmt(r.tutar)}</td>
+    <td>${r.odeme_hesap==='100'?'Nakit':r.odeme_hesap==='102-1'?'İş Bankası':r.odeme_hesap==='102-2'?'Ziraat':r.odeme_hesap==='102-3'?'Deniz Bank':r.odeme_hesap||'—'}</td>
+    <td>${r.fatura_var ? '<span class="green">✅</span>' : '<span class="red">❌</span>'}</td>
+    <td>${r.not_||'—'}</td>
+    <td style="white-space:nowrap"><button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="duzenle(${r.id})">Düzenle</button><button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="sil(${r.id},'${r.aciklama}')">Sil</button></td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
+  allData = data;
+  document.getElementById('info').textContent = `${data.length} kayıt | Toplam: ${fmt(toplam)}`;
+}
+
+let editId = null;
+
+async function openModal() {
+  editId = null;
+  document.getElementById('modal-baslik').textContent = 'Stok Alımı Ekle';
+  const bankalar = await api('/api/muhasebe/bankalar');
+  document.getElementById('f-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
+  document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function save() {
+  const data = {
+    tarih: document.getElementById('f-tarih').value,
+    belge_no: document.getElementById('f-belge').value,
+    aciklama: document.getElementById('f-aciklama').value,
+    kategori: document.getElementById('f-kat').value,
+    tutar: parseFloat(document.getElementById('f-tutar').value)||0,
+    odeme_hesap: document.getElementById('f-hesap').value,
+    fatura_var: document.getElementById('f-fatura').checked,
+    not_: document.getElementById('f-not').value,
+  };
+  if (!validateForm([
+    {id:'f-tarih',    label:'Tarih'},
+    {id:'f-aciklama', label:'Açıklama'},
+    {id:'f-tutar',    label:'Tutar'},
+    {id:'f-hesap',    label:'Ödeme Hesabı'},
+  ])) return;
+  const url = editId ? '/api/muhasebe/stok/guncelle' : '/api/muhasebe/stok/ekle';
+  if (editId) data.id = editId;
+  const r = await api(url, data);
+  if (r.ok) { toast(editId ? 'Güncellendi ✓' : 'Alım kaydedildi ✓'); closeModal(); load(); }
+  else toast(r.error, 'error');
+}
+
+async function duzenle(id) {
+  const r = allData.find(x => x.id === id);
+  if (!r) return;
+  editId = id;
+  document.getElementById('modal-baslik').textContent = 'Stok Düzenle';
+  const bankalar = await api('/api/muhasebe/bankalar');
+  document.getElementById('f-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
+  document.getElementById('f-tarih').value = r.tarih || '';
+  document.getElementById('f-belge').value = r.belge_no || '';
+  document.getElementById('f-aciklama').value = r.aciklama || '';
+  document.getElementById('f-kat').value = r.kategori || 'Market/Gıda';
+  document.getElementById('f-tutar').value = r.tutar || 0;
+  document.getElementById('f-hesap').value = r.odeme_hesap || '';
+  document.getElementById('f-not').value = r.not_ || '';
+  document.getElementById('f-fatura').checked = !!r.fatura_var;
+  document.getElementById('modal').classList.add('open');
+}
+
+async function sil(id, aciklama) {
+  if (!confirm(`"${aciklama}" kaydını silmek istediğinize emin misiniz?`)) return;
+  const r = await api('/api/muhasebe/stok/sil', {id, aciklama});
+  if (r.ok) { toast('Silindi ✓'); load(); }
+  else toast(r.error, 'error');
+}
+
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id==='modal') closeModal(); });
+load();
+</script>
+{% endblock %}

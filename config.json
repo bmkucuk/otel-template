@@ -1,0 +1,38 @@
+{
+  "otel": {
+    "ad": "Otel Adı",
+    "kisa_ad": "OTEL",
+    "toplam_oda": 20,
+    "oda_baslangic": 1,
+    "oda_bitis": 20,
+    "sehir": "İstanbul",
+    "telefon": "",
+    "email": ""
+  },
+  "sistem": {
+    "yedek_mail_alici": "",
+    "telegram_token": "",
+    "telegram_chat_id": "",
+    "demo_mod": true,
+    "demo_baslangic": "",
+    "demo_sure_gun": 3,
+    "lisans_aktif": false,
+    "askiya_alindi": false
+  },
+  "kullanicilar": {
+    "admin_sifre": "admin123",
+    "max_partner": 3,
+    "max_resepsiyonist": 3
+  },
+  "tema": {
+    "mod": "dark"
+  },
+  "acenteler": [
+    {"kod": "320-1", "ad": "Booking.com", "komisyon": 15},
+    {"kod": "320-2", "ad": "Expedia", "komisyon": 15},
+    {"kod": "320-3", "ad": "JollyTur", "komisyon": 15},
+    {"kod": "320-4", "ad": "TatilSepeti", "komisyon": 15},
+    {"kod": "320-5", "ad": "ETSTUR", "komisyon": 15}
+  ],
+  "odeme_sekilleri": ["Nakit", "Kredi Kartı", "Havale", "Acente"]
+}

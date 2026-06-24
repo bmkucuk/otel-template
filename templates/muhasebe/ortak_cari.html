@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% set active = "muh-ortak" %}
+{% block title %}Ortak Cari{% endblock %}
+{% block page_title %}👤 Ortak Cari{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+  <label style="color:var(--text2);font-size:12px">Yıl:</label>
+  <select class="filter" id="yil-sel" onchange="load()"></select>
+  <select class="filter" id="ortak-sel" onchange="load()">
+    <option value="">Tüm Ortaklar</option>
+    <option value="LK">LK — Levent Koçoğlu</option>
+    <option value="BT">BT — Burçin Taşdelen</option>
+    <option value="FK">FK — Fırat Koçoğlu</option>
+  </select>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="openModal()">＋ Gider Ekle</button>
+</div>
+
+<div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Tarih</th><th>Ortak</th><th>Belge</th><th>Açıklama</th><th>Kategori</th><th>Tutar</th><th>Ödeme</th><th></th></tr></thead>
+    <tbody id="tbody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span></td></tr></tbody>
+  </table>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modal-baslik">Ortak Gider Ekle</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="f-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
+      <div class="form-group"><label>Ortak</label><select id="f-ortak"><option value="LK">LK — Levent Koçoğlu</option><option value="BT">BT — Burçin Taşdelen</option><option value="FK">FK — Fırat Koçoğlu</option></select></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>İşlem Tipi</label>
+        <select id="f-islem-tipi" onchange="onIslemChange()">
+          <option value="Ortak Gider (Kendi Cebinden)">Ortak Kendi Cebinden Ödedi (Şirkete Borç)</option>
+          <option value="Ortaga Geri Odeme">Şirket Ortağa Geri Ödedi</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Belge No</label><input type="text" id="f-belge"></div>
+      <div class="form-group">
+        <label id="kat-odeme-label">Kategori</label>
+        <select id="f-kat"><option>Tamir/Bakım</option><option>Market/Alışveriş</option><option>Elektrik/Su</option><option>Yakıt</option><option>Yemek</option><option>Ulaşım</option><option>Diğer</option></select>
+        <select id="f-odeme" style="display:none">
+          <option>Nakit (Kasa)</option>
+          <option>İş Bankası</option>
+          <option>Ziraat Bankası</option>
+          <option>Deniz Bank</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="f-aciklama"></div></div>
+    <div class="form-row single">
+      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal()">İptal</button>
+      <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let editId = null;
+let allData = [];
+const thisYear = new Date().getFullYear();
+const yilSel = document.getElementById('yil-sel');
+for (let y = thisYear-2; y <= thisYear+1; y++) {
+  const o = document.createElement('option');
+  o.value = y; o.textContent = y;
+  if (y === thisYear) o.selected = true;
+  yilSel.appendChild(o);
+}
+
+async function load() {
+  const yil = yilSel.value;
+  const ortak = document.getElementById('ortak-sel').value;
+  const data = await api(`/api/muhasebe/ortak?yil=${yil}&ortak=${ortak}`);
+
+  const lk = data.filter(r => r.ortak === 'LK').reduce((s, r) => s + (r.tutar||0), 0);
+  const bt = data.filter(r => r.ortak === 'BT').reduce((s, r) => s + (r.tutar||0), 0);
+  const fk = data.filter(r => r.ortak === 'FK').reduce((s, r) => s + (r.tutar||0), 0);
+  const toplam = data.reduce((s, r) => s + (r.tutar||0), 0);
+
+  document.getElementById('kartlar').innerHTML = `
+    <div class="stat-card"><div class="label">LK Net Gider</div><div class="value red">${fmt(lk)}</div></div>
+    <div class="stat-card"><div class="label">BT Net Gider</div><div class="value red">${fmt(bt)}</div></div>
+    <div class="stat-card"><div class="label">FK Net Gider</div><div class="value red">${fmt(fk)}</div></div>
+    <div class="stat-card"><div class="label">Toplam</div><div class="value yellow">${fmt(toplam)}</div></div>
+  `;
+
+  document.getElementById('tbody').innerHTML = data.map(r => {
+    return `<tr>
+      <td>${r.tarih}</td>
+      <td><strong>${r.ortak}</strong></td>
+      <td>${r.belge_no||'—'}</td>
+      <td>${r.aciklama}</td>
+      <td>${r.gider_kategori||'—'}</td>
+      <td class="red" style="text-align:right">${fmt(r.tutar)}</td>
+      <td>${r.odeme_sekli||'—'}</td>
+      <td style="white-space:nowrap"><button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="duzenle(${r.id})">Düzenle</button><button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="sil(${r.id})">Sil</button></td>
+    </tr>`;
+  });
+  allData = data;
+  // rendered below style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
+}
+
+function onIslemChange() {
+  const tip = document.getElementById('f-islem-tipi').value;
+  const isGeri = tip === 'Ortaga Geri Odeme';
+  document.getElementById('f-kat').style.display = isGeri ? 'none' : '';
+  document.getElementById('f-odeme').style.display = isGeri ? '' : 'none';
+  document.getElementById('kat-odeme-label').textContent = isGeri ? 'Ödeme Kaynağı' : 'Kategori';
+}
+
+function openModal() {
+  editId = null;
+  document.getElementById('modal-baslik').textContent = 'Ortak Gider Ekle';
+  document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-ortak').value = 'LK';
+  document.getElementById('f-islem-tipi').value = 'Ortak Gider (Kendi Cebinden)';
+  document.getElementById('f-belge').value = '';
+  document.getElementById('f-aciklama').value = '';
+  document.getElementById('f-tutar').value = 0;
+  document.getElementById('f-kat').value = 'Tamir/Bakım';
+  document.getElementById('f-odeme').value = 'Nakit (Kasa)';
+  onIslemChange();
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function save() {
+  const isGeri = document.getElementById('f-islem-tipi').value === 'Ortaga Geri Odeme';
+  const data = {
+    tarih: document.getElementById('f-tarih').value,
+    ortak: document.getElementById('f-ortak').value,
+    belge_no: document.getElementById('f-belge').value,
+    aciklama: document.getElementById('f-aciklama').value,
+    gider_kategori: isGeri ? '' : document.getElementById('f-kat').value,
+    tutar: parseFloat(document.getElementById('f-tutar').value)||0,
+    odeme_sekli: isGeri ? document.getElementById('f-odeme').value : '',
+    islem_tipi: document.getElementById('f-islem-tipi').value,
+  };
+  if (!validateForm([
+    {id:'f-tarih',    label:'Tarih'},
+    {id:'f-ortak',    label:'Ortak'},
+    {id:'f-aciklama', label:'Açıklama'},
+    {id:'f-tutar',    label:'Tutar'},
+  ])) return;
+  const url = editId ? '/api/muhasebe/ortak-cari/guncelle' : '/api/muhasebe/ortak/ekle';
+  if (editId) data.id = editId;
+  const r = await api(url, data);
+  if (r.ok) { toast(editId ? 'Güncellendi ✓' : 'Kayıt eklendi ✓'); editId = null; closeModal(); load(); }
+  else toast(r.error, 'error');
+}
+
+async function duzenle(id) {
+  const r = allData.find(x => x.id === id);
+  if (!r) return;
+  editId = id;
+  document.getElementById('modal-baslik').textContent = 'Ortak Cari Düzenle';
+  document.getElementById('f-tarih').value = r.tarih || '';
+  document.getElementById('f-ortak').value = r.ortak || 'LK';
+  document.getElementById('f-aciklama').value = r.aciklama || '';
+  document.getElementById('f-belge').value = r.belge_no || '';
+  document.getElementById('f-islem-tipi').value = r.odeme_sekli ? 'Ortaga Geri Odeme' : 'Ortak Gider (Kendi Cebinden)';
+  onIslemChange();
+  document.getElementById('f-kat').value = r.gider_kategori || 'Tamir/Bakım';
+  document.getElementById('f-odeme').value = r.odeme_sekli || 'Nakit (Kasa)';
+  document.getElementById('f-tutar').value = r.tutar || 0;
+  document.getElementById('modal').classList.add('open');
+}
+
+async function sil(id) {
+  if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
+  const r = await api('/api/muhasebe/ortak-cari/sil', {id});
+  if (r.ok) { toast('Silindi ✓'); load(); }
+  else toast(r.error, 'error');
+}
+
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id==='modal') closeModal(); });
+load();
+</script>
+{% endblock %}

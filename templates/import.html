@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% set active = "" %}
+{% block title %}Excel Aktar{% endblock %}
+{% block page_title %}📥 Excel Aktar{% endblock %}
+
+{% block content %}
+
+
+  <!-- Sol: Excel Aktar (Web → DB) -->
+  <div class="panel">
+    <div class="section-title">📂 Excel → Web Aktar</div>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:16px;line-height:1.7">
+      <strong style="color:var(--accent)">Otel_Oda_Durumu_VS_2_0.xlsx</strong> dosyasını yükle —
+      rezervasyonlar ve adisyonlar web veritabanına aktarılır.
+    </p>
+
+    <div id="drop-zone" style="border:2px dashed var(--border);border-radius:10px;padding:32px;
+      text-align:center;cursor:pointer;transition:.2s;margin-bottom:16px"
+      onclick="document.getElementById('file-input').click()"
+      ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+      ondragleave="this.style.borderColor='var(--border)'"
+      ondrop="onDrop(event)">
+      <div style="font-size:36px;margin-bottom:8px">📂</div>
+      <div style="color:var(--text2);font-size:13px">
+        Excel dosyasını buraya sürükle veya <span style="color:var(--accent)">tıkla</span>
+      </div>
+      <div id="file-name" style="color:var(--accent2);margin-top:8px;font-weight:600"></div>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx" style="display:none" onchange="onFileSelect(this)">
+    <button class="btn btn-primary" style="width:100%;padding:12px" id="import-btn" onclick="doImport()" disabled>
+      📥 Aktarımı Başlat
+    </button>
+
+    <div id="result" style="display:none;margin-top:16px;padding:14px;background:var(--card2);border-radius:8px">
+      <div id="result-content"></div>
+    </div>
+  </div>
+
+
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedFile = null;
+
+function onFileSelect(input) {
+  if (input.files[0]) {
+    selectedFile = input.files[0];
+    document.getElementById('file-name').textContent = selectedFile.name;
+    document.getElementById('import-btn').disabled = false;
+    document.getElementById('drop-zone').style.borderColor = 'var(--accent2)';
+  }
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.borderColor = 'var(--border)';
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.xlsx')) {
+    selectedFile = f;
+    document.getElementById('file-name').textContent = f.name;
+    document.getElementById('import-btn').disabled = false;
+    document.getElementById('drop-zone').style.borderColor = 'var(--accent2)';
+  } else {
+    toast('.xlsx dosyası seçin!', 'error');
+  }
+}
+
+async function doImport() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('import-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Aktarılıyor...';
+  const fd = new FormData();
+  fd.append('excel', selectedFile);
+  try {
+    const r = await fetch('/api/import', {method: 'POST', body: fd});
+    const d = await r.json();
+    const res = document.getElementById('result');
+    res.style.display = 'block';
+    if (d.ok) {
+      document.getElementById('result-content').innerHTML =
+        `<div style="color:var(--accent2);font-weight:700">✅ Aktarım tamamlandı!</div>
+         <div style="color:var(--text2);font-size:13px;margin-top:6px">
+           ${d.rezervasyon} rezervasyon, ${d.adisyon} adisyon aktarıldı.
+         </div>`;
+      toast(`${d.rezervasyon} rezervasyon, ${d.adisyon} adisyon aktarıldı ✓`);
+    } else {
+      document.getElementById('result-content').innerHTML =
+        `<div style="color:var(--accent3)">❌ Hata: ${d.error}</div>`;
+      toast(d.error, 'error');
+    }
+  } catch(e) {
+    toast('Bağlantı hatası', 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = '📥 Aktarımı Başlat';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% set active = "oda-durumu" %}
+{% block title %}Oda Durumu{% endblock %}
+{% block page_title %}🛏️ Oda Durumu{% endblock %}
+
+{% block content %}
+<style>
+.oda-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.oda-nav button{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+.oda-nav button:hover{border-color:var(--accent);color:var(--accent)}
+.oda-nav .period{flex:1;text-align:center;font-weight:700;font-size:14px;color:var(--text)}
+.legend{display:flex;gap:20px;margin-bottom:12px;font-size:12px}
+.legend span{display:flex;align-items:center;gap:6px}
+.leg-dot{width:12px;height:12px;border-radius:3px}
+
+.grid-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px)}
+.oda-grid{display:grid;gap:2px;min-width:max-content}
+.header-row,.oda-row{display:contents}
+.day-header{background:var(--header);color:var(--text2);font-size:11px;font-weight:700;padding:6px 4px;text-align:center;width:60px;border:1px solid var(--border);border-radius:3px;white-space:pre-line}
+.day-header.today{color:var(--accent);border-color:var(--accent)40}
+.oda-label{background:var(--card);padding:5px 8px;font-size:12px;font-weight:700;border-radius:4px;border:1px solid var(--border);width:100px;white-space:nowrap;display:flex;align-items:center}
+.oda-label.leo{color:var(--leo)}
+.oda-label.cv{color:var(--cv)}
+.section-header{background:var(--header);color:var(--text2);font-size:11px;font-weight:700;padding:5px 8px;border-radius:3px;grid-column:1/-1;margin:6px 0 2px}
+.cell{width:60px;height:34px;border-radius:3px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:default;position:relative}
+.cell.bos{background:var(--sidebar)}
+.cell.bos.today{background:var(--card2);border-color:var(--accent)40}
+.cell.dolu-leo{background:#0e2038;color:var(--leo);border-color:var(--leo)40}
+.cell.dolu-leo.giris{background:#1a3a5a}
+.cell.dolu-cv{background:#0e2a14;color:var(--cv);border-color:var(--cv)40}
+.cell.dolu-cv.giris{background:#1a3a1a}
+.cell:hover .tooltip{display:block}
+.tooltip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#0a1628;border:1px solid var(--border);padding:8px 12px;border-radius:6px;white-space:nowrap;font-size:12px;color:var(--text);z-index:10;pointer-events:none;box-shadow:0 4px 16px #0006}
+.tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#0a1628}
+</style>
+
+<div class="oda-nav">
+  <button onclick="shift(-7)">◀ Önceki Hafta</button>
+  <button onclick="goToday()" style="color:var(--accent)">Bugün</button>
+  <div class="period" id="period-lbl">—</div>
+  <button onclick="shift(7)">Sonraki Hafta ▶</button>
+  <button onclick="reload()" style="margin-left:8px">🔄 Yenile</button>
+</div>
+
+<div class="legend">
+  <span><div class="leg-dot" style="background:#1a3a5a;border:1px solid var(--leo)"></div> Otel Leo</span>
+  <span><div class="leg-dot" style="background:#1a3a1a;border:1px solid var(--cv)"></div> Cunda Villa</span>
+  <span><div class="leg-dot" style="background:var(--sidebar);border:1px solid var(--border)"></div> Boş</span>
+  <span style="color:var(--text2);font-size:11px">Parlak renk = Giriş günü</span>
+</div>
+
+<div class="grid-wrap">
+  <div id="oda-grid"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let startDate = new Date();
+startDate.setHours(0,0,0,0);
+
+function toISO(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function shift(days) {
+  startDate.setDate(startDate.getDate() + days);
+  load();
+}
+
+function goToday() {
+  startDate = new Date();
+  startDate.setHours(0,0,0,0);
+  load();
+}
+
+async function reload() {
+  await api('/api/yenile', {});
+  load();
+}
+
+async function load() {
+  const d = await api(`/api/oda-durumu?start=${toISO(startDate)}`);
+  render(d);
+}
+
+function render(d) {
+  const today = d.today;
+  const dates = d.dates;
+  const grid = d.grid;
+
+  // Period label
+  const first = new Date(dates[0] + 'T00:00:00');
+  const last  = new Date(dates[dates.length-1] + 'T00:00:00');
+  document.getElementById('period-lbl').textContent =
+    first.toLocaleDateString('tr-TR',{day:'numeric',month:'short'}) + ' – ' +
+    last.toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'});
+
+  const dayNames = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+
+  let html = `<div style="display:grid;grid-template-columns:100px repeat(${dates.length},60px);gap:2px">`;
+
+  // Header row
+  html += `<div></div>`;
+  for (const dt of dates) {
+    const d2 = new Date(dt + 'T00:00:00');
+    const isToday = dt === today;
+    html += `<div class="day-header${isToday?' today':''}">${dayNames[d2.getDay()]}\n${d2.getDate()}</div>`;
+  }
+
+  // Group by otel
+  let lastOtel = null;
+  for (const room of grid) {
+    if (room.otel !== lastOtel) {
+      lastOtel = room.otel;
+      const label = room.otel === 'LEO' ? '── OTEL LEO ──' : '── CUNDA VİLLA ──';
+      html += `<div class="section-header">${label}</div>`;
+    }
+
+    const otelClass = room.otel === 'LEO' ? 'leo' : 'cv';
+    html += `<div class="oda-label ${otelClass}">${room.otel} – ${room.oda_no}</div>`;
+
+    for (let i = 0; i < dates.length; i++) {
+      const dt = dates[i];
+      const cell = room.cells[i];
+      const isToday = dt === today;
+
+      if (cell.dolu) {
+        const doluClass = `dolu-${room.otel.toLowerCase()}${cell.is_giris ? ' giris' : ''}`;
+        const girisF = cell.giris ? new Date(cell.giris+'T00:00:00').toLocaleDateString('tr-TR') : '';
+        const cikisF = cell.cikis ? new Date(cell.cikis+'T00:00:00').toLocaleDateString('tr-TR') : '';
+        html += `<div class="cell ${doluClass}">
+          ${cell.initials}
+          <div class="tooltip">${cell.musteri}<br>${girisF} – ${cikisF}<br>Föy: ${cell.foy_no}</div>
+        </div>`;
+      } else {
+        html += `<div class="cell bos${isToday?' today':''}"></div>`;
+      }
+    }
+  }
+
+  html += '</div>';
+  document.getElementById('oda-grid').innerHTML = html;
+}
+
+load();
+</script>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% set active = "dashboard" %}
+{% block title %}Dashboard — Otel Leo{% endblock %}
+{% block page_title %}Genel Bakış{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px">
+
+  <!-- Doluluk -->
+  <div class="panel">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px">
+      <div class="section-title" style="margin:0;padding:0;border:none">Doluluk · Bugün</div>
+      <div style="font-size:12px;color:var(--text2)" id="occ-sub">—</div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:14px;margin-bottom:22px">
+      <div style="font-family:'Geist Mono',monospace;font-size:48px;font-weight:700;line-height:.9;color:var(--accent);letter-spacing:-2px" id="occ-pct">—<span style="font-size:26px">%</span></div>
+      <div style="display:flex;gap:18px;padding-bottom:4px">
+        <div><div style="font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:var(--text)" id="occ-dolu">—</div><div style="font-size:11px;color:var(--text2)">dolu</div></div>
+        <div><div style="font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:var(--text2)" id="occ-bos">—</div><div style="font-size:11px;color:var(--text2)">boş</div></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:12.5px"><span style="color:var(--text);font-weight:500">Otel Leo</span><span style="font-family:'Geist Mono',monospace;color:var(--text2)" id="occ-leo-frac">— / 19</span></div>
+        <div style="height:9px;border-radius:5px;background:var(--card2);overflow:hidden"><div id="occ-leo-bar" style="height:100%;width:0%;border-radius:5px;background:var(--leo);transition:width .3s"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:12.5px"><span style="color:var(--text);font-weight:500">Cunda Villa</span><span style="font-family:'Geist Mono',monospace;color:var(--text2)" id="occ-cv-frac">— / 10</span></div>
+        <div style="height:9px;border-radius:5px;background:var(--card2);overflow:hidden"><div id="occ-cv-bar" style="height:100%;width:0%;border-radius:5px;background:var(--cv);transition:width .3s"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finans -->
+  <div class="panel" style="display:flex;flex-direction:column">
+    <div class="section-title" style="margin:0 0 14px;padding:0;border:none">Toplam Alacak</div>
+    <div style="font-family:'Geist Mono',monospace;font-size:36px;font-weight:700;line-height:1;color:var(--accent3)" id="s-alacak">—</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:8px" id="alacak-sub">bekleyen bakiye</div>
+    <div style="margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:11px">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px"><span style="color:var(--text2)">Rezervasyon bakiyesi</span><span style="font-family:'Geist Mono',monospace;color:var(--text);font-weight:600" id="rez-bakiye-toplam">—</span></div>
+      <div style="height:1px;background:var(--border)"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px"><span style="color:var(--text2)">Adisyon bakiyesi</span><span style="font-family:'Geist Mono',monospace;color:var(--text);font-weight:600" id="adis-bakiye-toplam">—</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="cards-row" id="stat-cards">
+  <div class="stat-card"><span style="position:absolute;top:17px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--accent)"></span><div class="label">Bugün Giriş</div><div class="value" id="s-giris">—</div><div class="sub">bekleyen check-in</div></div>
+  <div class="stat-card"><span style="position:absolute;top:17px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--accent2)"></span><div class="label">Bugün Çıkış</div><div class="value" id="s-cikis">—</div><div class="sub">check-out</div></div>
+  <div class="stat-card"><span style="position:absolute;top:17px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--accent4)"></span><div class="label">☕ Kahvaltı</div><div class="value" id="s-kah">—</div><div class="sub">kişi · bugün</div></div>
+  <div class="stat-card"><span style="position:absolute;top:17px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--pos)"></span><div class="label">Boş Oda</div><div class="value" id="s-bos">—</div><div class="sub">müsait · satışa açık</div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <div class="table-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent)"></span><span style="font-size:14px;font-weight:600">Bugün Giriş</span></div>
+    </div>
+    <table>
+      <thead><tr><th>Oda</th><th>Otel</th><th>Misafir</th><th>Gün</th><th>Kanal</th></tr></thead>
+      <tbody id="giris-tbody"><tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr></tbody>
+    </table>
+  </div>
+  <div class="table-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2)"></span><span style="font-size:14px;font-weight:600">Bugün Çıkış</span></div>
+    </div>
+    <table>
+      <thead><tr><th>Oda</th><th>Otel</th><th>Misafir</th><th>Giriş</th><th>Bakiye</th></tr></thead>
+      <tbody id="cikis-tbody"><tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--pos)"></span><span style="font-size:14px;font-weight:600">Şu An Otelde</span></div>
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;color:var(--text2);background:var(--card2);padding:3px 9px;border-radius:20px" id="aktif-count">— misafir</div>
+  </div>
+  <table>
+    <thead><tr><th>Oda</th><th>Otel</th><th>Misafir</th><th>Giriş</th><th>Çıkış</th><th>Gün</th><th>Rez.Bakiye</th><th>Adisyon</th><th>Adis.Bakiye</th></tr></thead>
+    <tbody id="aktif-tbody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span></td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const LEO_TOPLAM = 19;
+const CV_TOPLAM  = 10;
+
+async function load() {
+  const d = await api('/api/dashboard');
+
+  document.getElementById('s-giris').textContent  = d.stats.bugun_giris;
+  document.getElementById('s-cikis').textContent  = d.stats.bugun_cikis;
+  document.getElementById('s-kah').textContent    = d.stats.kahvalti_kisi;
+  document.getElementById('s-alacak').textContent = fmt(d.stats.toplam_alacak);
+
+  const leoDolu = d.stats.leo_aktif, cvDolu = d.stats.cv_aktif;
+  const toplamDolu = leoDolu + cvDolu, toplamOda = LEO_TOPLAM + CV_TOPLAM;
+  const bos = toplamOda - toplamDolu;
+  document.getElementById('s-bos').textContent = bos;
+  document.getElementById('occ-pct').innerHTML = Math.round(toplamDolu/toplamOda*100) + '<span style="font-size:26px">%</span>';
+  document.getElementById('occ-sub').textContent = toplamOda + " odanın " + toplamDolu + "'ı dolu";
+  document.getElementById('occ-dolu').textContent = toplamDolu;
+  document.getElementById('occ-bos').textContent = bos;
+  document.getElementById('occ-leo-frac').textContent = leoDolu + ' / ' + LEO_TOPLAM;
+  document.getElementById('occ-cv-frac').textContent  = cvDolu + ' / ' + CV_TOPLAM;
+  document.getElementById('occ-leo-bar').style.width = Math.round(leoDolu/LEO_TOPLAM*100) + '%';
+  document.getElementById('occ-cv-bar').style.width  = Math.round(cvDolu/CV_TOPLAM*100) + '%';
+
+  const rezToplam  = d.aktifler.reduce((s,r) => s + (r.rez_bakiye||0), 0);
+  const adisToplam = d.aktifler.reduce((s,r) => s + (r.adis_bakiye||0), 0);
+  document.getElementById('rez-bakiye-toplam').textContent  = fmt(rezToplam);
+  document.getElementById('adis-bakiye-toplam').textContent = fmt(adisToplam);
+  document.getElementById('alacak-sub').textContent = d.aktifler.length + ' rezervasyon · bekleyen bakiye';
+  document.getElementById('aktif-count').textContent = d.aktifler.length + ' misafir';
+
+  const girisBody = document.getElementById('giris-tbody');
+  girisBody.innerHTML = d.girisler.length ? d.girisler.map(r => `
+    <tr>
+      <td>${r.oda_no}</td>
+      <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.otel}</td>
+      <td>${r.musteri}</td>
+      <td>${r.toplam_gun} gün</td>
+      <td>${r.kanal||'—'}</td>
+    </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">Bugün giriş yok</td></tr>';
+
+  const cikisBody = document.getElementById('cikis-tbody');
+  cikisBody.innerHTML = d.cikislar.length ? d.cikislar.map(r => `
+    <tr>
+      <td>${r.oda_no}</td>
+      <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.otel}</td>
+      <td>${r.musteri}</td>
+      <td>${fmtDate(r.giris)}</td>
+      <td class="${(r.rez_bakiye||0)>0?'red':'green'}">${fmt(r.rez_bakiye||0)}</td>
+    </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">Bugün çıkış yok</td></tr>';
+
+  const aktifBody = document.getElementById('aktif-tbody');
+  aktifBody.innerHTML = d.aktifler.length ? d.aktifler.map(r => `
+    <tr>
+      <td>${r.oda_no}</td>
+      <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.otel}</td>
+      <td>${r.musteri}</td>
+      <td>${fmtDate(r.giris)}</td>
+      <td>${fmtDate(r.cikis)}</td>
+      <td>${r.toplam_gun} gün</td>
+      <td class="${(r.rez_bakiye||0)>0?'red':'green'}">${fmt(r.rez_bakiye||0)}</td>
+      <td>${fmt(r.adisyon||0)}</td>
+      <td class="${(r.adis_bakiye||0)>0?'red':'green'}">${fmt(r.adis_bakiye||0)}</td>
+    </tr>`).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:20px">Şu an otelde misafir yok</td></tr>';
+}
+load();
+</script>
+{% endblock %}

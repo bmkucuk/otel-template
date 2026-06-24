@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% set active = "muh-kasa" %}
+{% block title %}Kasa & Banka{% endblock %}
+{% block page_title %}🏦 Kasa & Banka{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+  <label style="color:var(--text2);font-size:12px">Yıl:</label>
+  <select class="filter" id="yil-sel" onchange="load()"></select>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="openModal()">＋ Kayıt Ekle</button>
+</div>
+
+<!-- Sekmeler -->
+<div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border)">
+  <button id="tab-kasa" onclick="switchTab('kasa')"
+    style="padding:10px 24px;background:var(--accent);color:#0d1117;border:none;cursor:pointer;font-weight:700;font-size:13px;border-radius:6px 6px 0 0">
+    🏧 Kasa (Nakit)
+  </button>
+  <button id="tab-banka" onclick="switchTab('banka')"
+    style="padding:10px 24px;background:var(--card2);color:var(--text2);border:none;cursor:pointer;font-weight:600;font-size:13px;border-radius:6px 6px 0 0;margin-left:4px">
+    🏦 Banka Hesapları
+  </button>
+</div>
+
+<!-- KASA SEKMESİ -->
+<div id="panel-kasa">
+  <div class="cards-row" id="kasa-ozet" style="margin-bottom:20px"></div>
+  <div class="toolbar" style="margin-bottom:10px">
+    <div class="section-title" style="margin:0;border:0">📋 Kasa Hareketleri</div>
+    <div style="flex:1"></div>
+    <input class="search-input" id="kasa-q" placeholder="🔍 Açıklama, işlem tipi, tutar, tarih ara..." oninput="curPage.kasa=1;renderKasa()" style="width:280px">
+    <button class="btn" id="kasa-sort-btn" onclick="toggleSort('kasa')" style="font-size:12px;padding:6px 12px;background:var(--card2);color:var(--text2)">Tarih ↓ (Yeni→Eski)</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th style="width:100px">Tarih</th><th>Açıklama</th><th>İşlem Tipi</th><th style="width:100px;text-align:right">Giriş</th><th style="width:100px;text-align:right">Çıkış</th><th style="width:110px;text-align:right">Bakiye</th><th style="width:40px"></th></tr></thead>
+      <tbody id="kasa-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px"><span class="spinner"></span></td></tr></tbody>
+    </table>
+  </div>
+  <div id="kasa-pager" style="display:flex;align-items:center;gap:10px;margin-top:10px"></div>
+</div>
+
+<!-- BANKA SEKMESİ -->
+<div id="panel-banka" style="display:none">
+  <div class="cards-row" id="banka-ozet" style="margin-bottom:20px"></div>
+  <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap" id="banka-tabs"></div>
+  <div class="toolbar" style="margin-bottom:10px">
+    <div class="section-title" style="margin:0;border:0">📋 Hesap Hareketleri</div>
+    <div style="flex:1"></div>
+    <input class="search-input" id="banka-q" placeholder="🔍 Açıklama, işlem tipi, tutar, tarih ara..." oninput="curPage.banka=1;renderBanka()" style="width:280px">
+    <button class="btn" id="banka-sort-btn" onclick="toggleSort('banka')" style="font-size:12px;padding:6px 12px;background:var(--card2);color:var(--text2)">Tarih ↓ (Yeni→Eski)</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th style="width:100px">Tarih</th><th>Açıklama</th><th>İşlem Tipi</th><th style="width:100px;text-align:right">Giriş</th><th style="width:100px;text-align:right">Çıkış</th><th style="width:110px;text-align:right">Bakiye</th><th style="width:40px"></th></tr></thead>
+      <tbody id="banka-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">Yukarıdan hesap seçin</td></tr></tbody>
+    </table>
+  </div>
+  <div id="banka-pager" style="display:flex;align-items:center;gap:10px;margin-top:10px"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>Yeni Kasa/Banka Kaydı</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="f-tarih"></div>
+      <div class="form-group"><label>Belge No</label><input type="text" id="f-belge"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>İşlem Tipi</label>
+        <select id="f-islem">
+          <option>Tahsilat - Nakit</option><option>Tahsilat - KK</option><option>Tahsilat - İş Bankası</option><option>Tahsilat - Denizbank</option>
+          <option>Maaş Ödemesi</option><option>Vergi Ödemesi</option><option>Fatura Ödemesi</option>
+          <option>Stok Alımı</option><option>Kasa - Banka Virman</option><option>Diğer</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Borç Hesabı</label><select id="f-borc"></select></div>
+      <div class="form-group"><label>Alacak Hesabı</label><select id="f-alacak"></select></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Açıklama</label><input type="text" id="f-aciklama"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal()">İptal</button>
+      <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const thisYear = new Date().getFullYear();
+const yilSel = document.getElementById('yil-sel');
+for (let y = thisYear-2; y <= thisYear+1; y++) {
+  const o = document.createElement('option');
+  o.value = y; o.textContent = y;
+  if (y === thisYear) o.selected = true;
+  yilSel.appendChild(o);
+}
+
+let aktifTab = 'kasa';
+let aktifBanka = '';
+let tumBakiyeler = [];
+let kasaData = [];
+let bankaData = [];
+let sortDir = { kasa: 'desc', banka: 'desc' };
+let curPage = { kasa: 1, banka: 1 };
+const PAGE_SIZE = 100;
+
+function switchTab(tab) {
+  aktifTab = tab;
+  document.getElementById('panel-kasa').style.display  = tab === 'kasa'  ? '' : 'none';
+  document.getElementById('panel-banka').style.display = tab === 'banka' ? '' : 'none';
+  const aktifStyle  = 'padding:10px 24px;background:var(--accent);color:#0d1117;border:none;cursor:pointer;font-weight:700;font-size:13px;border-radius:6px 6px 0 0';
+  const pasifStyle  = 'padding:10px 24px;background:var(--card2);color:var(--text2);border:none;cursor:pointer;font-weight:600;font-size:13px;border-radius:6px 6px 0 0;margin-left:4px';
+  document.getElementById('tab-kasa').style.cssText   = tab === 'kasa'  ? aktifStyle : pasifStyle;
+  document.getElementById('tab-banka').style.cssText  = tab === 'banka' ? aktifStyle : pasifStyle + ';margin-left:4px';
+}
+
+function toggleSort(which) {
+  sortDir[which] = sortDir[which] === 'desc' ? 'asc' : 'desc';
+  const btn = document.getElementById(which + '-sort-btn');
+  btn.textContent = sortDir[which] === 'desc' ? 'Tarih ↓ (Yeni→Eski)' : 'Tarih ↑ (Eski→Yeni)';
+  curPage[which] = 1;
+  if (which === 'kasa') renderKasa(); else renderBanka();
+}
+
+function filterSortHareketler(data, q, dir) {
+  let list = data;
+  if (q && q.trim()) {
+    const term = q.trim().toLowerCase();
+    list = list.filter(r => {
+      const tutarStr = String(r.giris || r.cikis || '').toLowerCase();
+      const tarihStr = (fmtDate(r.tarih) || '').toLowerCase();
+      return (r.aciklama||'').toLowerCase().includes(term) ||
+             (r.islem_tipi||'').toLowerCase().includes(term) ||
+             tutarStr.includes(term) ||
+             tarihStr.includes(term) ||
+             (r.tarih||'').includes(term);
+    });
+  }
+  list = [...list];
+  if (dir === 'desc') list.reverse();
+  return list;
+}
+
+function renderPager(which, totalItems) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  if (curPage[which] > totalPages) curPage[which] = totalPages;
+  const pager = document.getElementById(which + '-pager');
+  if (totalPages <= 1) { pager.innerHTML = ''; return; }
+  pager.innerHTML = `
+    <button class="btn" style="font-size:12px;padding:5px 12px" ${curPage[which]<=1?'disabled':''} onclick="gotoPage('${which}',${curPage[which]-1})">‹ Önceki</button>
+    <span style="font-size:12px;color:var(--text2)">Sayfa ${curPage[which]} / ${totalPages}</span>
+    <button class="btn" style="font-size:12px;padding:5px 12px" ${curPage[which]>=totalPages?'disabled':''} onclick="gotoPage('${which}',${curPage[which]+1})">Sonraki ›</button>`;
+}
+
+function gotoPage(which, p) {
+  curPage[which] = p;
+  if (which === 'kasa') renderKasa(); else renderBanka();
+}
+
+function rowHtml(r) {
+  return `<tr>
+    <td>${fmtDate(r.tarih)}</td>
+    <td>${r.aciklama||'—'}</td>
+    <td style="font-size:11px;color:var(--text2)">${r.islem_tipi||'—'}</td>
+    <td class="green" style="text-align:right">${r.giris > 0 ? fmt(r.giris) : '—'}</td>
+    <td class="red" style="text-align:right">${r.cikis > 0 ? fmt(r.cikis) : '—'}</td>
+    <td class="${r.bakiye_kum >= 0 ? 'green' : 'red'}" style="text-align:right;font-weight:600">${fmt(r.bakiye_kum)}</td>
+    <td style="text-align:center">
+      <button onclick='silKasaKaydi(${r.id}, ${JSON.stringify(r.kaynak_tablo||null)}, ${JSON.stringify(r.aciklama||"")})'
+        title="Sil" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:4px">🗑️</button>
+    </td>
+  </tr>`;
+}
+
+// kaynak_tablo / açıklama desenine göre kaydın hangi sayfaya ait olduğunu bulur
+const KAYNAK_SAYFA = {
+  personel_avans: 'Personel (Avans)',
+  personel_maas:  'Personel',
+  vergi:          'Vergi',
+  acente_cari:    'Acenteler',
+  ortak_cari:     'Ortak Cari',
+  stok:           'Stok',
+  'demirbaş':     'Demirbaş',
+};
+
+function baglantiliSayfa(kaynakTablo, aciklama) {
+  if (kaynakTablo && KAYNAK_SAYFA[kaynakTablo]) return KAYNAK_SAYFA[kaynakTablo];
+  if ((aciklama || '').includes('[ACENTE-FATURA]')) return 'Acenteler (ilgili föyün "İptal Et" linkiyle faturayı geri alın)';
+  if ((aciklama || '').includes('[ACENTE-OTO]')) return 'Rez. Formu (ilgili föyü açıp acenteyi/tutarı düzenleyin — otomatik güncellenir)';
+  if (/Föy#\d+/.test(aciklama || '')) return 'Rez. Formu (ilgili föyü açıp tahsilatı oradan kaldırın)';
+  if ((aciklama || '').includes('[OTEL-AKTARIM]')) return 'Dashboard gelir aktarımı (ilgili ayı yeniden aktararak güncelleyin)';
+  return null;
+}
+
+async function silKasaKaydi(id, kaynakTablo, aciklama) {
+  const sayfa = baglantiliSayfa(kaynakTablo, aciklama);
+  if (sayfa) {
+    alert(`Bu kayıt buradan silinemez çünkü başka bir işleme bağlı.\n\nSilmek için: ${sayfa}`);
+    return;
+  }
+  if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
+  const r = await api('/api/muhasebe/kasa/sil', { id });
+  if (r.ok) { toast('Kayıt silindi ✓'); load(); }
+  else toast(r.error, 'error');
+}
+
+function renderKasa() {
+  const q = document.getElementById('kasa-q').value;
+  const list = filterSortHareketler(kasaData, q, sortDir.kasa);
+  const start = (curPage.kasa - 1) * PAGE_SIZE;
+  const pageList = list.slice(start, start + PAGE_SIZE);
+  document.getElementById('kasa-tbody').innerHTML = pageList.map(rowHtml).join('')
+    || `<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">${q ? 'Sonuç bulunamadı' : 'Kasa hareketi yok'}</td></tr>`;
+  renderPager('kasa', list.length);
+}
+
+function renderBanka() {
+  const q = document.getElementById('banka-q').value;
+  const list = filterSortHareketler(bankaData, q, sortDir.banka);
+  const start = (curPage.banka - 1) * PAGE_SIZE;
+  const pageList = list.slice(start, start + PAGE_SIZE);
+  document.getElementById('banka-tbody').innerHTML = pageList.map(rowHtml).join('')
+    || `<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">${q ? 'Sonuç bulunamadı' : 'Bu hesapta hareket yok'}</td></tr>`;
+  renderPager('banka', list.length);
+}
+
+async function load() {
+  const yil = yilSel.value;
+  const d = await api(`/api/muhasebe/kasa?yil=${yil}&hesap=`);
+  tumBakiyeler = d.bakiyeler;
+
+  // KASA özet
+  const kasa = d.bakiyeler.find(b => b.kod === 'KASA') || {};
+  document.getElementById('kasa-ozet').innerHTML = `
+    <div class="stat-card"><div class="label">Kasa Bakiyesi</div>
+      <div class="value ${(kasa.bakiye||0) >= 0 ? 'green' : 'red'}">${fmt(kasa.bakiye||0)}</div>
+      <div class="sub">Giriş: ${fmt(kasa.giris||0)} | Çıkış: ${fmt(kasa.cikis||0)}</div>
+    </div>`;
+
+  // Kasa hareketleri
+  const kd = await api(`/api/muhasebe/kasa?yil=${yil}&hesap=KASA`);
+  kasaData = kd.hareketler;
+  curPage.kasa = 1;
+  renderKasa();
+
+  // BANKA özet kartları
+  const bankalar = d.bakiyeler.filter(b => b.kod !== 'KASA');
+  document.getElementById('banka-ozet').innerHTML = bankalar.map(b => `
+    <div class="stat-card" style="cursor:pointer" onclick="selectBanka('${b.kod}')">
+      <div class="label">🏦 ${b.ad}</div>
+      <div class="value ${b.bakiye >= 0 ? 'green' : 'red'}">${fmt(b.bakiye)}</div>
+      <div class="sub">Giriş: ${fmt(b.giris)} | Çıkış: ${fmt(b.cikis)}</div>
+    </div>`).join('');
+
+  // Banka seçim butonları
+  document.getElementById('banka-tabs').innerHTML = bankalar.map(b => `
+    <button id="btn-${b.kod}" onclick="selectBanka('${b.kod}')"
+      class="btn" style="font-size:12px;padding:6px 16px;background:var(--card2);color:var(--text2)">
+      🏦 ${b.ad}
+    </button>`).join('');
+
+  // İlk bankayı seç
+  if (bankalar.length > 0 && !aktifBanka) {
+    aktifBanka = bankalar[0].kod;
+  }
+  if (aktifBanka) selectBanka(aktifBanka);
+}
+
+async function selectBanka(kod) {
+  aktifBanka = kod;
+  // Buton stillerini güncelle
+  tumBakiyeler.filter(b => b.kod !== 'KASA').forEach(b => {
+    const btn = document.getElementById(`btn-${b.kod}`);
+    if (btn) btn.style.cssText = `font-size:12px;padding:6px 16px;background:${b.kod===kod?'var(--accent)':'var(--card2)'};color:${b.kod===kod?'#0d1117':'var(--text2)'};border:none;cursor:pointer;border-radius:6px`;
+  });
+  const yil = yilSel.value;
+  document.getElementById('banka-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>';
+  const d = await api(`/api/muhasebe/kasa?yil=${yil}&hesap=${encodeURIComponent(kod)}`);
+  bankaData = d.hareketler;
+  curPage.banka = 1;
+  renderBanka();
+}
+
+async function openModal() {
+  const hesaplar = await api('/api/muhasebe/hesaplar');
+  ['f-borc','f-alacak'].forEach(id => {
+    document.getElementById(id).innerHTML = hesaplar.map(h => `<option>${h}</option>`).join('');
+  });
+  document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function save() {
+  const data = {
+    tarih:      document.getElementById('f-tarih').value,
+    belge_no:   document.getElementById('f-belge').value,
+    islem_tipi: document.getElementById('f-islem').value,
+    borc:       document.getElementById('f-borc').value.split(' — ')[0],
+    alacak:     document.getElementById('f-alacak').value.split(' — ')[0],
+    tutar:      parseFloat(document.getElementById('f-tutar').value) || 0,
+    aciklama:   document.getElementById('f-aciklama').value,
+    otel:       'GENEL',
+  };
+  const r = await api('/api/muhasebe/yevmiye/ekle', data);
+  if (r.ok) { toast('Kayıt eklendi ✓'); closeModal(); load(); }
+  else toast(r.error, 'error');
+}
+
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id==='modal') closeModal(); });
+load();
+</script>
+{% endblock %}

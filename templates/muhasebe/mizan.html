@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% set active = "muh-mizan" %}
+{% block title %}Mizan{% endblock %}
+{% block page_title %}⚖️ Genel Mizan{% endblock %}
+
+{% block content %}
+<div class="toolbar" style="margin-bottom:16px">
+  <label style="color:var(--text2);font-size:12px">Yıl:</label>
+  <select class="filter" id="yil-sel" onchange="load()"></select>
+  <div style="flex:1"></div>
+  <button class="btn btn-default" onclick="window.print()">🖨️ Yazdır</button>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th style="width:80px">KOD</th><th>HESAP ADI</th><th style="width:150px;text-align:right">BORÇ</th><th style="width:150px;text-align:right">ALACAK</th><th style="width:150px;text-align:right">BAKİYE</th></tr></thead>
+    <tbody id="tbody"><tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const thisYear = new Date().getFullYear();
+const yilSel = document.getElementById('yil-sel');
+for (let y = thisYear-2; y <= thisYear+1; y++) {
+  const o = document.createElement('option');
+  o.value = y; o.textContent = y;
+  if (y === thisYear) o.selected = true;
+  yilSel.appendChild(o);
+}
+
+async function load() {
+  const yil = yilSel.value;
+  const d = await api(`/api/muhasebe/mizan?yil=${yil}`);
+
+  document.getElementById('tbody').innerHTML = d.satirlar.map(r => {
+    if (r.tip === 'bos') return '<tr style="height:8px"><td colspan="5"></td></tr>';
+
+    const isBaslik = r.tip === 'baslik';
+    const isToplam = r.tip === 'toplam';
+    const isNet = r.tip === 'net';
+    const bold = isBaslik || isToplam || isNet;
+
+    const borc   = r.borc   || 0;
+    const alacak = r.alacak || 0;
+    // Aktif hesaplar: bakiye = borç - alacak (borç > alacak = pozitif/yeşil)
+    // Pasif/Gelir hesaplar: bakiye = alacak - borç
+    const aktifHesaplar = ['100','101','102','102-1','102-2','102-3','120','153','195','255'];
+    const isAktif = aktifHesaplar.includes(r.kod);
+    const bakiye = isAktif ? (borc - alacak) : (alacak - borc);
+
+    let rowStyle = '';
+    let kodColor = '', adColor = '';
+    if (isBaslik) { rowStyle = 'background:var(--header)'; kodColor = adColor = 'color:var(--accent)'; }
+    if (isToplam) { adColor = 'color:var(--accent4)'; }
+    if (isNet) { rowStyle = 'background:var(--sidebar)'; }
+
+    const borcStr   = borc   > 0 ? fmt(borc)   : '—';
+    const alacakStr = alacak > 0 ? fmt(alacak) : '—';
+    const bakiyeStr = (borc || alacak) ? fmt(Math.abs(bakiye)) : '—';
+    // 120 Müşteri Cari: bakiye varsa kırmızı (tahsil edilmemiş alacak uyarısı)
+    const bakiyeRenk = r.kod === '120' ? (bakiye > 0 ? 'color:var(--accent3)' : 'color:var(--accent2)') :
+                       (bakiye >= 0 ? 'color:var(--accent2)' : 'color:var(--accent3)');
+
+    return `<tr style="${rowStyle}${bold?';font-weight:700':''}">
+      <td style="${kodColor}">${r.kod}</td>
+      <td style="${adColor}">${r.ad}</td>
+      <td style="text-align:right;color:${borc>0?(isAktif?'var(--accent2)':'var(--accent3)'):'var(--text2)'}">${borcStr}</td>
+      <td style="text-align:right;color:${alacak>0?'var(--accent2)':'var(--text2)'}">${alacakStr}</td>
+      <td style="text-align:right;${bakiyeRenk}">${bakiyeStr}</td>
+    </tr>`;
+  }).join('');
+}
+
+load();
+</script>
+{% endblock %}

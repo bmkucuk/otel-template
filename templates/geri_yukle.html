@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% set active = "" %}
+{% block title %}Geri Yükle — Otel Leo{% endblock %}
+{% block page_title %}📤 Yedekten Geri Yükle{% endblock %}
+
+{% block content %}
+<div style="max-width:600px">
+  <div class="panel" style="margin-bottom:16px">
+    <div class="section-title">⚠️ Önemli Uyarı</div>
+    <p style="color:var(--accent3);font-size:13px;line-height:1.8;margin:0">
+      Bu işlem seçili tablolardaki <strong>mevcut verileri silerek</strong> yedek dosyasındaki verilerle değiştirir.
+      Geri alınamaz. Devam etmeden önce mevcut bir yedek aldığınızdan emin olun.
+    </p>
+  </div>
+
+  <div class="panel">
+    <div class="section-title">📁 Yedek Dosyası Seç</div>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:16px;line-height:1.7">
+      <strong>📥 Yedek Al</strong> ile indirdiğiniz <code>otel_yedek_YYYY-MM-DD.xlsx</code> dosyasını seçin.
+      Sistem hangi sheet'lerin bulunduğunu tespit edip otomatik yükler.
+    </p>
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600">Excel Dosyası (.xlsx)</label>
+      <input type="file" id="yukle-dosya" accept=".xlsx"
+        style="background:var(--card2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:7px;width:100%;font-size:13px">
+    </div>
+
+    <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:2">
+      <strong style="color:var(--text)">Yüklenecek tablolar:</strong><br>
+      ✅ Stok &nbsp;·&nbsp; ✅ Demirbaş &nbsp;·&nbsp; ✅ Yevmiye &nbsp;·&nbsp;
+      ✅ Personel &nbsp;·&nbsp; ✅ Personel Maaş &nbsp;·&nbsp; ✅ Personel Avans &nbsp;·&nbsp;
+      ✅ Rezervasyonlar &nbsp;·&nbsp; ✅ Adisyonlar
+    </div>
+
+    <button id="yukle-btn" class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="geriYukle()">
+      📤 Geri Yüklemeyi Başlat
+    </button>
+
+    <div id="yukle-sonuc" style="margin-top:16px;display:none"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function geriYukle() {
+  const dosya = document.getElementById('yukle-dosya').files[0];
+  if (!dosya) { toast('Lütfen bir dosya seçin', 'error'); return; }
+  if (!confirm('⚠️ Mevcut veriler silinecek ve yedekteki veriler yüklenecek. Emin misiniz?')) return;
+
+  const btn = document.getElementById('yukle-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Yükleniyor...';
+
+  const form = new FormData();
+  form.append('excel', dosya);
+
+  try {
+    const resp = await fetch('/api/geri-yukle', { method: 'POST', body: form });
+    const r = await resp.json();
+    const sonuc = document.getElementById('yukle-sonuc');
+    sonuc.style.display = '';
+    if (r.ok) {
+      const oz = r.ozet || {};
+      sonuc.innerHTML = `
+        <div style="background:var(--card2);border:1px solid var(--accent2);border-radius:8px;padding:16px">
+          <div style="color:var(--accent2);font-weight:700;margin-bottom:12px;font-size:14px">✅ Geri yükleme tamamlandı</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            ${Object.entries(oz).map(([k,v]) => `
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:6px 10px;color:var(--text2)">${k}</td>
+                <td style="padding:6px 10px;font-weight:700;color:var(--text)">${v} kayıt</td>
+              </tr>`).join('')}
+          </table>
+        </div>`;
+      toast('Geri yükleme tamamlandı ✓');
+    } else {
+      sonuc.innerHTML = `<div style="background:var(--card2);border:1px solid var(--accent3);border-radius:8px;padding:16px;color:var(--accent3)">
+        ❌ Hata: ${r.error}</div>`;
+      toast(r.error, 'error');
+    }
+  } catch(e) {
+    toast('Bağlantı hatası: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 Geri Yüklemeyi Başlat';
+  }
+}
+</script>
+{% endblock %}

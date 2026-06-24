@@ -1,0 +1,649 @@
+{% extends "base.html" %}
+{% set active = "muh-gider" %}
+{% block title %}Gider Girişleri{% endblock %}
+{% block page_title %}💸 Gider Girişleri{% endblock %}
+
+{% block content %}
+
+<!-- Kategori Butonları -->
+<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+  <button class="kat-btn" id="btn-stok" onclick="selectKat('stok')">📦 Stok / Market</button>
+  <button class="kat-btn" id="btn-vergi" onclick="selectKat('vergi')">🧾 Vergi</button>
+  <button class="kat-btn" id="btn-demirbas" onclick="selectKat('demirbas')">🪑 Demirbaş</button>
+  <button class="kat-btn" id="btn-acente" onclick="selectKat('acente')">🤝 Acente</button>
+</div>
+
+<!-- STOK BÖLÜMÜ -->
+<div id="sec-stok" class="kat-sec" style="display:none">
+  <!-- Form -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="section-title">📦 Stok / Market Alımı Ekle</div>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="s-tarih"></div>
+      <div class="form-group"><label>Belge No</label><input type="text" id="s-belge"></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="s-aciklama"></div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Kategori</label><select id="s-kat"><option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option><option>Kırtasiye</option><option>Diğer</option></select></div>
+      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="s-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Ödeme Hesabı</label><select id="s-hesap"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option><option value="500-FK">Fırat Nakit</option><option value="500-FK">Fırat KK</option><option value="500-LK">Levent Nakit</option><option value="500-LK">Levent KK</option><option value="500-BT">Burçin Nakit</option><option value="500-BT">Burçin KK</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Not</label><input type="text" id="s-not"></div>
+      <div class="form-group" style="justify-content:flex-end;padding-top:20px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="s-fatura"> Fatura Var</label></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-default" onclick="resetStok()">✕ Temizle</button>
+      <button class="btn btn-primary" onclick="saveStok()">💾 Kaydet</button>
+    </div>
+    <div id="s-edit-bar" style="display:none;margin-top:8px;padding:8px;background:var(--accent4);border-radius:6px;font-size:12px;color:#000">
+      ✏️ Düzenleme modu — <strong id="s-edit-label"></strong> <button class="btn" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="resetStok()">İptal</button>
+    </div>
+  </div>
+  <!-- Liste -->
+  <div class="panel">
+    <div class="toolbar" style="margin-bottom:10px">
+      <div class="section-title" style="margin:0;border:0">📋 Stok Listesi</div>
+      <label style="color:var(--text2);font-size:12px">Yıl:</label>
+      <select class="filter" id="stok-yil" onchange="loadStok()"></select>
+      <select class="filter" id="stok-kat-fil" onchange="loadStok()">
+        <option value="">Tüm Kategoriler</option>
+        <option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option><option>Kırtasiye</option><option>Diğer</option>
+      </select>
+    </div>
+    <div class="cards-row" id="stok-kartlar" style="margin-bottom:16px"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tarih</th><th>Açıklama</th><th>Kategori</th><th style="text-align:right">Tutar</th><th>Ödeme</th><th>Fatura</th><th>Not</th><th></th></tr></thead>
+        <tbody id="stok-tbody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span></td></tr></tbody>
+      </table>
+    </div>
+    <div id="stok-info" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+  </div>
+</div>
+
+<!-- VERGİ BÖLÜMÜ -->
+<div id="sec-vergi" class="kat-sec" style="display:none">
+  <!-- Form -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="section-title">🧾 Vergi Kaydı Ekle</div>
+    <div class="form-row">
+      <div class="form-group"><label>Dönem Yılı</label><input type="number" id="v-yil" min="2020" max="2030"></div>
+      <div class="form-group"><label>Dönem Ayı</label><select id="v-ay"><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Vergi Türü</label><select id="v-tur"><option>KDV Beyannamesi</option><option>Muhtasar Beyanname</option><option>Kurumlar Vergisi</option><option>Gelir Vergisi</option><option>Damga Vergisi</option><option>Diğer</option></select></div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Matrah (₺)</label><input type="number" id="v-matrah" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+      <div class="form-group"><label>Vergi Tutarı (₺)</label><input type="number" id="v-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Durum</label><select id="v-durum"><option>Bekliyor</option><option>Ödendi</option></select></div>
+      <div class="form-group"><label>Ödeme Bankası</label><select id="v-banka"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option><option value="500-FK">Fırat Nakit</option><option value="500-FK">Fırat KK</option><option value="500-LK">Levent Nakit</option><option value="500-LK">Levent KK</option><option value="500-BT">Burçin Nakit</option><option value="500-BT">Burçin KK</option></select></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="v-aciklama"></div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-default" onclick="resetVergi()">✕ Temizle</button>
+      <button class="btn btn-primary" onclick="saveVergi()">💾 Kaydet</button>
+    </div>
+    <div id="v-edit-bar" style="display:none;margin-top:8px;padding:8px;background:var(--accent4);border-radius:6px;font-size:12px;color:#000">
+      ✏️ Düzenleme modu <button class="btn" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="resetVergi()">İptal</button>
+    </div>
+  </div>
+  <!-- Liste -->
+  <div class="panel">
+    <div class="toolbar" style="margin-bottom:10px">
+      <div class="section-title" style="margin:0;border:0">📋 Vergi Listesi</div>
+      <label style="color:var(--text2);font-size:12px">Yıl:</label>
+      <select class="filter" id="vergi-yil" onchange="loadVergi()"></select>
+    </div>
+    <div class="cards-row" id="vergi-kartlar" style="margin-bottom:16px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div class="section-title">⏳ Ödenecek</div>
+        <div class="table-wrap"><table><thead><tr><th>Dönem</th><th>Vergi Türü</th><th>Matrah</th><th style="text-align:right">Tutar</th><th></th></tr></thead><tbody id="vergi-bekleyen"></tbody></table></div>
+      </div>
+      <div>
+        <div class="section-title">✅ Ödenen</div>
+        <div class="table-wrap"><table><thead><tr><th>Tarih</th><th>Dönem</th><th>Vergi Türü</th><th style="text-align:right">Tutar</th><th>Ödeme</th><th></th></tr></thead><tbody id="vergi-odenen"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEMİRBAŞ BÖLÜMÜ -->
+<div id="sec-demirbas" class="kat-sec" style="display:none">
+  <!-- Form -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="section-title">🪑 Demirbaş Ekle</div>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="d-tarih"></div>
+      <div class="form-group"><label>Fatura No</label><input type="text" id="d-fatura"></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="d-aciklama" placeholder="TV, buzdolabı, mobilya..."></div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Miktar</label><input type="number" id="d-miktar" value="1" min="1" oninput="calcDemToplam()"></div>
+      <div class="form-group"><label>Birim Fiyat (₺)</label><input type="number" id="d-birim" value="0" oninput="calcDemToplam()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Toplam (₺)</label><input type="number" id="d-toplam" value="0" readonly style="background:var(--bg);color:var(--accent2);font-weight:700"></div>
+      <div class="form-group"><label>Ödeme Hesabı</label><select id="d-hesap"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option><option value="500-FK">Fırat Nakit</option><option value="500-FK">Fırat KK</option><option value="500-LK">Levent Nakit</option><option value="500-LK">Levent KK</option><option value="500-BT">Burçin Nakit</option><option value="500-BT">Burçin KK</option></select></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Not</label><input type="text" id="d-not"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-default" onclick="resetDem()">✕ Temizle</button>
+      <button class="btn btn-primary" onclick="saveDem()">💾 Kaydet</button>
+    </div>
+    <div id="d-edit-bar" style="display:none;margin-top:8px;padding:8px;background:var(--accent4);border-radius:6px;font-size:12px;color:#000">
+      ✏️ Düzenleme modu <button class="btn" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="resetDem()">İptal</button>
+    </div>
+  </div>
+  <!-- Liste -->
+  <div class="panel">
+    <div class="toolbar" style="margin-bottom:10px">
+      <div class="section-title" style="margin:0;border:0">📋 Demirbaş Listesi</div>
+      <label style="color:var(--text2);font-size:12px">Yıl:</label>
+      <select class="filter" id="dem-yil" onchange="loadDem()"></select>
+    </div>
+    <div class="cards-row" id="dem-kartlar" style="margin-bottom:16px"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tarih</th><th>Açıklama</th><th>Miktar</th><th style="text-align:right">Birim Fiyat</th><th style="text-align:right">Toplam</th><th>Ödeme</th><th>Fatura No</th><th>Not</th><th></th></tr></thead>
+        <tbody id="dem-tbody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span></td></tr></tbody>
+      </table>
+    </div>
+    <div id="dem-info" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+  </div>
+</div>
+
+<!-- ACENTE BÖLÜMÜ -->
+<div id="sec-acente" class="kat-sec" style="display:none">
+  <!-- Form -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="section-title">🤝 Acente Kaydı Ekle</div>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="a-tarih"></div>
+      <div class="form-group"><label>Acente</label><select id="a-acente"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Föy No</label><select id="a-foy" onchange="onAceFoyChange()"><option value="">— Seçin —</option></select></div>
+      <div class="form-group"><label>Rez. No</label><input type="text" id="a-rez-no"></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Misafir</label><input type="text" id="a-misafir" readonly style="background:var(--bg);color:var(--accent2)"></div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Rez. Tutarı (₺)</label><input type="number" id="a-tutar" value="0" oninput="calcAceKom()"></div>
+      <div class="form-group"><label>Komisyon Oranı (%)</label><input type="number" id="a-oran" value="15" oninput="calcAceKom()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Komisyon (₺)</label><input type="number" id="a-kom" value="0"></div>
+      <div class="form-group"><label>Komisyon Ödeme Şekli</label><select id="a-kom-odeme"><option value="Mahsup">Mahsup</option><option value="Banka">Bankadan Ödendi</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Gelen Ödeme (₺)</label><input type="number" id="a-gelen" value="0"></div>
+      <div class="form-group"><label>Ödeme Bankası</label><select id="a-odeme-banka"><option value="IS">İş Bankası</option><option value="ZRH">Ziraat Bankası</option><option value="DNZ">Deniz Bank</option></select></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Otel</label><select id="a-otel"><option>LEO</option><option>CV</option></select></div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-default" onclick="resetAce()">✕ Temizle</button>
+      <button class="btn btn-primary" onclick="saveAce()">💾 Kaydet</button>
+    </div>
+    <div id="a-edit-bar" style="display:none;margin-top:8px;padding:8px;background:var(--accent4);border-radius:6px;font-size:12px;color:#000">
+      ✏️ Düzenleme modu <button class="btn" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="resetAce()">İptal</button>
+    </div>
+  </div>
+  <!-- Liste -->
+  <div class="panel">
+    <div class="toolbar" style="margin-bottom:10px">
+      <div class="section-title" style="margin:0;border:0">📋 Acente Listesi</div>
+      <label style="color:var(--text2);font-size:12px">Yıl:</label>
+      <select class="filter" id="ace-yil" onchange="loadAcente()"></select>
+      <select class="filter" id="ace-sel" onchange="loadAcente()"><option value="">Tüm Acenteler</option></select>
+    </div>
+    <div class="cards-row" id="ace-kartlar" style="margin-bottom:16px"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tarih</th><th>Acente</th><th>Föy</th><th>Misafir</th><th style="text-align:right">Rez. Tutarı</th><th style="text-align:center">Kom. Oranı</th><th style="text-align:right">Komisyon</th><th style="text-align:right">Gelen Ödeme</th><th>Otel</th><th></th></tr></thead>
+        <tbody id="ace-tbody"><tr class="loading-row"><td colspan="10"><span class="spinner"></span></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+.kat-btn {
+  padding: 10px 20px; border-radius: 8px; border: 2px solid var(--border);
+  background: var(--card); color: var(--text); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.kat-btn:hover { background: var(--card2); }
+.kat-btn.active {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const thisYear = new Date().getFullYear();
+['stok-yil','vergi-yil','dem-yil','ace-yil'].forEach(id => {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  for (let y = thisYear-2; y <= thisYear+1; y++) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if (y === thisYear) o.selected = true;
+    sel.appendChild(o);
+  }
+});
+
+function selectKat(id) {
+  document.querySelectorAll('.kat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.kat-sec').forEach(s => s.style.display = 'none');
+  document.getElementById('btn-' + id).classList.add('active');
+  document.getElementById('sec-' + id).style.display = 'block';
+  if (id === 'stok') { initStok(); loadStok(); }
+  else if (id === 'vergi') { initVergi(); loadVergi(); }
+  else if (id === 'demirbas') { initDem(); loadDem(); }
+  else if (id === 'acente') { initAce(); loadAcente(); }
+}
+
+// ── STOK ─────────────────────────────────────────────────────────────────────
+let stokData = [], stokEditId = null;
+
+function initStok() {
+  document.getElementById('s-tarih').value = new Date().toISOString().split('T')[0];
+}
+
+function resetStok() {
+  stokEditId = null;
+  document.getElementById('s-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('s-belge').value = '';
+  document.getElementById('s-aciklama').value = '';
+  document.getElementById('s-tutar').value = 0;
+  document.getElementById('s-not').value = '';
+  document.getElementById('s-fatura').checked = false;
+  document.getElementById('s-edit-bar').style.display = 'none';
+}
+
+async function loadStok() {
+  const yil = document.getElementById('stok-yil').value;
+  const kat = document.getElementById('stok-kat-fil').value;
+  const data = await api(`/api/muhasebe/stok?yil=${yil}&kat=${encodeURIComponent(kat)}`);
+  stokData = data;
+  const katTop = {}; let toplam = 0;
+  data.forEach(r => { katTop[r.kategori||'Diğer'] = (katTop[r.kategori||'Diğer']||0) + r.tutar; toplam += r.tutar; });
+  document.getElementById('stok-kartlar').innerHTML =
+    `<div class="stat-card"><div class="label">Toplam Alım</div><div class="value red">${fmt(toplam)}</div><div class="sub">${data.length} kayıt</div></div>` +
+    Object.entries(katTop).slice(0,4).map(([k,t]) => `<div class="stat-card"><div class="label">${k}</div><div class="value yellow">${fmt(t)}</div></div>`).join('');
+  document.getElementById('stok-tbody').innerHTML = data.map(r => `<tr>
+    <td>${r.tarih}</td><td>${r.aciklama}</td><td>${r.kategori||'—'}</td>
+    <td class="red" style="text-align:right">${fmt(r.tutar)}</td>
+    <td>${({'100':'Nakit','102-1':'İş Bankası','102-2':'Ziraat','102-3':'Deniz Bank','500-FK':'Fırat (Kendi)','500-LK':'Levent (Kendi)','500-BT':'Burçin (Kendi)'})[r.odeme_hesap] || r.odeme_hesap || '—'}</td>
+    <td>${r.fatura_var?'✅':'❌'}</td><td>${r.not_||'—'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="editStok(${r.id})">Düzenle</button>
+      <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="silStok(${r.id},'${r.aciklama}')">Sil</button>
+    </td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
+  document.getElementById('stok-info').textContent = `${data.length} kayıt | Toplam: ${fmt(toplam)}`;
+}
+
+async function saveStok() {
+  const data = {
+    tarih: document.getElementById('s-tarih').value,
+    belge_no: document.getElementById('s-belge').value,
+    aciklama: document.getElementById('s-aciklama').value,
+    kategori: document.getElementById('s-kat').value,
+    tutar: parseFloat(document.getElementById('s-tutar').value)||0,
+    odeme_hesap: document.getElementById('s-hesap').value,
+    fatura_var: document.getElementById('s-fatura').checked,
+    not_: document.getElementById('s-not').value,
+  };
+  if (!validateForm([{id:'s-tarih',label:'Tarih'},{id:'s-aciklama',label:'Açıklama'},{id:'s-tutar',label:'Tutar'}])) return;
+  const url = stokEditId ? '/api/muhasebe/stok/guncelle' : '/api/muhasebe/stok/ekle';
+  if (stokEditId) data.id = stokEditId;
+  const r = await api(url, data);
+  if (r.ok) { toast(stokEditId?'Güncellendi ✓':'Kaydedildi ✓'); resetStok(); loadStok(); }
+  else toast(r.error, 'error');
+}
+
+function editStok(id) {
+  const r = stokData.find(x => x.id === id); if (!r) return;
+  stokEditId = id;
+  document.getElementById('s-tarih').value = r.tarih||'';
+  document.getElementById('s-belge').value = r.belge_no||'';
+  document.getElementById('s-aciklama').value = r.aciklama||'';
+  document.getElementById('s-kat').value = r.kategori||'Market/Gıda';
+  document.getElementById('s-tutar').value = r.tutar||0;
+  document.getElementById('s-hesap').value = r.odeme_hesap||'';
+  document.getElementById('s-not').value = r.not_||'';
+  document.getElementById('s-fatura').checked = !!r.fatura_var;
+  document.getElementById('s-edit-bar').style.display = 'block';
+  document.getElementById('s-edit-label').textContent = r.aciklama;
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function silStok(id, aciklama) {
+  if (!confirm(`"${aciklama}" silinsin mi?`)) return;
+  const r = await api('/api/muhasebe/stok/sil', {id, aciklama});
+  if (r.ok) { toast('Silindi ✓'); loadStok(); }
+  else toast(r.error, 'error');
+}
+
+// ── VERGİ ─────────────────────────────────────────────────────────────────────
+let vergiData = [], vergiEditId = null;
+
+function initVergi() {
+  document.getElementById('v-yil').value = thisYear;
+  document.getElementById('v-ay').value = new Date().getMonth()+1;
+}
+
+function resetVergi() {
+  vergiEditId = null;
+  document.getElementById('v-yil').value = thisYear;
+  document.getElementById('v-ay').value = new Date().getMonth()+1;
+  document.getElementById('v-matrah').value = 0;
+  document.getElementById('v-tutar').value = 0;
+  document.getElementById('v-aciklama').value = '';
+  document.getElementById('v-durum').value = 'Bekliyor';
+  document.getElementById('v-edit-bar').style.display = 'none';
+}
+
+async function loadVergi() {
+  const yil = document.getElementById('vergi-yil').value;
+  const data = await api(`/api/muhasebe/vergi?yil=${yil}`);
+  vergiData = data;
+  const bekleyen = data.filter(r => r.durum !== 'Ödendi');
+  const odenen = data.filter(r => r.durum === 'Ödendi');
+  const topB = bekleyen.reduce((s,r)=>s+(r.tutar||0),0);
+  const topO = odenen.reduce((s,r)=>s+(r.tutar||0),0);
+  document.getElementById('vergi-kartlar').innerHTML = `
+    <div class="stat-card"><div class="label">⏳ Ödenecek</div><div class="value red">${fmt(topB)}</div></div>
+    <div class="stat-card"><div class="label">✅ Ödenen</div><div class="value green">${fmt(topO)}</div></div>
+    <div class="stat-card"><div class="label">Toplam</div><div class="value yellow">${fmt(topB+topO)}</div></div>`;
+  const AYLAR=['','Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  document.getElementById('vergi-bekleyen').innerHTML = bekleyen.map(r=>`<tr>
+    <td>${AYLAR[r.donem_ay]||r.donem_ay} ${r.donem_yil}</td><td>${r.vergi_turu}</td>
+    <td style="text-align:right">${fmt(r.matrah)}</td><td class="red" style="text-align:right">${fmt(r.tutar)}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-primary" style="padding:3px 8px;font-size:11px" onclick="onaylaVergi(${r.id})">✓ Öde</button>
+      <button class="btn" style="padding:3px 8px;font-size:11px;background:var(--accent4);color:#000;margin-left:4px" onclick="editVergi(${r.id})">Düzenle</button>
+      <button class="btn btn-danger" style="padding:3px 8px;font-size:11px;margin-left:4px" onclick="silVergi(${r.id})">Sil</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px">Bekleyen vergi yok</td></tr>';
+  document.getElementById('vergi-odenen').innerHTML = odenen.map(r=>`<tr>
+    <td>${r.tarih||'—'}</td><td>${AYLAR[r.donem_ay]||r.donem_ay} ${r.donem_yil}</td><td>${r.vergi_turu}</td>
+    <td class="green" style="text-align:right">${fmt(r.tutar)}</td>
+    <td style="font-size:11px">${r.odeme_banka==='100'?'Nakit':r.odeme_banka==='102-1'?'İş Bankası':r.odeme_banka==='102-2'?'Ziraat':r.odeme_banka==='102-3'?'Deniz Bank':r.odeme_banka||'—'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;background:var(--accent4);color:#000;margin-right:4px" onclick="editVergi(${r.id})">Düzenle</button>
+      <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="silVergi(${r.id})">Sil</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:16px">—</td></tr>';
+}
+
+async function onaylaVergi(id) {
+  const r = await api('/api/muhasebe/vergi/onayla', {id, tarih: new Date().toISOString().split('T')[0]});
+  if (r.ok) { toast('Ödendi olarak işaretlendi ✓'); loadVergi(); }
+  else toast(r.error, 'error');
+}
+
+async function saveVergi() {
+  if (!validateForm([{id:'v-yil',label:'Dönem Yılı'},{id:'v-tutar',label:'Vergi Tutarı'}])) return;
+  const data = {
+    donem_yil: parseInt(document.getElementById('v-yil').value),
+    donem_ay: parseInt(document.getElementById('v-ay').value),
+    vergi_turu: document.getElementById('v-tur').value,
+    matrah: parseFloat(document.getElementById('v-matrah').value)||0,
+    tutar: parseFloat(document.getElementById('v-tutar').value)||0,
+    durum: document.getElementById('v-durum').value,
+    odeme_banka: document.getElementById('v-banka').value,
+    aciklama: document.getElementById('v-aciklama').value,
+  };
+  const url = vergiEditId ? '/api/muhasebe/vergi/guncelle' : '/api/muhasebe/vergi/ekle';
+  if (vergiEditId) data.id = vergiEditId;
+  const r = await api(url, data);
+  if (r.ok) { toast(vergiEditId?'Güncellendi ✓':'Kaydedildi ✓'); resetVergi(); loadVergi(); }
+  else toast(r.error, 'error');
+}
+
+function editVergi(id) {
+  const r = vergiData.find(x => x.id === id); if (!r) return;
+  vergiEditId = id;
+  document.getElementById('v-yil').value = r.donem_yil||thisYear;
+  document.getElementById('v-ay').value = r.donem_ay||1;
+  document.getElementById('v-tur').value = r.vergi_turu||'';
+  document.getElementById('v-matrah').value = r.matrah||0;
+  document.getElementById('v-tutar').value = r.tutar||0;
+  document.getElementById('v-durum').value = r.durum||'Bekliyor';
+  document.getElementById('v-aciklama').value = r.aciklama||'';
+  document.getElementById('v-edit-bar').style.display = 'block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function silVergi(id) {
+  if (!confirm('Bu vergi kaydını silmek istediğinize emin misiniz?')) return;
+  const r = await api('/api/muhasebe/vergi/sil', {id});
+  if (r.ok) { toast('Silindi ✓'); loadVergi(); }
+  else toast(r.error, 'error');
+}
+
+// ── DEMİRBAŞ ──────────────────────────────────────────────────────────────────
+let demData = [], demEditId = null;
+
+function calcDemToplam() {
+  const m = parseFloat(document.getElementById('d-miktar').value)||0;
+  const b = parseFloat(document.getElementById('d-birim').value)||0;
+  document.getElementById('d-toplam').value = (m*b).toFixed(2);
+}
+
+function initDem() {
+  document.getElementById('d-tarih').value = new Date().toISOString().split('T')[0];
+}
+
+function resetDem() {
+  demEditId = null;
+  document.getElementById('d-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('d-fatura').value = '';
+  document.getElementById('d-aciklama').value = '';
+  document.getElementById('d-miktar').value = 1;
+  document.getElementById('d-birim').value = 0;
+  document.getElementById('d-toplam').value = 0;
+  document.getElementById('d-not').value = '';
+  document.getElementById('d-edit-bar').style.display = 'none';
+}
+
+async function loadDem() {
+  const yil = document.getElementById('dem-yil').value;
+  const data = await api(`/api/muhasebe/demirbas?yil=${yil}`);
+  demData = data;
+  const toplam = data.reduce((s,r)=>s+(r.toplam||0),0);
+  document.getElementById('dem-kartlar').innerHTML = `
+    <div class="stat-card"><div class="label">Toplam</div><div class="value red">${fmt(toplam)}</div><div class="sub">${data.length} kayıt</div></div>`;
+  document.getElementById('dem-tbody').innerHTML = data.map(r=>`<tr>
+    <td>${r.tarih||'—'}</td><td>${r.aciklama}</td>
+    <td style="text-align:right">${r.miktar||1}</td>
+    <td style="text-align:right">${fmt(r.birim_fiyat)}</td>
+    <td class="red" style="text-align:right">${fmt(r.toplam)}</td>
+    <td>${({'100':'Nakit','102-1':'İş Bankası','102-2':'Ziraat','102-3':'Deniz Bank','500-FK':'Fırat (Kendi)','500-LK':'Levent (Kendi)','500-BT':'Burçin (Kendi)'})[r.odeme_hesap] || r.odeme_hesap || '—'}</td>
+    <td>${r.fatura_no||'—'}</td><td>${r.not_||'—'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="editDem(${r.id})">Düzenle</button>
+      <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="silDem(${r.id})">Sil</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
+  document.getElementById('dem-info').textContent = `${data.length} kayıt | Toplam: ${fmt(toplam)}`;
+}
+
+async function saveDem() {
+  if (!validateForm([{id:'d-tarih',label:'Tarih'},{id:'d-aciklama',label:'Açıklama'},{id:'d-birim',label:'Birim Fiyat'}])) return;
+  const data = {
+    tarih: document.getElementById('d-tarih').value,
+    aciklama: document.getElementById('d-aciklama').value,
+    miktar: parseFloat(document.getElementById('d-miktar').value)||1,
+    birim_fiyat: parseFloat(document.getElementById('d-birim').value)||0,
+    odeme_hesap: document.getElementById('d-hesap').value,
+    fatura_no: document.getElementById('d-fatura').value,
+    not_: document.getElementById('d-not').value,
+  };
+  const url = demEditId ? '/api/muhasebe/demirbas/guncelle' : '/api/muhasebe/demirbas/ekle';
+  if (demEditId) data.id = demEditId;
+  const r = await api(url, data);
+  if (r.ok) { toast(demEditId?'Güncellendi ✓':'Kaydedildi ✓'); resetDem(); loadDem(); }
+  else toast(r.error, 'error');
+}
+
+function editDem(id) {
+  const r = demData.find(x=>x.id===id); if (!r) return;
+  demEditId = id;
+  document.getElementById('d-tarih').value = r.tarih||'';
+  document.getElementById('d-fatura').value = r.fatura_no||'';
+  document.getElementById('d-aciklama').value = r.aciklama||'';
+  document.getElementById('d-miktar').value = r.miktar||1;
+  document.getElementById('d-birim').value = r.birim_fiyat||0;
+  document.getElementById('d-toplam').value = r.toplam||0;
+  document.getElementById('d-hesap').value = r.odeme_hesap||'';
+  document.getElementById('d-not').value = r.not_||'';
+  document.getElementById('d-edit-bar').style.display = 'block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function silDem(id) {
+  if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
+  const r = await api('/api/muhasebe/demirbas/sil', {id});
+  if (r.ok) { toast('Silindi ✓'); loadDem(); }
+  else toast(r.error, 'error');
+}
+
+// ── ACENTE ────────────────────────────────────────────────────────────────────
+let aceData = [], aceEditId = null, aceFoyListesi = [], aceAcenteler = [];
+
+function onAceFoyChange() {
+  const foyNo = parseInt(document.getElementById('a-foy').value);
+  const rez = aceFoyListesi.find(r=>r.foy_no===foyNo);
+  if (rez) {
+    document.getElementById('a-misafir').value = rez.musteri;
+    document.getElementById('a-tutar').value = rez.toplam_fiyat||0;
+    document.getElementById('a-otel').value = rez.otel||'LEO';
+    calcAceKom();
+  }
+}
+
+function calcAceKom() {
+  const tutar = parseFloat(document.getElementById('a-tutar').value)||0;
+  const oran = parseFloat(document.getElementById('a-oran').value)||0;
+  const kom = parseFloat((tutar*oran/100).toFixed(2));
+  document.getElementById('a-kom').value = kom;
+  document.getElementById('a-gelen').value = Math.max(0,tutar-kom).toFixed(2);
+}
+
+function resetAce() {
+  aceEditId = null;
+  document.getElementById('a-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('a-misafir').value = '';
+  document.getElementById('a-tutar').value = 0;
+  document.getElementById('a-rez-no').value = '';
+  document.getElementById('a-kom').value = 0;
+  document.getElementById('a-gelen').value = 0;
+  document.getElementById('a-edit-bar').style.display = 'none';
+}
+
+async function initAce() {
+  const d = await api(`/api/muhasebe/acente?yil=${thisYear}&acente=`);
+  aceAcenteler = d.acenteler||[];
+  const sel = document.getElementById('a-acente');
+  sel.innerHTML = aceAcenteler.map(a=>`<option value="${a.kod}">${a.kod} — ${a.ad}</option>`).join('');
+  const aceSel = document.getElementById('ace-sel');
+  if (aceSel.options.length <= 1) {
+    aceAcenteler.forEach(a => { const o=document.createElement('option'); o.value=a.kod; o.textContent=`${a.kod} — ${a.ad}`; aceSel.appendChild(o); });
+  }
+  const rezData = await api('/api/rezervasyonlar');
+  aceFoyListesi = Array.isArray(rezData) ? rezData : (rezData.rezervasyonlar||[]);
+  const foySel = document.getElementById('a-foy');
+  foySel.innerHTML = '<option value="">— Seçin —</option>' +
+    aceFoyListesi.map(r=>`<option value="${r.foy_no}">Föy #${r.foy_no} — ${r.musteri} (Oda ${r.oda_no})</option>`).join('');
+  document.getElementById('a-tarih').value = new Date().toISOString().split('T')[0];
+}
+
+async function loadAcente() {
+  const yil = document.getElementById('ace-yil').value;
+  const acente = document.getElementById('ace-sel').value;
+  const d = await api(`/api/muhasebe/acente?yil=${yil}&acente=${acente}`);
+  aceData = d.rows||[];
+  let topR=0,topK=0,topG=0;
+  aceData.forEach(r=>{topR+=r.rez_tutari||0;topK+=r.komisyon_tl||0;topG+=r.gelen_odeme||0;});
+  const bak=topK-topG;
+  document.getElementById('ace-kartlar').innerHTML=`
+    <div class="stat-card"><div class="label">Rez. Tutarı</div><div class="value blue">${fmt(topR)}</div></div>
+    <div class="stat-card"><div class="label">Toplam Komisyon</div><div class="value red">${fmt(topK)}</div></div>
+    <div class="stat-card"><div class="label">Gelen Ödeme</div><div class="value green">${fmt(topG)}</div></div>
+    <div class="stat-card"><div class="label">Acente Bakiye</div><div class="value ${bak>0?'red':'green'}">${fmt(bak)}</div></div>`;
+  document.getElementById('ace-tbody').innerHTML=aceData.map(r=>`<tr>
+    <td>${fmtDate(r.tarih)}</td><td>${r.acente_kod}</td><td style="text-align:center">${r.foy_no||'—'}</td>
+    <td>${r.misafir||'—'}</td><td style="text-align:right">${fmt(r.rez_tutari)}</td>
+    <td style="text-align:center">${r.komisyon_oran||0}%</td>
+    <td class="red" style="text-align:right">${fmt(r.komisyon_tl)}</td>
+    <td class="green" style="text-align:right">${fmt(r.gelen_odeme)}</td>
+    <td>${r.otel||''}</td>
+    <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="editAce(${r.id})">Düzenle</button>
+      <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="silAce(${r.id})">Sil</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
+}
+
+async function saveAce() {
+  if (!validateForm([{id:'a-tarih',label:'Tarih'},{id:'a-misafir',label:'Misafir'},{id:'a-tutar',label:'Rez. Tutarı'}])) return;
+  const data = {
+    tarih: document.getElementById('a-tarih').value,
+    acente_kod: document.getElementById('a-acente').value,
+    foy_no: document.getElementById('a-foy').value,
+    rez_no: document.getElementById('a-rez-no').value,
+    misafir: document.getElementById('a-misafir').value,
+    rez_tutari: parseFloat(document.getElementById('a-tutar').value)||0,
+    komisyon_oran: parseFloat(document.getElementById('a-oran').value)||15,
+    komisyon_tl: parseFloat(document.getElementById('a-kom').value)||0,
+    gelen_odeme: parseFloat(document.getElementById('a-gelen').value)||0,
+    otel: document.getElementById('a-otel').value,
+    komisyon_odeme: document.getElementById('a-kom-odeme').value,
+    odeme_banka: document.getElementById('a-odeme-banka').value,
+  };
+  const url = aceEditId ? '/api/muhasebe/acente/guncelle' : '/api/muhasebe/acente/ekle';
+  if (aceEditId) data.id = aceEditId;
+  const r = await api(url, data);
+  if (r.ok) { toast(aceEditId?'Güncellendi ✓':'Kaydedildi ✓'); resetAce(); loadAcente(); }
+  else toast(r.error, 'error');
+}
+
+function editAce(id) {
+  const r = aceData.find(x=>x.id===id); if (!r) return;
+  aceEditId = id;
+  const sel = document.getElementById('a-acente');
+  sel.innerHTML = aceAcenteler.map(a=>`<option value="${a.kod}" ${a.kod==r.acente_kod?'selected':''}>${a.kod} — ${a.ad}</option>`).join('');
+  document.getElementById('a-tarih').value = r.tarih||'';
+  document.getElementById('a-foy').innerHTML = `<option value="${r.foy_no}">${r.foy_no?'Föy #'+r.foy_no:'—'}</option>`;
+  document.getElementById('a-rez-no').value = r.rez_no||'';
+  document.getElementById('a-misafir').value = r.misafir||'';
+  document.getElementById('a-tutar').value = r.rez_tutari||0;
+  document.getElementById('a-oran').value = r.komisyon_oran||15;
+  document.getElementById('a-kom').value = r.komisyon_tl||0;
+  document.getElementById('a-gelen').value = r.gelen_odeme||0;
+  document.getElementById('a-otel').value = r.otel||'LEO';
+  document.getElementById('a-edit-bar').style.display = 'block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function silAce(id) {
+  if (!confirm('Bu acente kaydını silmek istediğinize emin misiniz?')) return;
+  const r = await api('/api/muhasebe/acente/sil', {id});
+  if (r.ok) { toast('Silindi ✓'); loadAcente(); }
+  else toast(r.error, 'error');
+}
+
+// İlk açılışta stok seçili
+selectKat('stok');
+</script>
+{% endblock %}

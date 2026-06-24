@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% set active = "hk-listesi" %}
+{% block title %}HK Listesi{% endblock %}
+{% block page_title %}🧹 Housekeeping Listesi{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="btn" onclick="changeDate(-1)" style="padding:6px 12px;font-size:16px">‹</button>
+    <input type="date" id="tarih-input" class="form-control"
+      style="width:160px;font-size:14px;font-weight:600;text-align:center;cursor:pointer"
+      onchange="loadData()"
+      onclick="try{this.showPicker()}catch(e){}">
+    <button class="btn" onclick="changeDate(1)" style="padding:6px 12px;font-size:16px">›</button>
+    <button class="btn" onclick="goToday()" style="padding:6px 12px;font-size:13px">Bugün</button>
+  </div>
+  <div id="ozet-hk" style="font-size:13px;color:var(--text2)"></div>
+  <button class="btn" onclick="loadData()" style="margin-left:auto;padding:6px 14px;font-size:13px">🔄 Yenile</button>
+</div>
+
+<div class="panel" style="padding:0;overflow:hidden">
+  <table class="hk-table" id="tbl-hk">
+    <thead>
+      <tr>
+        <th style="width:70px">Oda</th>
+        <th style="width:60px">Otel</th>
+        <th>Misafir</th>
+        <th style="width:110px">Anahtar Saati</th>
+        <th style="width:120px;text-align:center">Durum</th>
+        <th style="width:90px;text-align:center">İşlem</th>
+      </tr>
+    </thead>
+    <tbody id="hk-tbody">
+      <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text2)"><span class="spinner"></span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<style>
+.hk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.hk-table thead tr { background: var(--bg); }
+.hk-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  color: var(--text2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 1px solid var(--border);
+}
+.hk-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.hk-table tr:last-child td { border-bottom: none; }
+.hk-table tr.row-bekliyor td { background: transparent; }
+.hk-table tr.row-temizleniyor td { background: rgba(255,165,0,0.07); }
+.hk-table tr.row-temiz td { background: rgba(46,213,115,0.07); }
+
+.hk-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.hk-badge.bekliyor     { background: rgba(200,200,200,0.15); color: var(--text2); }
+.hk-badge.temizleniyor { background: rgba(255,165,0,0.2);    color: orange; }
+.hk-badge.temiz        { background: rgba(46,213,115,0.2);   color: var(--accent2); }
+
+.hk-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hk-btn:hover { background: var(--accent); color: #111; }
+.hk-btn { transition: all .15s; }
+.hk-btn.bekliyor     { border-color: var(--text2); color: var(--text2); }
+.hk-btn.temizleniyor { border-color: orange; color: orange; }
+.hk-btn.temiz        { border-color: var(--accent2); color: var(--accent2); }
+.hk-btn.active-step  { font-weight: 700; opacity: 1; }
+.hk-btn.done-step    { opacity: .35; cursor: pointer; }
+
+.otel-leo { color: var(--accent);  font-weight:700; font-size:12px; }
+.otel-cv  { color: var(--accent4); font-weight:700; font-size:12px; }
+
+.empty-msg { padding:30px; text-align:center; color:var(--text2); font-size:14px; }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const today = new Date().toISOString().split('T')[0];
+
+function init() {
+  document.getElementById('tarih-input').value = today;
+  loadData();
+  // Her 30 saniyede otomatik yenile
+  setInterval(loadData, 10000);
+}
+
+function changeDate(delta) {
+  const inp = document.getElementById('tarih-input');
+  const parts = inp.value.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  d.setDate(d.getDate() + delta);
+  inp.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  loadData();
+}
+
+function goToday() {
+  document.getElementById('tarih-input').value = today;
+  loadData();
+}
+
+async function loadData() {
+  const tarih = document.getElementById('tarih-input').value;
+  try {
+    const res = await fetch(`/api/hk-listesi?tarih=${tarih}`);
+    const d   = await res.json();
+    renderTable(d.odalar);
+    const bekliyor     = d.odalar.filter(o => o.hk_durum === 'bekliyor').length;
+    const temizleniyor = d.odalar.filter(o => o.hk_durum === 'temizleniyor').length;
+    const temiz        = d.odalar.filter(o => o.hk_durum === 'temiz').length;
+    document.getElementById('ozet-hk').innerHTML =
+      `Toplam: <strong>${d.odalar.length}</strong> oda &nbsp;|&nbsp;
+       ⏳ Bekliyor: <strong>${bekliyor}</strong> &nbsp;|&nbsp;
+       🔄 Temizleniyor: <strong>${temizleniyor}</strong> &nbsp;|&nbsp;
+       ✅ Temiz: <strong>${temiz}</strong>`;
+  } catch(e) {
+    document.getElementById('hk-tbody').innerHTML =
+      '<tr><td colspan="6" class="empty-msg">Veri yüklenemedi</td></tr>';
+  }
+}
+
+function renderTable(odalar) {
+  const tbody = document.getElementById('hk-tbody');
+  if (!odalar.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">Bu tarih için anahtar teslim alınan oda yok</td></tr>';
+    return;
+  }
+  tbody.innerHTML = odalar.map(o => {
+    const otelCls = o.otel === 'LEO' ? 'otel-leo' : 'otel-cv';
+    const saat    = o.teslim_zaman ? o.teslim_zaman.slice(11, 16) : '—';
+    const durum   = o.hk_durum || 'bekliyor';
+
+    let badgeTxt = durum === 'temiz' ? '✅ Temiz' :
+                   durum === 'temizleniyor' ? '🔄 Temizleniyor' : '⏳ Temizliği Bekliyor';
+
+    // İşlem sütunu: sadece "ne yapmalı" butonu + gerekirse geri al linki
+    const adimlar = [
+      { key: 'bekliyor',     ileri: 'temizleniyor', ileriLabel: '🔄 Temizlemeye Başla' },
+      { key: 'temizleniyor', ileri: 'temiz',        ileriLabel: '✅ Temizlendi'         },
+      { key: 'temiz',        ileri: null,            ileriLabel: null                   },
+    ];
+    const aktif = adimlar.find(a => a.key === durum) || adimlar[0];
+    const onceki = { bekliyor: null, temizleniyor: 'bekliyor', temiz: 'temizleniyor' }[durum];
+    const oncekiLabel = { bekliyor: null, temizleniyor: '↩ Temizliği Bekleyene Al', temiz: '↩ Temizleniyora Al' }[durum];
+
+    let butonlar = '';
+    if (aktif.ileri) {
+      const waOnclick = (durum === 'bekliyor')
+        ? `setDurumVeWA(${o.foy_no},'${aktif.ileri}','${o.otel}',${o.oda_no})`
+        : `setDurum(${o.foy_no},'${aktif.ileri}')`;
+      butonlar += `<button class="hk-btn active-step ${durum}"
+        onclick="${waOnclick}">${aktif.ileriLabel}</button>`;
+    }
+    if (onceki) {
+      butonlar += ` <button class="hk-btn done-step"
+        style="font-size:11px;padding:4px 8px"
+        onclick="geriAl(${o.foy_no},'${onceki}')">${oncekiLabel}</button>`;
+    }
+
+    const bakiyeUyari = o.bakiyeli
+      ? `<span title="Bakiyeli çıkış!" style="color:#ff6b6b;font-size:11px;margin-left:4px">⚠️ BAKİYE</span>`
+      : '';
+
+    return `<tr class="row-${durum}">
+      <td><strong style="font-size:16px">${o.oda_no}</strong></td>
+      <td class="${otelCls}">${o.otel}</td>
+      <td>${o.musteri}${bakiyeUyari}</td>
+      <td style="font-family:monospace;font-size:13px">${saat}</td>
+      <td style="text-align:center"><span class="hk-badge ${durum}">${badgeTxt}</span></td>
+      <td style="text-align:center">${butonlar}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function setDurumVeWA(foyNo, durum, otel, odaNo) {
+  // Telegram bildirimi backend'den otomatik gönderiliyor
+  await setDurum(foyNo, durum);
+}
+
+async function setDurum(foyNo, durum) {
+  try {
+    const res = await fetch('/api/hk-durum', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({foy_no: foyNo, durum: durum})
+    });
+    const d = await res.json();
+    if (d.ok) {
+      const mesaj = durum === 'temiz' ? '✅ Oda temiz' :
+                    durum === 'temizleniyor' ? '🔄 Temizlik başladı' : '⏳ Beklemeye alındı';
+      toast(mesaj);
+      loadData();
+    }
+  } catch(e) { toast('Hata', 'error'); }
+}
+
+function geriAl(foyNo, durum) {
+  const etiket = durum === 'bekliyor' ? 'Bekliyor' : 'Temizleniyor';
+  if (!confirm(`"${etiket}" adımına geri almak istediğinizden emin misiniz?`)) return;
+  setDurum(foyNo, durum);
+}
+
+init();
+</script>
+{% endblock %}

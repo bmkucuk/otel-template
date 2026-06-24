@@ -1,0 +1,497 @@
+{% extends "base.html" %}
+{% set active = "rezervasyonlar" %}
+{% block title %}Rezervasyonlar{% endblock %}
+{% block page_title %}📋 Rezervasyonlar{% endblock %}
+
+{% block content %}
+<style>
+.rez-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.rez-search{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 13px;width:300px}
+.rez-search input{background:transparent;border:none;outline:none;color:var(--text);font-size:13px;width:100%;font-family:Geist,sans-serif}
+.rez-chip{display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--card);color:var(--text2);border:1px solid var(--border);transition:.15s}
+.rez-chip.active{background:var(--card2);color:var(--text);border-color:var(--accent)}
+.rez-summary{font-size:12.5px;color:var(--text2);margin-bottom:12px}
+.rez-avatar{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;flex:none}
+.rez-oda-pill{font-family:'Geist Mono',monospace;font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:5px}
+.rez-durum-pill{display:inline-block;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:600}
+.rez-tahsil-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(47,221,155,.13);color:var(--pos);border:1px solid rgba(47,221,155,.32)}
+.rez-btn{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;border:none;display:inline-block}
+.rez-btn-def{background:var(--card2);color:var(--text2);border:1px solid var(--border)}
+.rez-btn-gold{background:rgba(255,194,77,.16);color:var(--accent);border:1px solid rgba(255,194,77,.4)}
+.rez-btn-danger{background:rgba(255,111,125,.12);color:var(--accent3);border:1px solid rgba(255,111,125,.34)}
+.rez-btn-warn{background:#8B4513;color:#fff;border:none}
+</style>
+
+<div class="rez-summary" id="rez-summary">— kayıt</div>
+
+<div class="rez-toolbar">
+  <div class="rez-search">
+    <span style="width:14px;height:14px;border-radius:50%;border:1.5px solid var(--text2);flex:none"></span>
+    <input id="search" placeholder="Misafir, föy no, oda ara…" oninput="load()">
+  </div>
+  <select class="filter" id="otel-filter" onchange="load()" style="border-radius:10px">
+    <option value="">Tüm Oteller</option><option>LEO</option><option>CV</option>
+  </select>
+  <div class="rez-chip" id="chip-aktif" onclick="toggleChip('aktif')"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent2)"></span>Aktif</div>
+  <div class="rez-chip" id="chip-tamam" onclick="toggleChip('tamam')"><span style="width:7px;height:7px;border-radius:50%;background:var(--pos)"></span>Tamamlandı</div>
+  <input type="checkbox" id="cb-aktif" style="display:none">
+  <input type="checkbox" id="cb-tamamlandi" style="display:none">
+  <div style="flex:1"></div>
+  <button id="secim-kaldir-btn" onclick="secimKaldirRez()" style="display:none;background:var(--card2);border:1px solid var(--accent2);color:var(--accent2);padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;margin-right:8px">✕ Seçimi Kaldır</button>
+  <button class="btn btn-primary" onclick="openModal()">＋ Yeni Rezervasyon</button>
+</div>
+
+<div class="table-wrap" style="max-height:calc(100vh - 240px);overflow-y:auto">
+  <table>
+    <thead>
+      <tr>
+        <th>Föy</th><th>Misafir</th><th>Kişi</th><th>Kanal</th><th>Konaklama</th>
+        <th style="text-align:right">Gün Fiyat</th>
+        <th style="text-align:right">Toplam</th>
+        <th style="text-align:right">Kapora</th>
+        <th style="text-align:right">Bakiye</th>
+        <th style="text-align:center">Durum</th>
+        <th style="text-align:center">Kahvaltı</th>
+        <th style="text-align:right">İşlem</th>
+      </tr>
+    </thead>
+    <tbody id="rez-tbody">
+      <tr class="loading-row"><td colspan="12"><span class="spinner"></span></td></tr>
+    </tbody>
+  </table>
+</div>
+<div id="info-lbl" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+
+
+<!-- Çifte Rezervasyon Uyarı Modalı -->
+<div class="modal-overlay" id="uyari-modal" style="z-index:200">
+  <div class="modal" style="min-width:460px;border:2px solid #ff4444;text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+    <h2 style="color:#ff4444;font-size:20px;margin-bottom:16px">ÇİFTE REZERVASYON!</h2>
+    <div id="uyari-mesaj" style="color:#ff7c7c;font-size:16px;font-weight:700;line-height:1.6;margin-bottom:20px"></div>
+    <button class="btn btn-danger" style="padding:10px 32px;font-size:15px;font-weight:700" onclick="closeUyari()">✕ Kapat</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modal-title">Yeni Rezervasyon</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Föy No</label>
+        <input type="number" id="f-foy" min="1" readonly style="background:var(--bg2,#1a1f29);opacity:.8;cursor:not-allowed">
+      </div>
+      <div class="form-group">
+        <label>Oda No</label>
+        <select id="f-oda" onchange="onOdaChange()">
+          <option value="">Seçin...</option>
+          <optgroup label="── Cunda Villa (1-10) ──">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+          </optgroup>
+          <optgroup label="── Otel Leo (11-29) ──">
+            <option value="11">11</option><option value="12">12</option><option value="13">13</option>
+            <option value="14">14</option><option value="15">15</option><option value="16">16</option>
+            <option value="17">17</option><option value="18">18</option><option value="19">19</option>
+            <option value="20">20</option><option value="21">21</option><option value="22">22</option>
+            <option value="23">23</option><option value="24">24</option><option value="25">25</option>
+            <option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Otel</label>
+        <input type="text" id="f-otel" readonly value="LEO" style="background:var(--bg2,#1a1f29);opacity:.8;cursor:not-allowed;font-weight:700">
+      </div>
+      <div class="form-group">
+        <label>Kanal (Acente)</label>
+        <select id="f-kanal"><option value="">— Seçin —</option><option>EXP</option><option>JLY</option><option>TTS</option><option>Booking</option><option>Telefon</option><option>Kapıdan</option></select>
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group">
+        <label>Müşteri Adı</label>
+        <input type="text" id="f-musteri" placeholder="Ad Soyad">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Yetişkin</label>
+        <input type="number" id="f-yetiskin" value="2" min="1">
+      </div>
+      <div class="form-group">
+        <label>Çocuk</label>
+        <input type="number" id="f-cocuk" value="0" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Ek Yatak</label>
+        <select id="f-ek"><option>Yok</option><option>Var</option></select>
+      </div>
+      <div class="form-group">
+        <label>Kahvaltı</label>
+        <select id="f-kahvalti"><option>Kahvaltılı</option><option>Kahvaltısız</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Gün Fiyatı (₺)</label>
+        <input type="number" id="f-gunfiyat" value="0" min="0" step="any" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Giriş Tarihi</label>
+        <input type="date" id="f-giris" onchange="autoSetCikis()" onclick="try{this.showPicker()}catch(e){}" style="cursor:pointer">
+      </div>
+      <div class="form-group">
+        <label>Çıkış Tarihi</label>
+        <input type="date" id="f-cikis" onclick="try{this.showPicker()}catch(e){}" style="cursor:pointer">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Kapora (₺)</label>
+        <input type="number" id="f-kapora" value="0" min="0" step="any" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'">
+      </div>
+      <div class="form-group">
+        <label>Kapora Tarihi</label>
+        <input type="date" id="f-kapora-tarihi" onclick="try{this.showPicker()}catch(e){}" style="cursor:pointer">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal()">İptal</button>
+      <button class="btn btn-primary" onclick="saveRez()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const USER_ROLE = "{{ session.get('role', '') }}";
+let editFoy = null;
+let allData = [];
+const today = new Date().toISOString().split('T')[0];
+
+function checkinBtn(r) {
+  const bugun = new Date().toISOString().split('T')[0];
+  if (r.durum === 'Kapora Yandı') return '';
+  if (r.checkin) {
+    return '<span style="padding:4px 10px;border-radius:9px;font-size:11px;font-weight:700;background:#1a3a6b;color:#7af;margin-right:4px">✓ Check-in</span>' +
+           '<button class="btn" style="padding:4px 8px;font-size:10px;background:#5a1a1a;color:#fff" onclick="checkinIptal(' + r.foy_no + ')">↩ İptal</button>';
+  }
+  if (r.giris <= bugun) {
+    return '<button class="btn" style="padding:4px 10px;font-size:11px;background:#cc8a3d;color:#1a1206;font-weight:700;margin-right:4px" onclick="checkin(' + r.foy_no + ')">▶ Giriş</button>';
+  }
+  return '<span style="padding:4px 10px;border-radius:9px;font-size:10px;color:var(--text2)">Giriş: ' + fmtDate(r.giris) + '</span>';
+}
+
+async function checkin(foy_no) {
+  if (!confirm('Check-in yapılsın mı? Konaklama geliri yevmiyeye yazılacak.')) return;
+  const r = await api('/api/rezervasyon/checkin', {foy_no});
+  if (r.ok) { toast('✓ Check-in yapıldı'); load(); }
+  else toast(r.error || 'Hata', 'error');
+}
+
+async function checkinIptal(foy_no) {
+  if (!confirm('Check-in iptal edilsin mi? Yevmiye kayıtları storno edilecek.')) return;
+  const r = await api('/api/rezervasyon/checkin-iptal', {foy_no});
+  if (r.ok) { toast('↩ Check-in iptal edildi'); load(); }
+  else toast(r.error || 'Hata', 'error');
+}
+
+async function silRez(foy_no) {
+  const rez = allData.find(x => x.foy_no === foy_no);
+  if (rez && rez.durum === 'Kapora Yandı') {
+    if (!confirm(`⚠️ Föy #${foy_no} - Bu rezervasyonun KAPORASI YANDI!\n\nYine de silmek istiyor musunuz?\n(Yevmiye kaydı da silinecek)`)) return;
+  } else {
+    if (!confirm(`Föy #${foy_no} silinsin mi? Bu işlem geri alınamaz!`)) return;
+  }
+  const r = await api('/api/rezervasyon/sil', {foy_no});
+  if (r.ok) { toast('Rezervasyon silindi ✓'); load(); }
+  else toast(r.error || 'Hata', 'error');
+}
+
+async function kaporaYandi(foy_no) {
+  if (!confirm(`Föy #${foy_no} kaporası yandı olarak işaretlensin mi?`)) return;
+  const r = await api('/api/rezervasyon/kapora-yandi', {foy_no});
+  if (r.ok) { toast('Kapora yandı olarak işaretlendi ✓'); load(); }
+  else toast(r.error || 'Hata', 'error');
+}
+
+function toggleChip(which){
+  const cb = which==='aktif' ? document.getElementById('cb-aktif') : document.getElementById('cb-tamamlandi');
+  const chip = which==='aktif' ? document.getElementById('chip-aktif') : document.getElementById('chip-tamam');
+  cb.checked = !cb.checked;
+  chip.classList.toggle('active', cb.checked);
+  load();
+}
+
+function initials(name){
+  return (name||'').split(' ').filter(Boolean).map(s=>s[0]).slice(0,2).join('').toUpperCase();
+}
+
+async function load() {
+  const q = document.getElementById('search').value;
+  const otel = document.getElementById('otel-filter').value;
+  const data = await api(`/api/rezervasyonlar?q=${encodeURIComponent(q)}&otel=${otel}`);
+
+  // Durum checkbox filtreleri
+  const showAktif = document.getElementById('cb-aktif').checked;
+  const showTamamlandi = document.getElementById('cb-tamamlandi').checked;
+  const filtered = data.filter(r => {
+    if (!showAktif && !showTamamlandi) return true;
+    const gercekDurum = r.durum === 'Kapora Yandı' ? 'Kapora Yandı' : r.rez_bakiye <= 0 ? 'Tamamlandı' : 'Aktif';
+    if (showAktif && gercekDurum === 'Aktif') return true;
+    if (showTamamlandi && gercekDurum === 'Tamamlandı') return true;
+    return false;
+  });
+  allData = filtered;
+  const tbody = document.getElementById('rez-tbody');
+  const todayStr = today;
+  const toplam = filtered.reduce((s, r) => s + (r.toplam_fiyat||0), 0);
+  document.getElementById('rez-summary').textContent = `${filtered.length} kayıt · Toplam ${fmt(toplam)}`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text2);padding:24px">Sonuç bulunamadı</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => {
+    const isHL = _urlQ && String(r.foy_no) === String(_urlQ);
+    const rowId = isHL ? 'id="hl-row"' : '';
+    const rowBg = isHL ? 'background:rgba(255,194,77,.12);box-shadow:inset 3px 0 0 var(--accent)' : '';
+    const HC = r.otel==='LEO' ? 'var(--leo)' : 'var(--cv)';
+    const HBG = r.otel==='LEO' ? 'rgba(84,182,255,.15)' : 'rgba(61,220,132,.15)';
+    const gercekDurum = r.durum === 'Kapora Yandı' ? 'Kapora Yandı' : r.rez_bakiye <= 0 ? 'Tamamlandı' : 'Aktif';
+    const durumBg = gercekDurum==='Aktif' ? 'rgba(84,182,255,.15)' : gercekDurum==='Tamamlandı' ? 'rgba(47,221,155,.15)' : 'rgba(255,210,63,.15)';
+    const durumC  = gercekDurum==='Aktif' ? 'var(--leo)' : gercekDurum==='Tamamlandı' ? 'var(--pos)' : 'var(--accent4)';
+    const subParts = [];
+    if (r.cocuk>0) subParts.push(r.cocuk+' çocuk');
+    if (r.ek_yatak && r.ek_yatak!=='Yok') subParts.push(r.ek_yatak);
+
+    let islemHtml;
+    if (gercekDurum === 'Tamamlandı') {
+      const rObjJson = JSON.stringify(r).replace(/"/g,'&quot;');
+      if (USER_ROLE === 'admin' || USER_ROLE === 'partner') {
+        islemHtml =
+          `<button class="rez-btn rez-btn-def" onclick="openEdit(${rObjJson})" title="Yanlış girişi düzelt">✏️ Düzenle</button> ` +
+          `<span class="rez-tahsil-pill">✓ Tahsil edildi</span>`;
+      } else {
+        islemHtml = '<span class="rez-tahsil-pill">✓ Tahsil edildi</span>';
+      }
+    } else {
+      const rObjJson = JSON.stringify(r).replace(/"/g,'&quot;');
+      islemHtml =
+        `<button class="rez-btn rez-btn-def" onclick="openEdit(${rObjJson})">Düzenle</button> ` +
+        checkinBtn(r) +
+        `<button class="rez-btn rez-btn-danger" onclick="silRez(${r.foy_no})">Sil</button>` +
+        (r.kapora>0 && r.durum!=='Kapora Yandı' ? ` <button class="rez-btn rez-btn-warn" onclick="kaporaYandi(${r.foy_no})">🔥 Kapora Yandı</button>` : '');
+    }
+    islemHtml += ` <a class="rez-btn rez-btn-def" href="/rez-formu?foy=${r.foy_no}" style="text-decoration:none;display:inline-block">📝 Form</a>`;
+
+    return `<tr ${rowId} style="${rowBg}">
+      <td style="font-family:'Geist Mono',monospace;color:var(--text2)">#${r.foy_no}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="rez-avatar" style="background:${HBG};color:${HC}">${initials(r.musteri)}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap">${r.musteri}</div>
+            <div style="margin-top:3px"><span class="rez-oda-pill" style="background:${HBG};color:${HC}">${r.otel} ${r.oda_no}</span></div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div style="font-size:12.5px">${r.yetiskin||1} yetişkin</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">${subParts.length?subParts.join(' · '):'—'}</div>
+      </td>
+      <td style="color:var(--text2)">${r.kanal||'—'}</td>
+      <td>
+        <div style="font-family:'Geist Mono',monospace;font-size:12px;white-space:nowrap">${fmtDate(r.giris)} → ${fmtDate(r.cikis)}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">${r.toplam_gun} gün</div>
+      </td>
+      <td style="text-align:right;font-family:'Geist Mono',monospace;color:var(--text2)">${fmt(r.gun_fiyat)}</td>
+      <td style="text-align:right;font-family:'Geist Mono',monospace;font-weight:600">${fmt(r.toplam_fiyat)}</td>
+      <td style="text-align:right;font-family:'Geist Mono',monospace;color:var(--text2)">${r.kapora>0?fmt(r.kapora):'—'}</td>
+      <td style="text-align:right;font-family:'Geist Mono',monospace;font-weight:600;color:${r.rez_bakiye>0?'var(--accent3)':'var(--pos)'}">${r.rez_bakiye>0?fmt(r.rez_bakiye):'Temiz'}</td>
+      <td style="text-align:center"><span class="rez-durum-pill" style="background:${durumBg};color:${durumC}">${gercekDurum}</span></td>
+      <td style="text-align:center">${r.kahvalti==='Kahvaltısız' ? '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(255,111,125,.15);color:var(--accent3);font-weight:600">Kahvaltısız</span>' : '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(47,221,155,.15);color:var(--pos);font-weight:600">Kahvaltılı</span>'}</td>
+      <td style="text-align:right;white-space:nowrap">${islemHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+function onOdaChange() {
+  const oda = parseInt(document.getElementById('f-oda').value);
+  if (oda > 10) document.getElementById('f-otel').value = 'LEO';
+  else if (oda > 0) document.getElementById('f-otel').value = 'CV';
+}
+
+function openEdit(foy_no) {
+  const r = allData.find(x => x.foy_no === foy_no);
+  if (r) openModal(r);
+}
+
+async function openModal(r = null) {
+  editFoy = null;
+  document.getElementById('modal-title').textContent = 'Yeni Rezervasyon';
+  // Sonraki föy no
+  const d = await api('/api/next-foy');
+  document.getElementById('f-foy').value = d.foy_no;
+  document.getElementById('f-oda').value = '';
+  document.getElementById('f-otel').value = 'LEO';
+  document.getElementById('f-kanal').value = '';
+  document.getElementById('f-musteri').value = '';
+  document.getElementById('f-yetiskin').value = 2;
+  document.getElementById('f-cocuk').value = 0;
+  document.getElementById('f-ek').value = 'Yok';
+  document.getElementById('f-kahvalti').value = 'Kahvaltılı';
+  document.getElementById('f-gunfiyat').value = 0;
+  document.getElementById('f-giris').value = today;
+  // Çıkış = giriş + 1 gün
+  const tp = today.split('-');
+  const nextDay = new Date(parseInt(tp[0]), parseInt(tp[1])-1, parseInt(tp[2])+1);
+  const ny = nextDay.getFullYear();
+  const nm = String(nextDay.getMonth()+1).padStart(2,'0');
+  const nd = String(nextDay.getDate()).padStart(2,'0');
+  document.getElementById('f-cikis').value = ny + '-' + nm + '-' + nd;
+  document.getElementById('f-kapora').value = 0;
+  document.getElementById('f-kapora-tarihi').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal').classList.add('open');
+}
+
+function openEdit(r) {
+  if (r.durum === 'Kapora Yandı') {
+    if (!confirm(`⚠️ Föy #${r.foy_no} - Bu rezervasyonun KAPORASI YANDI!\n\nKapora tutarını değiştirirseniz yevmiye kaydı otomatik güncellenmez.\nDiğer bilgileri (misafir, tarih, oda vb.) güncelleyebilirsiniz.\n\nDevam etmek istiyor musunuz?`)) return;
+  }
+  editFoy = r.foy_no;
+  document.getElementById('modal-title').textContent = `Rezervasyon Düzenle — Föy #${r.foy_no}`;
+  document.getElementById('f-foy').value = r.foy_no;
+  document.getElementById('f-oda').value = r.oda_no;
+  document.getElementById('f-otel').value = r.otel;
+  document.getElementById('f-kanal').value = r.kanal||'';
+  document.getElementById('f-musteri').value = r.musteri;
+  document.getElementById('f-yetiskin').value = r.yetiskin||2;
+  document.getElementById('f-cocuk').value = r.cocuk||0;
+  document.getElementById('f-ek').value = r.ek_yatak||'Yok';
+  document.getElementById('f-kahvalti').value = r.kahvalti||'Kahvaltılı';
+  document.getElementById('f-gunfiyat').value = r.gun_fiyat||0;
+  document.getElementById('f-giris').value = r.giris||'';
+  document.getElementById('f-cikis').value = r.cikis||'';
+  document.getElementById('f-kapora').value = r.kapora||0;
+  document.getElementById('f-kapora-tarihi').value = r.kapora_tarihi||'';
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function calcToplamFiyat() {
+  const giris = document.getElementById('f-giris').value;
+  const cikis = document.getElementById('f-cikis').value;
+  const gunFiyat = parseFloat(document.getElementById('f-gunfiyat').value) || 0;
+  if (!giris || !cikis) return 0;
+  const gun = Math.ceil((new Date(cikis) - new Date(giris)) / (1000*60*60*24));
+  return gun > 0 ? gun * gunFiyat : 0;
+}
+
+function autoSetCikis() {
+  const giris = document.getElementById('f-giris').value;
+  if (!giris) return;
+  const parts = giris.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])+1);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  document.getElementById('f-cikis').value = yyyy + '-' + mm + '-' + dd;
+}
+
+async function saveRez() {
+  const data = {
+    foy_no:        document.getElementById('f-foy').value,
+    oda_no:        document.getElementById('f-oda').value,
+    otel:          document.getElementById('f-otel').value,
+    kanal:         document.getElementById('f-kanal').value,
+    musteri:       document.getElementById('f-musteri').value,
+    yetiskin:      document.getElementById('f-yetiskin').value,
+    cocuk:         document.getElementById('f-cocuk').value,
+    ek_yatak:      document.getElementById('f-ek').value,
+    kahvalti:      document.getElementById('f-kahvalti').value,
+    gun_fiyat:     document.getElementById('f-gunfiyat').value,
+    toplam_fiyat:  calcToplamFiyat(),
+    giris:         document.getElementById('f-giris').value,
+    cikis:         document.getElementById('f-cikis').value,
+    kapora:        document.getElementById('f-kapora').value,
+    kapora_tarihi: document.getElementById('f-kapora-tarihi').value||null,
+  };
+  if (!validateForm([
+    {id:'f-musteri', label:'Müşteri Adı'},
+    {id:'f-oda',     label:'Oda No'},
+    {id:'f-kanal',   label:'Kanal'},
+    {id:'f-giris',   label:'Giriş Tarihi'},
+    {id:'f-cikis',   label:'Çıkış Tarihi'},
+    {id:'f-gunfiyat',label:'Gün Fiyatı'},
+  ])) return;
+  if (data.cikis <= data.giris) { toast('Çıkış tarihi girişten sonra olmalı!', 'error'); return; }
+  // Çifte rezervasyon kontrolü
+  const odaNo = parseInt(data.oda_no);
+  const conflict = allData.find(r =>
+    r.oda_no === odaNo &&
+    r.foy_no !== (editFoy ? parseInt(editFoy) : -1) &&
+    r.giris && r.cikis &&
+    data.giris < r.cikis && data.cikis > r.giris
+  );
+  if (conflict) {
+    document.getElementById('uyari-mesaj').innerHTML =
+      'Oda ' + odaNo + ' bu tarihlerde<br><strong>' + conflict.musteri + '</strong> adına dolu!<br>' +
+      fmtDate(conflict.giris) + ' – ' + fmtDate(conflict.cikis);
+    document.getElementById('uyari-modal').classList.add('open');
+    return;
+  }
+
+  const url = editFoy ? '/api/rezervasyon/guncelle' : '/api/rezervasyon/yeni';
+  const r = await api(url, data);
+  if (r.ok) {
+    toast(editFoy ? `Föy #${editFoy} güncellendi ✓` : 'Rezervasyon oluşturuldu ✓');
+    closeModal();
+    load();
+  } else {
+    toast(r.error || 'Hata oluştu', 'error');
+  }
+}
+
+function closeUyari() {
+  document.getElementById('uyari-modal').classList.remove('open');
+}
+
+// Modal dışına tıklayınca kapat
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+// URL'den ?q= parametresini oku (oda durumundan gelen yönlendirme)
+const _urlQ = new URLSearchParams(window.location.search).get('q');
+if (_urlQ) { document.getElementById('search').value = _urlQ; }
+load().then(() => {
+  if (_urlQ) {
+    const hl = document.getElementById('hl-row');
+    if (hl) hl.scrollIntoView({behavior:'smooth', block:'center'});
+    document.getElementById('secim-kaldir-btn').style.display = 'inline-block';
+  }
+});
+
+function secimKaldirRez(){
+  document.getElementById('search').value = '';
+  history.replaceState(null, '', '/rezervasyonlar');
+  document.getElementById('secim-kaldir-btn').style.display = 'none';
+  load();
+}
+</script>
+{% endblock %}

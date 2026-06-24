@@ -423,13 +423,28 @@ function adim2Ileri() {
 }
 
 // ── Adım 3 ────────────────────────────────────────────────────────────────
+// Mevcut input değerlerini kaydet
+function _mevcut_degerler(tip) {
+  const sonuc = {};
+  for (let i = 1; i <= 3; i++) {
+    const k = document.getElementById(`${tip}-kullanici-${i}`);
+    const s = document.getElementById(`${tip}-sifre-${i}`);
+    if (k) sonuc[i] = { kullanici: k.value, sifre: s ? s.value : '' };
+  }
+  return sonuc;
+}
+
 function kullanicilariOlustur() {
   const pSayi = parseInt(document.getElementById('partner-sayi').value);
   const rSayi = parseInt(document.getElementById('resep-sayi').value);
 
+  // Mevcut değerleri kaydet (yeniden çizmeden önce)
+  const pMevcut = _mevcut_degerler('p');
+  const rMevcut = _mevcut_degerler('r');
+
   let pHtml = '';
   for (let i = 1; i <= pSayi; i++) {
-    const prev = veri.kullanicilar.find(u => u.rol === 'partner' && u.idx === i) || {};
+    const prev = pMevcut[i] || veri.kullanicilar.find(u => u.rol === 'partner' && u.idx === i) || {};
     pHtml += `
     <div class="kullanici-kart">
       <div class="baslik">👔 Muhasebe Kullanıcısı ${i}</div>
@@ -440,7 +455,7 @@ function kullanicilariOlustur() {
         </div>
         <div class="form-grup" style="margin:0">
           <label>Şifre</label>
-          <input type="password" id="p-sifre-${i}" placeholder="Şifre">
+          <input type="password" id="p-sifre-${i}" value="${prev.sifre || ''}" placeholder="Şifre">
         </div>
       </div>
     </div>`;
@@ -448,7 +463,7 @@ function kullanicilariOlustur() {
 
   let rHtml = '';
   for (let i = 1; i <= rSayi; i++) {
-    const prev = veri.kullanicilar.find(u => u.rol === 'resepsiyon' && u.idx === i) || {};
+    const prev = rMevcut[i] || veri.kullanicilar.find(u => u.rol === 'resepsiyon' && u.idx === i) || {};
     rHtml += `
     <div class="kullanici-kart">
       <div class="baslik">🖥️ Resepsiyon Kullanıcısı ${i}</div>
@@ -459,7 +474,7 @@ function kullanicilariOlustur() {
         </div>
         <div class="form-grup" style="margin:0">
           <label>Şifre</label>
-          <input type="password" id="r-sifre-${i}" placeholder="Şifre">
+          <input type="password" id="r-sifre-${i}" value="${prev.sifre || ''}" placeholder="Şifre">
         </div>
       </div>
     </div>`;

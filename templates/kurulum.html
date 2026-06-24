@@ -330,7 +330,7 @@ body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui
 
   <div class="btn-row">
     <button class="btn btn-geri" onclick="goster(3)">← Geri</button>
-    <button class="btn btn-ileri" onclick="goster(5)">Devam →</button>
+    <button class="btn btn-ileri" onclick="adim4Ileri()">Devam →</button>
   </div>
 </div>
 
@@ -379,6 +379,7 @@ function goster(n) {
   }
   mevcutAdim = n;
   window.scrollTo({top: 0, behavior: 'smooth'});
+  if (n === 5) ozetGoster();
 }
 
 // ── Adım 1 ────────────────────────────────────────────────────────────────
@@ -521,13 +522,25 @@ async function chatIdBul() {
   }
 }
 
-// ── Adım 5 — Özet ────────────────────────────────────────────────────────
-function ozetGoster() {
+// ── Adım 4 ────────────────────────────────────────────────────────────────
+function adim4Ileri() {
   veri.entegrasyon = {
     yedek_mail: document.getElementById('yedek-mail').value.trim(),
     tg_token:   document.getElementById('tg-token').value.trim(),
     tg_chat:    document.getElementById('tg-chat').value.trim()
   };
+  goster(5);
+}
+
+// ── Adım 5 — Özet ────────────────────────────────────────────────────────
+function ozetGoster() {
+  if (!veri.entegrasyon) {
+    veri.entegrasyon = {
+      yedek_mail: document.getElementById('yedek-mail')?.value.trim() || '',
+      tg_token:   document.getElementById('tg-token')?.value.trim() || '',
+      tg_chat:    document.getElementById('tg-chat')?.value.trim() || ''
+    };
+  }
 
   const satirlar = [
     ['Otel Adı',        veri.otel.ad],
@@ -581,16 +594,22 @@ function gosterDurum(el, mesaj, tip) {
   el.style.display = 'block';
 }
 
-// Adım 5'e geçerken özet göster
-const origGoster = goster;
-function goster(n) {
-  origGoster(n);
-  if (n === 5) ozetGoster();
-}
-
 // Init
 odaOnizle();
 kullanicilariOlustur();
+
+// Enter tuşu ile devam
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    // Textarea veya select değilse devam et
+    if (e.target.tagName === 'TEXTAREA') return;
+    e.preventDefault();
+    const aktifAdim = document.querySelector('.kart:not([style*="display:none"])');
+    if (!aktifAdim) return;
+    const btn = aktifAdim.querySelector('.btn-ileri');
+    if (btn) btn.click();
+  }
+});
 </script>
 </body>
 </html>

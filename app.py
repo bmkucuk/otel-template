@@ -107,12 +107,16 @@ app.register_blueprint(muh)
 # ── Template context processor ───────────────────────────────────────────────
 @app.context_processor
 def inject_lisans():
+    def _lisans():
+        c = cfg.load_config()
+        return {
+            'durum':    cfg.lisans_durumu(),
+            'kalan':    cfg.demo_kalan_gun(),
+            'otel':     c.get('otel', {}),
+            'ortaklar': c.get('ortaklar', [])
+        }
     return {
-        'lisans_bilgi': lambda: {
-            'durum': cfg.lisans_durumu(),
-            'kalan': cfg.demo_kalan_gun(),
-            'otel':  cfg.otel_bilgi()
-        },
+        'lisans_bilgi': _lisans,
         'tema_mod': cfg.tema_mod()
     }
 
@@ -1938,6 +1942,17 @@ def kurulum_kaydet():
     c['sistem']['demo_sure_gun']     = 3
     c['sistem']['lisans_aktif']      = False
     c['sistem']['askiya_alindi']     = False
+
+    # Partner bilgilerini config'e yaz
+    ortaklar = []
+    for u in kullanicilar:
+        if u.get('rol') == 'partner':
+            ortaklar.append({
+                'kod':    u.get('kisalt', 'P' + str(u.get('idx', 1))),
+                'kisalt': u.get('kisalt', 'P' + str(u.get('idx', 1))),
+                'ad':     u.get('adsoyad', u.get('kullanici', ''))
+            })
+    c['ortaklar'] = ortaklar
     cfg.save_config(c)
 
     # 2. Kullanıcıları DB'ye yaz

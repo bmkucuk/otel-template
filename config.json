@@ -60,5 +60,22 @@
     "Kredi Kartı",
     "Havale",
     "Acente"
+  ],
+  "ortaklar": [
+    {
+      "kod": "P1",
+      "kisalt": "P1",
+      "ad": "Ortak 1"
+    },
+    {
+      "kod": "P2",
+      "kisalt": "P2",
+      "ad": "Ortak 2"
+    },
+    {
+      "kod": "P3",
+      "kisalt": "P3",
+      "ad": "Ortak 3"
+    }
   ]
 }

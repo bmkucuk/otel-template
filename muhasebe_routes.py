@@ -508,19 +508,31 @@ def api_demirbas():
     conn.close()
     return jsonify(rows)
 
-# Banka adı → hesap kodu
+# Banka adı → hesap kodu (temel)
 BANKA_AD_KODU = {
     'Kasa TL': '100', 'İş Bankası': '102-1',
     'Ziraat Bankası': '102-2', 'Denizbank': '102-3', 'Deniz Bank': '102-3',
-    'Fırat Nakit': '500-FK', 'Fırat KK': '500-FK',
-    'Levent Nakit': '500-LK', 'Levent KK': '500-LK',
-    'Burçin Nakit': '500-BT', 'Burçin KK': '500-BT',
 }
 BANKA_HESAP_KODU = {'100': '100', '102-1': '102-1', '102-2': '102-2', '102-3': '102-3',
-                    'KASA': '100', 'IS': '102-1', 'ZRH': '102-2', 'DNZ': '102-3',
-                    'FK-NKT': '500-FK', 'FK-KK': '500-FK',
-                    'LK-NKT': '500-LK', 'LK-KK': '500-LK',
-                    'BT-NKT': '500-BT', 'BT-KK': '500-BT'}
+                    'KASA': '100', 'IS': '102-1', 'ZRH': '102-2', 'DNZ': '102-3'}
+
+# Config'den ortak banka mappinglerini ekle
+def _ortak_banka_mapping_guncelle():
+    try:
+        ortaklar = cfg.load_config().get('ortaklar', [])
+        for o in ortaklar:
+            kod = o.get('kod', '')
+            ad  = o.get('ad', '').split()[0]
+            if not kod: continue
+            hesap = f'500-{kod}'
+            BANKA_AD_KODU[f'{ad} Nakit'] = hesap
+            BANKA_AD_KODU[f'{ad} KK']    = hesap
+            BANKA_HESAP_KODU[f'{kod}-NKT'] = hesap
+            BANKA_HESAP_KODU[f'{kod}-KK']  = hesap
+    except Exception:
+        pass
+
+_ortak_banka_mapping_guncelle()
 
 
 @muh.route('/api/muhasebe/demirbas/ekle', methods=['POST'])

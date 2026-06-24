@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Veritabanı katmanı — SQLite"""
 import sqlite3
+import config_loader as _cfg
 from pathlib import Path
 from datetime import date, datetime
 
@@ -223,12 +224,9 @@ def init_db():
         ("360",    "Ödenecek Vergi",             "Pasif",     "Vergi"),
         ("340",    "Alınan Avanslar (Kaparo)",              "Pasif",     "Kaparo"),
         ("649",    "Diğer Olağan Gelir ve Karlar",  "Gelir",     "Diğer"),
-        ("500-LK", "LK Cari (Levent Koçoğlu)",  "Ozkaynak",  "Ortak"),
-        ("500-BT", "BT Cari (Burçin Taşdelen)",  "Ozkaynak",  "Ortak"),
-        ("500-FK", "FK Cari (Fırat Koçoğlu)",   "Ozkaynak",  "Ortak"),
-        ("600",    "Konaklama Geliri - Leo",     "Gelir",     "Gelir"),
-        ("601",    "Konaklama Geliri - CV",      "Gelir",     "Gelir"),
-        ("610",    "Adisyon Geliri",        "Gelir",     "Gelir"),
+        ("600",    "Konaklama Geliri",          "Gelir",     "Gelir"),
+        ("610",    "Adisyon Geliri",             "Gelir",     "Gelir"),
+
         ("720",    "Personel Maaşları",          "Gider",     "Gider"),
         ("730",    "Acente Komisyonları",        "Gider",     "Gider"),
         ("740",    "Elektrik/Su/Doğalgaz",       "Gider",     "Gider"),
@@ -248,18 +246,31 @@ def init_db():
         ("IS",    "İş Bankası",     ""),
         ("ZRH",   "Ziraat Bankası", ""),
         ("DNZ",   "Denizbank",     ""),
-        ("FK-NKT","Fırat Nakit",    ""),
-        ("FK-KK", "Fırat KK",       ""),
-        ("LK-NKT","Levent Nakit",   ""),
-        ("LK-KK", "Levent KK",      ""),
-        ("BT-NKT","Burçin Nakit",   ""),
-        ("BT-KK", "Burçin KK",      ""),
+
     ]
     for b in bankalar:
         c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)", b)
 
-    # Migration: BT hesap adı Barış Taşdelen'den Burçin Taşdelen'e düzeltildi
-    c.execute("UPDATE hesaplar SET ad='BT Cari (Burçin Taşdelen)' WHERE kod='500-BT'")
+    # Ortak cari hesaplarını ve kişisel banka hesaplarını config'den oluştur
+    try:
+        ortaklar = _cfg.load_config().get('ortaklar', [])
+        for o in ortaklar:
+            kod   = o.get('kod', '')
+            ad    = o.get('ad', '')
+            kisalt = o.get('kisalt', kod)
+            if not kod: continue
+            # Ortak cari hesabı
+            c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES(?,?,?,?)",
+                (f"500-{kod}", f"{kisalt} Cari ({ad})", "Ozkaynak", "Ortak"))
+            # Kişisel banka hesapları
+            c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)",
+                (f"{kod}-NKT", f"{ad.split()[0]} Nakit", ""))
+            c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)",
+                (f"{kod}-KK", f"{ad.split()[0]} KK", ""))
+    except Exception as e:
+        print(f"Ortak hesap oluşturma hatası: {e}")
+
+    # Migration: BT hesap adı Barış Taşdelen'den Burçin Taşdelen'e düzeltildi (sadece eski sistemlerde)
     # Migration: Booking.com -> Booking adı düzeltildi
     c.execute("UPDATE hesaplar SET ad='Booking Cari' WHERE kod='320-1'")
     c.execute("UPDATE acenteler SET ad='Booking' WHERE kod='BKG'")

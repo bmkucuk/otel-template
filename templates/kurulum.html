@@ -429,7 +429,14 @@ function _mevcut_degerler(tip) {
   for (let i = 1; i <= 3; i++) {
     const k = document.getElementById(`${tip}-kullanici-${i}`);
     const s = document.getElementById(`${tip}-sifre-${i}`);
-    if (k) sonuc[i] = { kullanici: k.value, sifre: s ? s.value : '' };
+    const a = document.getElementById(`${tip}-adsoyad-${i}`);
+    const z = document.getElementById(`${tip}-kisalt-${i}`);
+    if (k) sonuc[i] = {
+      kullanici: k.value,
+      sifre: s ? s.value : '',
+      adsoyad: a ? a.value : '',
+      kisalt: z ? z.value : ''
+    };
   }
   return sonuc;
 }
@@ -450,8 +457,19 @@ function kullanicilariOlustur() {
       <div class="baslik">👔 Muhasebe Kullanıcısı ${i}</div>
       <div class="iki-sutun">
         <div class="form-grup" style="margin:0">
+          <label>Ad Soyad</label>
+          <input type="text" id="p-adsoyad-${i}" value="${prev.adsoyad || ''}" placeholder="örn: Ahmet Yılmaz">
+        </div>
+        <div class="form-grup" style="margin:0">
+          <label>Kısa Kod (2-3 harf)</label>
+          <input type="text" id="p-kisalt-${i}" value="${prev.kisalt || ''}" placeholder="örn: AY" maxlength="3"
+            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+        </div>
+      </div>
+      <div class="iki-sutun" style="margin-top:10px">
+        <div class="form-grup" style="margin:0">
           <label>Kullanıcı Adı</label>
-          <input type="text" id="p-kullanici-${i}" value="${prev.kullanici || ''}" placeholder="ornek: muhasebe1">
+          <input type="text" id="p-kullanici-${i}" value="${prev.kullanici || ''}" placeholder="örn: ahmet">
         </div>
         <div class="form-grup" style="margin:0">
           <label>Şifre</label>
@@ -499,7 +517,9 @@ function adim3Ileri() {
   for (let i = 1; i <= pSayi; i++) {
     const k = document.getElementById(`p-kullanici-${i}`)?.value.trim();
     const s = document.getElementById(`p-sifre-${i}`)?.value;
-    if (k && s) kullanicilar.push({ rol: 'partner', kullanici: k, sifre: s, idx: i });
+    const a = document.getElementById(`p-adsoyad-${i}`)?.value.trim();
+    const z = document.getElementById(`p-kisalt-${i}`)?.value.trim();
+    if (k && s) kullanicilar.push({ rol: 'partner', kullanici: k, sifre: s, adsoyad: a||k, kisalt: z||('P'+i), idx: i });
   }
   for (let i = 1; i <= rSayi; i++) {
     const k = document.getElementById(`r-kullanici-${i}`)?.value.trim();

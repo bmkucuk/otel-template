@@ -9,9 +9,9 @@
   <select class="filter" id="yil-sel" onchange="load()"></select>
   <select class="filter" id="ortak-sel" onchange="load()">
     <option value="">Tüm Ortaklar</option>
-    <option value="LK">LK — Levent Koçoğlu</option>
-    <option value="BT">BT — Burçin Taşdelen</option>
-    <option value="FK">FK — Fırat Koçoğlu</option>
+    {% for o in lisans_bilgi().get('ortaklar', []) %}
+    <option value="{{ o.kod }}">{{ o.kisalt }} — {{ o.ad }}</option>
+    {% endfor %}
   </select>
   <div style="flex:1"></div>
   <button class="btn btn-primary" onclick="openModal()">＋ Gider Ekle</button>
@@ -32,7 +32,7 @@
     <h2 id="modal-baslik">Ortak Gider Ekle</h2>
     <div class="form-row">
       <div class="form-group"><label>Tarih</label><input type="date" id="f-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
-      <div class="form-group"><label>Ortak</label><select id="f-ortak"><option value="LK">LK — Levent Koçoğlu</option><option value="BT">BT — Burçin Taşdelen</option><option value="FK">FK — Fırat Koçoğlu</option></select></div>
+      <div class="form-group"><label>Ortak</label><select id="f-ortak">{% for o in lisans_bilgi().get('ortaklar', []) %}<option value="{{ o.kod }}">{{ o.kisalt }} — {{ o.ad }}</option>{% endfor %}</select></div>
     </div>
     <div class="form-row single">
       <div class="form-group"><label>İşlem Tipi</label>
@@ -85,15 +85,16 @@ async function load() {
   const ortak = document.getElementById('ortak-sel').value;
   const data = await api(`/api/muhasebe/ortak?yil=${yil}&ortak=${ortak}`);
 
-  const lk = data.filter(r => r.ortak === 'LK').reduce((s, r) => s + (r.tutar||0), 0);
-  const bt = data.filter(r => r.ortak === 'BT').reduce((s, r) => s + (r.tutar||0), 0);
-  const fk = data.filter(r => r.ortak === 'FK').reduce((s, r) => s + (r.tutar||0), 0);
+  // Ortak toplamları config'den dinamik
+  const ortaklar = {{ lisans_bilgi().get('ortaklar', [])|tojson }};
+  const ortakToplam = {};
+  ortaklar.forEach(o => {
+    ortakToplam[o.kod] = data.filter(r => r.ortak === o.kod).reduce((s, r) => s + (r.tutar||0), 0);
+  });
   const toplam = data.reduce((s, r) => s + (r.tutar||0), 0);
 
   document.getElementById('kartlar').innerHTML = `
-    <div class="stat-card"><div class="label">LK Net Gider</div><div class="value red">${fmt(lk)}</div></div>
-    <div class="stat-card"><div class="label">BT Net Gider</div><div class="value red">${fmt(bt)}</div></div>
-    <div class="stat-card"><div class="label">FK Net Gider</div><div class="value red">${fmt(fk)}</div></div>
+    ${ortaklar.map(o => `<div class="stat-card"><div class="label">${o.kisalt} Net Gider</div><div class="value red">${fmt(ortakToplam[o.kod]||0)}</div></div>`).join('')}
     <div class="stat-card"><div class="label">Toplam</div><div class="value yellow">${fmt(toplam)}</div></div>
   `;
 
@@ -125,7 +126,7 @@ function openModal() {
   editId = null;
   document.getElementById('modal-baslik').textContent = 'Ortak Gider Ekle';
   document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
-  document.getElementById('f-ortak').value = 'LK';
+  if (ortaklar.length) document.getElementById('f-ortak').value = ortaklar[0].kod;
   document.getElementById('f-islem-tipi').value = 'Ortak Gider (Kendi Cebinden)';
   document.getElementById('f-belge').value = '';
   document.getElementById('f-aciklama').value = '';
@@ -168,7 +169,7 @@ async function duzenle(id) {
   editId = id;
   document.getElementById('modal-baslik').textContent = 'Ortak Cari Düzenle';
   document.getElementById('f-tarih').value = r.tarih || '';
-  document.getElementById('f-ortak').value = r.ortak || 'LK';
+  document.getElementById('f-ortak').value = r.ortak || (ortaklar[0]?.kod || '');
   document.getElementById('f-aciklama').value = r.aciklama || '';
   document.getElementById('f-belge').value = r.belge_no || '';
   document.getElementById('f-islem-tipi').value = r.odeme_sekli ? 'Ortaga Geri Odeme' : 'Ortak Gider (Kendi Cebinden)';

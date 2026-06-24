@@ -1942,13 +1942,13 @@ def kurulum_kaydet():
 
     # 2. Kullanıcıları DB'ye yaz
     conn = db.get_conn()
-    conn.execute("DELETE FROM kullanicilar WHERE kullanici != 'superadmin'")
+    conn.execute("DELETE FROM kullanicilar WHERE username != 'superadmin'")
     for u in kullanicilar:
         h = hashlib.sha256(u['sifre'].encode()).hexdigest()
         rol = u.get('rol', 'resepsiyon')
         conn.execute(
-            "INSERT OR REPLACE INTO kullanicilar(kullanici, sifre_hash, rol, ad) VALUES(?,?,?,?)",
-            (u['kullanici'], h, rol, u['kullanici'])
+            "INSERT OR REPLACE INTO kullanicilar(username, ad, hash, role) VALUES(?,?,?,?)",
+            (u['kullanici'], u['kullanici'], h, rol)
         )
     conn.commit()
     conn.close()

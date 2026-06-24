@@ -21,12 +21,13 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
       <div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:12.5px"><span style="color:var(--text);font-weight:500">Otel Leo</span><span style="font-family:'Geist Mono',monospace;color:var(--text2)" id="occ-leo-frac">— / 19</span></div>
-        <div style="height:9px;border-radius:5px;background:var(--card2);overflow:hidden"><div id="occ-leo-bar" style="height:100%;width:0%;border-radius:5px;background:var(--leo);transition:width .3s"></div></div>
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:12.5px"><span style="color:var(--text);font-weight:500">Cunda Villa</span><span style="font-family:'Geist Mono',monospace;color:var(--text2)" id="occ-cv-frac">— / 10</span></div>
-        <div style="height:9px;border-radius:5px;background:var(--card2);overflow:hidden"><div id="occ-cv-bar" style="height:100%;width:0%;border-radius:5px;background:var(--cv);transition:width .3s"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:12.5px">
+          <span style="color:var(--text);font-weight:500" id="otel-adi-bar">—</span>
+          <span style="font-family:'Geist Mono',monospace;color:var(--text2)" id="occ-leo-frac">— / —</span>
+        </div>
+        <div style="height:9px;border-radius:5px;background:var(--card2);overflow:hidden">
+          <div id="occ-leo-bar" style="height:100%;width:0%;border-radius:5px;background:var(--accent);transition:width .3s"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -86,9 +87,6 @@
 
 {% block scripts %}
 <script>
-const LEO_TOPLAM = 19;
-const CV_TOPLAM  = 10;
-
 async function load() {
   const d = await api('/api/dashboard');
 
@@ -97,18 +95,19 @@ async function load() {
   document.getElementById('s-kah').textContent    = d.stats.kahvalti_kisi;
   document.getElementById('s-alacak').textContent = fmt(d.stats.toplam_alacak);
 
-  const leoDolu = d.stats.leo_aktif, cvDolu = d.stats.cv_aktif;
-  const toplamDolu = leoDolu + cvDolu, toplamOda = LEO_TOPLAM + CV_TOPLAM;
-  const bos = toplamOda - toplamDolu;
+  const toplamDolu = d.stats.leo_aktif;
+  const toplamOda  = d.stats.toplam_oda || 20;
+  const bos        = toplamOda - toplamDolu;
+
   document.getElementById('s-bos').textContent = bos;
   document.getElementById('occ-pct').innerHTML = Math.round(toplamDolu/toplamOda*100) + '<span style="font-size:26px">%</span>';
   document.getElementById('occ-sub').textContent = toplamOda + " odanın " + toplamDolu + "'ı dolu";
   document.getElementById('occ-dolu').textContent = toplamDolu;
   document.getElementById('occ-bos').textContent = bos;
-  document.getElementById('occ-leo-frac').textContent = leoDolu + ' / ' + LEO_TOPLAM;
-  document.getElementById('occ-cv-frac').textContent  = cvDolu + ' / ' + CV_TOPLAM;
-  document.getElementById('occ-leo-bar').style.width = Math.round(leoDolu/LEO_TOPLAM*100) + '%';
-  document.getElementById('occ-cv-bar').style.width  = Math.round(cvDolu/CV_TOPLAM*100) + '%';
+  if (document.getElementById('otel-adi-bar'))
+    document.getElementById('otel-adi-bar').textContent = d.stats.otel_adi || 'Otel';
+  document.getElementById('occ-leo-frac').textContent = toplamDolu + ' / ' + toplamOda;
+  document.getElementById('occ-leo-bar').style.width = Math.round(toplamDolu/toplamOda*100) + '%';
 
   const rezToplam  = d.aktifler.reduce((s,r) => s + (r.rez_bakiye||0), 0);
   const adisToplam = d.aktifler.reduce((s,r) => s + (r.adis_bakiye||0), 0);
@@ -121,7 +120,7 @@ async function load() {
   girisBody.innerHTML = d.girisler.length ? d.girisler.map(r => `
     <tr>
       <td>${r.oda_no}</td>
-      <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.otel}</td>
+      <td class="${'otel-tag'}">${r.otel}</td>
       <td>${r.musteri}</td>
       <td>${r.toplam_gun} gün</td>
       <td>${r.kanal||'—'}</td>
@@ -131,7 +130,7 @@ async function load() {
   cikisBody.innerHTML = d.cikislar.length ? d.cikislar.map(r => `
     <tr>
       <td>${r.oda_no}</td>
-      <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.otel}</td>
+      <td class="${'otel-tag'}">${r.otel}</td>
       <td>${r.musteri}</td>
       <td>${fmtDate(r.giris)}</td>
       <td class="${(r.rez_bakiye||0)>0?'red':'green'}">${fmt(r.rez_bakiye||0)}</td>
@@ -141,7 +140,7 @@ async function load() {
   aktifBody.innerHTML = d.aktifler.length ? d.aktifler.map(r => `
     <tr>
       <td>${r.oda_no}</td>
-      <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.otel}</td>
+      <td class="${'otel-tag'}">${r.otel}</td>
       <td>${r.musteri}</td>
       <td>${fmtDate(r.giris)}</td>
       <td>${fmtDate(r.cikis)}</td>

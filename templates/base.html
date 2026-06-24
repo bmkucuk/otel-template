@@ -8,7 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
+/* ── KARANLIK TEMA (varsayılan) ── */
+:root, [data-tema="dark"] {
   --bg:       #0a1326;
   --sidebar:  #080f1f;
   --card:     #14213d;
@@ -18,15 +19,51 @@
   --accent2:  #43c6ff;
   --accent3:  #ff6f7d;
   --accent4:  #ffd23f;
-  --leo:      #54b6ff;
-  --cv:       #3ddc84;
   --pos:      #2fdd9b;
   --text:     #f2f6ff;
   --text2:    #9bb0d6;
   --header:   #080f1f;
   --radius:   10px;
+  --input-bg: #0a1326;
+  --shadow:   0 4px 20px rgba(0,0,0,.4);
+}
+
+/* ── AÇIK TEMA ── */
+[data-tema="light"] {
+  --bg:       #f1f5f9;
+  --sidebar:  #ffffff;
+  --card:     #ffffff;
+  --card2:    #f8fafc;
+  --border:   #e2e8f0;
+  --accent:   #d97706;
+  --accent2:  #0284c7;
+  --accent3:  #e11d48;
+  --accent4:  #d97706;
+  --pos:      #059669;
+  --text:     #0f172a;
+  --text2:    #64748b;
+  --header:   #ffffff;
+  --radius:   10px;
+  --input-bg: #ffffff;
+  --shadow:   0 4px 20px rgba(0,0,0,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0}
+
+/* Açık tema input uyumluluğu */
+[data-tema="light"] input, [data-tema="light"] select, [data-tema="light"] textarea {
+  background: var(--input-bg) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+[data-tema="light"] .panel, [data-tema="light"] .table-wrap {
+  box-shadow: var(--shadow);
+}
+[data-tema="light"] table th {
+  background: #f8fafc;
+}
+[data-tema="light"] #sidebar {
+  box-shadow: 2px 0 8px rgba(0,0,0,.06);
+}
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;border:2px solid var(--bg)}
 ::-webkit-scrollbar-track{background:transparent}
@@ -238,6 +275,11 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
       </div>
       {% endif %}
       <div class="meta" id="date-display">—</div>
+      <button class="btn btn-print-hide" onclick="temaDegistir()" id="tema-btn"
+        title="Tema değiştir"
+        style="padding:5px 12px;font-size:12px;background:var(--card2);color:var(--text2);border:1px solid var(--border)">
+        🌙
+      </button>
       <button class="btn btn-print-hide" onclick="window.print()"
         style="padding:5px 12px;font-size:12px;background:var(--card2);color:var(--text2);border:1px solid var(--border)">
         🖨️ Yazdır
@@ -270,6 +312,32 @@ function validateForm(fields) {
   }
   return true;
 }
+
+// ── Tema Sistemi ─────────────────────────────────────────────────────────────
+function temayiUygula(mod) {
+  document.documentElement.setAttribute('data-tema', mod);
+  const btn = document.getElementById('tema-btn');
+  if (btn) btn.textContent = mod === 'dark' ? '🌙' : '☀️';
+}
+
+function temaDegistir() {
+  const mevcut = document.documentElement.getAttribute('data-tema') || 'dark';
+  const yeni   = mevcut === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('otel-tema', yeni);
+  temayiUygula(yeni);
+  // Sunucuya da kaydet
+  fetch('/api/tema-kaydet', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({mod: yeni})
+  }).catch(() => {});
+}
+
+// Sayfa yüklenince tema uygula
+(function() {
+  const kayitli = localStorage.getItem('otel-tema') || '{{ tema_mod }}';
+  temayiUygula(kayitli);
+})();
 
 function toast(msg, type='ok', ms=3000) {
   const t = document.getElementById('toast');

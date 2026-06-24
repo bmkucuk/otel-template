@@ -104,11 +104,14 @@ app.register_blueprint(muh)
 # ── Template context processor ───────────────────────────────────────────────
 @app.context_processor
 def inject_lisans():
-    return {'lisans_bilgi': lambda: {
-        'durum': cfg.lisans_durumu(),
-        'kalan': cfg.demo_kalan_gun(),
-        'otel':  cfg.otel_bilgi()
-    }}
+    return {
+        'lisans_bilgi': lambda: {
+            'durum': cfg.lisans_durumu(),
+            'kalan': cfg.demo_kalan_gun(),
+            'otel':  cfg.otel_bilgi()
+        },
+        'tema_mod': cfg.tema_mod()
+    }
 
 # DB başlat
 db.init_db()
@@ -582,6 +585,8 @@ def api_dashboard():
             'cv_aktif':      cv_aktif,
             'kahvalti_kisi': kahvalti,
             'toplam_alacak': toplam_alacak,
+            'toplam_oda':    cfg.otel_bilgi().get('toplam_oda', 20),
+            'otel_adi':      cfg.otel_bilgi().get('ad', 'Otel'),
         },
         'girisler': girisler,
         'cikislar': cikislar,
@@ -1842,6 +1847,21 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"🌐 Sunucu → http://localhost:{port}")
     app.run(debug=False, host='0.0.0.0', port=port)
+
+
+# ── Tema ────────────────────────────────────────────────────────────────────
+
+@app.route('/api/tema-kaydet', methods=['POST'])
+@login_required
+def api_tema_kaydet():
+    data = request.get_json()
+    mod  = data.get('mod', 'dark')
+    if mod not in ('dark', 'light'):
+        return jsonify({'ok': False})
+    c = cfg.load_config()
+    c['tema']['mod'] = mod
+    cfg.save_config(c)
+    return jsonify({'ok': True, 'mod': mod})
 
 
 # ── Lisans Sayfaları ──────────────────────────────────────────────────────────

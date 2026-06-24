@@ -4,9 +4,20 @@ Config yöneticisi — config.json'ı yükler ve uygulama genelinde kullanılabi
 import json, os
 from datetime import date
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.json')
+# Render'da /data diski kalıcı, repo dizini read-only
+_data_dir    = "/data" if os.path.isdir("/data") else os.path.dirname(__file__)
+CONFIG_PATH  = os.path.join(_data_dir, 'config.json')
+CONFIG_TEMPLATE = os.path.join(os.path.dirname(__file__), 'config.json')
+
+def _ensure_config():
+    """config.json yoksa template'den kopyala"""
+    if not os.path.exists(CONFIG_PATH):
+        import shutil
+        if os.path.exists(CONFIG_TEMPLATE):
+            shutil.copy2(CONFIG_TEMPLATE, CONFIG_PATH)
 
 def load_config():
+    _ensure_config()
     with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
         return json.load(f)
 

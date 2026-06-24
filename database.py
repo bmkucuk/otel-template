@@ -151,22 +151,15 @@ def init_db():
         except Exception:
             pass  # Kolon zaten var
 
-    # İlk kullanıcılar (yalnızca tablo boşsa eklenir)
+    # Kullanıcılar kurulum sihirbazı tarafından oluşturulur
+    # Eğer hiç kullanıcı yoksa geçici bir admin ekle (kurulum sonrası değiştirilmeli)
     if conn.execute("SELECT COUNT(*) FROM kullanicilar").fetchone()[0] == 0:
         import hashlib
-        ilk_kullanicilar = [
-            ('murre34',    'Murat',  'Mk192837+-',  'admin'),
-            ('LeventK',    'Levent', 'Lk415263+-',  'partner'),
-            ('FıratK',     'Fırat',  '415263',      'partner'),
-            ('BurcinT',    'Burçin', 'Bt415263+-',  'partner'),
-            ('resepsiyon', 'Resepsiyon', 'res708090/', 'resepsiyon'),
-        ]
-        for username, ad, pw, role in ilk_kullanicilar:
-            h = hashlib.sha256(pw.encode()).hexdigest()
-            conn.execute(
-                "INSERT INTO kullanicilar(username, ad, hash, role) VALUES (?,?,?,?)",
-                (username, ad, h, role)
-            )
+        h = hashlib.sha256('admin123'.encode()).hexdigest()
+        conn.execute(
+            "INSERT INTO kullanicilar(username, ad, hash, role) VALUES (?,?,?,?)",
+            ('admin', 'Admin', h, 'admin')
+        )
 
     conn.commit()
     conn.close()

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Muhasebe modülü — Flask route'ları"""
 from datetime import date
+import config_loader as cfg
 from flask import Blueprint, render_template, request, jsonify, session, redirect
 import muhasebe_db as mdb
 import database as db
@@ -123,8 +124,9 @@ def api_gosterge():
         if tip:    q += " AND islem_tipi=?";   p.append(tip)
         return conn.execute(q, p).fetchone()[0] or 0
 
-    leo_kon  = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel='LEO'", (yil,)).fetchone()[0] or 0
-    cv_kon   = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel='CV'", (yil,)).fetchone()[0] or 0
+    _kisa = cfg.otel_bilgi().get('kisa_ad','OTEL')
+    leo_kon  = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel=?", (yil,_kisa)).fetchone()[0] or 0
+    cv_kon   = 0
     restoran = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi='Adisyon Geliri'", (yil,)).fetchone()[0] or 0
     # Tüm nakit girişleri (tahsilat + kapora)
     nakit    = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND borc_hesap='100'", (yil,)).fetchone()[0] or 0
@@ -712,7 +714,7 @@ def api_acente_fatura_kes():
         foy_nolar = [str(x) for x in d.get('foy_nolar', [])]
         tarih = d.get('tarih') or date.today().isoformat()
         banka = d.get('odeme_banka', 'IS')
-        otel = d.get('otel', 'LEO')
+        otel = d.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
         fatura_no = (d.get('fatura_no') or '').strip()
         hesap = ACENTE_HESAP.get(kod)
         if not hesap or not foy_nolar:
@@ -884,7 +886,7 @@ def api_acente_ekle():
             (tarih,acente_kod,foy_no,rez_no,misafir,rez_tutari,komisyon_oran,komisyon_tl,gelen_odeme,otel,fatura_no)
             VALUES (?,?,?,?,?,?,?,?,?,?,?)
         """, (d['tarih'], d['acente_kod'], None, '', 'Fatura Tahsilatı', 0, 0, 0,
-              gelen, d.get('otel', 'LEO'), fatura_no))
+              gelen, d.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL')), fatura_no))
         acente_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         if gelen > 0:
             banka = d.get('odeme_banka', 'IS')
@@ -1072,8 +1074,8 @@ def api_mizan():
     satirlar.append({'tip':'bos'})
 
     satirlar.append({'tip':'baslik','kod':'━━','ad':'GELİRLER','borc':0,'alacak':0})
-    satir('600', 'Konaklama Geliri - Leo', 0, leo_kon, 'Gelir')
-    satir('601', 'Konaklama Geliri - CV',  0, cv_kon,  'Gelir')
+    _otel_adi = cfg.otel_bilgi().get('ad', 'Otel')
+    satir('600', f'Konaklama Geliri - {_otel_adi}', 0, leo_kon, 'Gelir')
     satir('610', 'Adisyon Geliri',         0, adis_gel,'Gelir')
     satirlar.append({'tip':'bos'})
 
@@ -1123,7 +1125,7 @@ def api_gelir_aktar():
             if not giris: continue
             if giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', 'LEO')
+            otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
             key = (ay, otel)
             ozet[key]['konaklama'] += float(r.get('toplam_fiyat') or 0)
             ozet[key]['kapora']    += float(r.get('kapora') or 0)
@@ -1144,7 +1146,7 @@ def api_gelir_aktar():
             tarih = a.get('tarih')
             if not tarih or tarih[:4] != str(yil): continue
             ay = int(tarih[5:7])
-            otel = a.get('otel') or 'LEO'
+            otel = a.get('otel') or cfg.otel_bilgi().get('kisa_ad','OTEL')
             ozet[(ay, otel)]['restoran'] += float(a.get('tutar') or 0)
             ozet[(ay, otel)]['acik'] += float(a.get('tutar') or 0) - float(a.get('tutar') or 0)
 
@@ -1153,7 +1155,7 @@ def api_gelir_aktar():
             giris = r.get('giris')
             if not giris or giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', 'LEO')
+            otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
             ozet[(ay, otel)]['acik'] += float(r.get('rez_bakiye') or 0) + float(r.get('adis_bakiye') or 0)
 
         # Rezervasyonları ay/otel bazında grupla (gerçek tarihler için)
@@ -1163,7 +1165,7 @@ def api_gelir_aktar():
             giris = r.get('giris')
             if not giris or giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', 'LEO')
+            otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
             rez_gruplar[(ay, otel)].append(dict(r))
 
         mdb.temizle_gelir_ozet(yil)

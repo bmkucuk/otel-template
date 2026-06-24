@@ -92,7 +92,7 @@
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
       <div class="ms-field"><label>Giriş</label><input type="date" id="ms-giris" onchange="msAutoCikis()"></div>
       <div class="ms-field"><label>Çıkış</label><input type="date" id="ms-cikis"></div>
-      <div class="ms-field"><label>Otel</label><select id="ms-otel"><option>Tümü</option><option>LEO</option><option>CV</option></select></div>
+      <div class="ms-field"><label>Otel</label><select id="ms-otel"><option>Tümü</option><option>{{ lisans_bilgi().otel.get("kisa_ad","OTEL") }}</option></select></div>
       <button class="btn btn-primary" onclick="sorgula()" style="padding:9px 18px">Sorgula</button>
     </div>
     <div class="oda-nav" style="margin-top:18px;margin-bottom:0">
@@ -210,11 +210,11 @@ function render(d){
   for(const room of grid){
     if(room.otel!==lastOtel){
       lastOtel=room.otel;
-      const title=room.otel==='LEO'?'OTEL LEO':'CUNDA VİLLA';
+      const title=room.otel || 'OTEL';
       html+=`<div class="section-header">${title}</div>`;
     }
-    const otelClass=room.otel==='LEO'?'leo':'cv';
-    const label=room.otel==='LEO'?`LEO – ${room.oda_no}`:`CV – ${room.oda_no}`;
+    const otelClass='leo';
+    const label=`${room.otel} – ${room.oda_no}`;
     const roomKey=`${room.otel}-${room.oda_no}`;
     html+=`<div class="oda-label ${otelClass}"><span class="dot"></span>${label}</div>`;
 
@@ -295,8 +295,8 @@ async function sorgula(){
   }
   const d = await api(`/api/musaitlik?giris=${giris}&cikis=${cikis}&otel=${otel}`);
   const odalar = d.odalar || [];
-  const leo = odalar.filter(o=>o.otel==='LEO').length;
-  const cv  = odalar.filter(o=>o.otel==='CV').length;
+  const leo = odalar.length;
+  const cv  = 0;
   const gece = Math.round((new Date(cikis)-new Date(giris))/86400000);
 
   document.getElementById('ms-empty').style.display='none';
@@ -308,8 +308,8 @@ async function sorgula(){
     `${new Date(giris).toLocaleDateString('tr-TR')} → ${new Date(cikis).toLocaleDateString('tr-TR')} · ${gece} gece`;
 
   document.getElementById('ms-pills').innerHTML = odalar.length ? odalar.map(o=>{
-    const cls = o.otel==='LEO'?'leo':'cv';
-    const lbl = o.otel==='LEO'?`LEO ${o.oda_no}`:`CV ${o.oda_no}`;
+    const cls = 'leo';
+    const lbl = `${o.otel} ${o.oda_no}`;
     return `<div class="ms-room-pill ${cls}" onclick="lokalizeOda('${o.otel}',${o.oda_no},'${giris}','${cikis}')">${lbl}</div>`;
   }).join('') : '<span style="color:var(--text2);font-size:12.5px">Bu tarih aralığında müsait oda yok</span>';
 
@@ -391,7 +391,7 @@ async function lokalizeOda(otel, odaNo, girisStr, cikisStr){
     gridEl.appendChild(rowLine);
 
     // Odayı "seçili" yap
-    const labelEl = Array.from(gridEl.querySelectorAll('.oda-label')).find(el => el.textContent.replace(/\s+/g,' ').trim().includes(`${otel==='LEO'?'LEO':'CV'} – ${odaNo}`));
+    const labelEl = Array.from(gridEl.querySelectorAll('.oda-label')).find(el => el.textContent.replace(/\s+/g,' ').trim().includes(`– ${odaNo}`));
     if(labelEl) labelEl.classList.add('selected');
 
     // Yatayda ortalama için aralığın TAM ORTASINDAKİ günü baz alıyoruz (sadece giriş günü değil),

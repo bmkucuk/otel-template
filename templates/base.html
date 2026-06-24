@@ -325,15 +325,9 @@ function temaDegistir() {
   const yeni   = mevcut === 'dark' ? 'light' : 'dark';
   localStorage.setItem('otel-tema', yeni);
   temayiUygula(yeni);
-  // Sunucuya da kaydet
-  fetch('/api/tema-kaydet', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({mod: yeni})
-  }).catch(() => {});
 }
 
-// Sayfa yüklenince tema uygula
+// Sayfa yüklenince tema uygula — sadece localStorage, kişisel tercih
 (function() {
   const kayitli = localStorage.getItem('otel-tema') || '{{ tema_mod }}';
   temayiUygula(kayitli);

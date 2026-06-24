@@ -151,7 +151,7 @@ body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui
     </div>
     <div class="form-grup">
       <label>Telefon</label>
-      <input type="text" id="otel-tel" placeholder="0266 000 00 00">
+      <input type="text" id="otel-tel" placeholder="0266 000 00 00" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
     </div>
   </div>
 

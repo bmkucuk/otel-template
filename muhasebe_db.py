@@ -274,6 +274,9 @@ def init_db():
     # Migration: Booking.com -> Booking adı düzeltildi
     c.execute("UPDATE hesaplar SET ad='Booking Cari' WHERE kod='320-1'")
     c.execute("UPDATE acenteler SET ad='Booking' WHERE kod='BKG'")
+
+    # Migration: 153 hesap adını Genel Giderler yap
+    c.execute("UPDATE hesaplar SET ad='Genel Giderler' WHERE kod='153'")
     # Migration: eski ayrı Burçin kişisel hesabı varsa resmi BT ortak hesabına birleştir
     c.execute("SELECT 1 FROM hesaplar WHERE kod='500-BC'")
     if c.fetchone():

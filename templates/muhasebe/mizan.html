@@ -201,7 +201,14 @@ function renderModal() {
     if (r.alacak_hesap === kod) toplamAlacak += r.tutar || 0;
   });
 
-  const duzenlenebirmi = r => !r.kaynak_tablo;
+  const SISTEM_TIPLERI = new Set([
+    'Konaklama Geliri','Adisyon Geliri','Tahsilat - Nakit','Tahsilat - KK',
+    'Tahsilat - Havale','Personel Maaşı','Personel Maaşı (Avans Mahsubu)',
+    'Personel Avans','Stok Alımı','Demirbaş Alımı','Acente Ödemesi',
+    'Acente Komisyonu','Vergi Ödemesi','Ortak Çekimi','Ortak Yatırımı',
+    'Kasa - Banka Virman'
+  ]);
+  const duzenlenebirmi = r => !r.kaynak_tablo && !SISTEM_TIPLERI.has(r.islem_tipi);
 
   const tbody = filtered.map(r => {
     const borc   = r.borc_hesap   === kod ? r.tutar : 0;

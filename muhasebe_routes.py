@@ -247,10 +247,19 @@ def api_yevmiye_guncelle():
         if alacak:
             sets += ", alacak_hesap=?"; vals.append(alacak)
         vals.append(yev_id)
-        conn.execute(f"UPDATE yevmiye SET {sets} WHERE id=? AND kaynak_tablo IS NULL", vals)
-        if conn.execute("SELECT changes()").fetchone()[0] == 0:
+        SISTEM_TIPLERI = {
+            'Konaklama Geliri','Adisyon Geliri','Tahsilat - Nakit','Tahsilat - KK',
+            'Tahsilat - Havale','Personel Maaşı','Personel Maaşı (Avans Mahsubu)',
+            'Personel Avans','Stok Alımı','Demirbaş Alımı','Acente Ödemesi',
+            'Acente Komisyonu','Vergi Ödemesi','Ortak Çekimi','Ortak Yatırımı',
+            'Kasa - Banka Virman'
+        }
+        # kaynak_tablo dolu VEYA sistem islem tipiyse düzenlenemez
+        mevcut = conn.execute("SELECT kaynak_tablo, islem_tipi FROM yevmiye WHERE id=?", (yev_id,)).fetchone()
+        if not mevcut or mevcut[0] or (mevcut[1] in SISTEM_TIPLERI):
             conn.close()
             return jsonify({'ok': False, 'error': 'Bu kayıt düzenlenemez (sisteme bağlı kayıt)'}), 400
+        conn.execute(f"UPDATE yevmiye SET {sets} WHERE id=?", vals)
         conn.commit(); conn.close()
         return jsonify({'ok': True})
     except Exception as e:

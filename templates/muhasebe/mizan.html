@@ -20,30 +20,77 @@
 
 <!-- Hesap Detay Modalı -->
 <div class="modal-overlay" id="detay-modal">
-  <div class="modal" style="min-width:700px;max-width:900px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h2 id="modal-baslik" style="margin:0">Hesap Detayı</h2>
-      <button onclick="closeModal()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer">✕</button>
+  <div class="modal" style="min-width:760px;max-width:960px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2 id="modal-baslik" style="margin:0;font-size:17px"></h2>
+      <button onclick="closeModal()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1">✕</button>
     </div>
-    <div style="margin-bottom:12px;display:flex;gap:16px">
-      <div id="modal-ozet" style="font-size:13px;color:var(--text2)"></div>
+
+    <!-- Özet -->
+    <div id="modal-ozet" style="font-size:13px;color:var(--text2);margin-bottom:10px"></div>
+
+    <!-- Arama -->
+    <div style="margin-bottom:10px">
+      <input class="search-input" id="modal-q" placeholder="🔍 Tarih, açıklama, tutar, işlem tipi ara..."
+        oninput="renderModal()" style="width:100%">
     </div>
-    <div class="table-wrap" style="max-height:420px;overflow-y:auto">
+
+    <!-- Tablo -->
+    <div class="table-wrap" style="max-height:400px;overflow-y:auto">
       <table>
         <thead><tr>
           <th style="width:100px">Tarih</th>
           <th>Açıklama</th>
-          <th style="width:120px">İşlem Tipi</th>
-          <th style="width:110px;text-align:right">Borç</th>
-          <th style="width:110px;text-align:right">Alacak</th>
+          <th style="width:130px">İşlem Tipi</th>
+          <th style="width:105px;text-align:right">Borç</th>
+          <th style="width:105px;text-align:right">Alacak</th>
+          <th style="width:50px"></th>
         </tr></thead>
         <tbody id="modal-tbody">
-          <tr><td colspan="5" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>
+          <tr><td colspan="6" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>
         </tbody>
       </table>
     </div>
+
+    <!-- Toplam satırı -->
+    <div id="modal-toplam" style="display:flex;justify-content:flex-end;gap:24px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:13px;font-weight:600"></div>
+
     <div style="margin-top:12px;text-align:right">
       <button class="btn btn-default" onclick="closeModal()">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Düzenleme Modalı -->
+<div class="modal-overlay" id="duzenle-modal">
+  <div class="modal" style="min-width:440px">
+    <h2 style="margin-bottom:16px">✏️ Kaydı Düzenle</h2>
+    <input type="hidden" id="d-id">
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="d-tarih"></div>
+      <div class="form-group"><label>İşlem Tipi</label>
+        <select id="d-islem">
+          <option>Maaş Ödemesi</option><option>Vergi Ödemesi</option><option>Fatura Ödemesi</option>
+          <option>Stok Alımı</option><option>Kasa - Banka Virman</option><option>Diğer</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Açıklama</label><input type="text" id="d-aciklama"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Borç Hesabı</label><select id="d-borc"></select></div>
+      <div class="form-group"><label>Alacak Hesabı</label><select id="d-alacak"></select></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Tutar (₺)</label>
+        <input type="number" id="d-tutar" step="any" min="0" style="font-size:18px;font-weight:700">
+      </div>
+    </div>
+    <div id="d-hata" style="color:var(--accent3);font-size:13px;margin-bottom:8px;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeDuzenle()">İptal</button>
+      <button class="btn btn-primary" onclick="saveDuzenle()">💾 Güncelle</button>
     </div>
   </div>
 </div>
@@ -61,7 +108,10 @@ for (let y = thisYear-2; y <= thisYear+1; y++) {
 }
 
 const aktifHesaplar = ['100','101','102','102-1','102-2','102-3','120','153','195','255'];
+let modalRows = [];   // tüm yüklenen kayıtlar
+let aktifKod  = '';   // açık modal hesap kodu
 
+// ── ANA MİZAN ────────────────────────────────────────────────────────────────
 async function load() {
   const yil = yilSel.value;
   const d = await api(`/api/muhasebe/mizan?yil=${yil}`);
@@ -72,7 +122,7 @@ async function load() {
     const isBaslik = r.tip === 'baslik';
     const isToplam = r.tip === 'toplam';
     const isNet    = r.tip === 'net';
-    const isGider  = r.tip === 'veri' && r.kod && !isBaslik && !isToplam && !isNet;
+    const isVeri   = r.tip === 'veri';
     const bold = isBaslik || isToplam || isNet;
 
     const borc   = r.borc   || 0;
@@ -80,30 +130,27 @@ async function load() {
     const isAktif = aktifHesaplar.includes(r.kod);
     const bakiye = isAktif ? (borc - alacak) : (alacak - borc);
 
-    let rowStyle = '';
-    let kodColor = '', adColor = '';
+    let rowStyle = '', kodColor = '', adColor = '';
     if (isBaslik) { rowStyle = 'background:var(--header)'; kodColor = adColor = 'color:var(--accent)'; }
     if (isToplam) { adColor = 'color:var(--accent4)'; }
     if (isNet)    { rowStyle = 'background:var(--sidebar)'; }
 
-    // Gider satırları tıklanabilir
-    const clickable = isGider && (borc > 0 || alacak > 0);
-    if (clickable) {
-      rowStyle += ';cursor:pointer';
-      adColor = 'color:var(--text)';
-    }
-    const onclick = clickable ? `onclick="openDetay('${r.kod}','${r.ad.replace(/'/g,"\\'")}',${yilSel.value})"` : '';
-    const hoverTitle = clickable ? `title="Detayları gör"` : '';
-    const detayIcon = clickable ? ` <span style="font-size:11px;color:var(--accent2);margin-left:4px">🔍</span>` : '';
+    const clickable = isVeri && (borc > 0 || alacak > 0);
+    if (clickable) { rowStyle += ';cursor:pointer'; }
+    const onclick    = clickable ? `onclick="openDetay('${r.kod}','${r.ad.replace(/'/g,"\\'")}',${yilSel.value})"` : '';
+    const detayIcon  = clickable ? ` <span style="font-size:11px;color:var(--accent2);margin-left:4px">🔍</span>` : '';
+    const hoverAttrs = clickable
+      ? 'onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'"'
+      : '';
 
     const borcStr   = borc   > 0 ? fmt(borc)   : '—';
     const alacakStr = alacak > 0 ? fmt(alacak) : '—';
     const bakiyeStr = (borc || alacak) ? fmt(Math.abs(bakiye)) : '—';
-    const bakiyeRenk = r.kod === '120' ? (bakiye > 0 ? 'color:var(--accent3)' : 'color:var(--accent2)') :
-                       (bakiye >= 0 ? 'color:var(--accent2)' : 'color:var(--accent3)');
+    const bakiyeRenk = r.kod === '120'
+      ? (bakiye > 0 ? 'color:var(--accent3)' : 'color:var(--accent2)')
+      : (bakiye >= 0 ? 'color:var(--accent2)' : 'color:var(--accent3)');
 
-    return `<tr style="${rowStyle}${bold?';font-weight:700':''}" ${onclick} ${hoverTitle}
-      ${clickable ? 'onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'"' : ''}>
+    return `<tr style="${rowStyle}${bold?';font-weight:700':''}" ${onclick} ${hoverAttrs}>
       <td style="${kodColor}">${r.kod}</td>
       <td style="${adColor}">${r.ad}${detayIcon}</td>
       <td style="text-align:right;color:${borc>0?(isAktif?'var(--accent2)':'var(--accent3)'):'var(--text2)'}">${borcStr}</td>
@@ -113,43 +160,82 @@ async function load() {
   }).join('');
 }
 
+// ── DETAY MODAL ──────────────────────────────────────────────────────────────
 async function openDetay(kod, ad, yil) {
+  aktifKod = kod;
   document.getElementById('modal-baslik').textContent = `${kod} — ${ad}`;
   document.getElementById('modal-ozet').innerHTML = '<span class="spinner"></span>';
+  document.getElementById('modal-toplam').innerHTML = '';
   document.getElementById('modal-tbody').innerHTML =
-    '<tr><td colspan="5" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>';
+    '<tr><td colspan="6" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>';
+  document.getElementById('modal-q').value = '';
   document.getElementById('detay-modal').classList.add('open');
 
-  const rows = await api(`/api/muhasebe/yevmiye?yil=${yil}&hesap=${encodeURIComponent(kod)}&order=ASC`);
+  modalRows = await api(`/api/muhasebe/yevmiye?yil=${yil}&hesap=${encodeURIComponent(kod)}&order=ASC`);
+  renderModal();
+}
+
+function trLower(s) {
+  return String(s||'').replace(/İ/g,'i').replace(/I/g,'ı').replace(/Ğ/g,'ğ')
+    .replace(/Ü/g,'ü').replace(/Ş/g,'ş').replace(/Ö/g,'ö').replace(/Ç/g,'ç').toLowerCase();
+}
+
+function renderModal() {
+  const q = trLower(document.getElementById('modal-q').value.trim());
+  const kod = aktifKod;
+
+  let filtered = modalRows;
+  if (q) {
+    filtered = modalRows.filter(r => {
+      const hay = [
+        fmtDate(r.tarih), r.tarih, r.aciklama, r.islem_tipi,
+        String(r.tutar||''), r.borc_hesap, r.alacak_hesap
+      ].map(trLower).join(' ');
+      return q.split(' ').filter(Boolean).every(w => hay.includes(w));
+    });
+  }
 
   let toplamBorc = 0, toplamAlacak = 0;
-  const tbody = rows.map(r => {
+  filtered.forEach(r => {
+    if (r.borc_hesap   === kod) toplamBorc   += r.tutar || 0;
+    if (r.alacak_hesap === kod) toplamAlacak += r.tutar || 0;
+  });
+
+  const duzenlenebirmi = r => !r.kaynak_tablo;
+
+  const tbody = filtered.map(r => {
     const borc   = r.borc_hesap   === kod ? r.tutar : 0;
     const alacak = r.alacak_hesap === kod ? r.tutar : 0;
-    toplamBorc   += borc;
-    toplamAlacak += alacak;
+    const canEdit = duzenlenebirmi(r);
+    const editBtn = canEdit
+      ? `<button onclick='openDuzenle(${JSON.stringify(r)})' title="Düzenle"
+           style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:14px;padding:2px 4px">✏️</button>`
+      : `<span title="Sisteme bağlı kayıt — düzenlenemez"
+           style="color:var(--text2);font-size:14px;padding:2px 6px;opacity:0.4">✏️</span>`;
     return `<tr>
       <td>${fmtDate(r.tarih)}</td>
-      <td>${r.aciklama || '—'}</td>
-      <td style="font-size:11px;color:var(--text2)">${r.islem_tipi || '—'}</td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.aciklama||'').replace(/"/g,'&quot;')}">${r.aciklama||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${r.islem_tipi||'—'}</td>
       <td style="text-align:right;color:${borc>0?'var(--accent3)':'var(--text2)'}">${borc>0?fmt(borc):'—'}</td>
       <td style="text-align:right;color:${alacak>0?'var(--accent2)':'var(--text2)'}">${alacak>0?fmt(alacak):'—'}</td>
+      <td style="text-align:center">${editBtn}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">Kayıt bulunamadı</td></tr>';
+  }).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:20px">${q?'Sonuç bulunamadı':'Kayıt yok'}</td></tr>`;
 
-  document.getElementById('modal-tbody').innerHTML = tbody +
-    `<tr style="font-weight:700;background:var(--header)">
-      <td colspan="2" style="color:var(--accent)">TOPLAM</td>
-      <td></td>
-      <td style="text-align:right;color:var(--accent3)">${toplamBorc>0?fmt(toplamBorc):'—'}</td>
-      <td style="text-align:right;color:var(--accent2)">${toplamAlacak>0?fmt(toplamAlacak):'—'}</td>
-    </tr>`;
+  document.getElementById('modal-tbody').innerHTML = tbody;
 
   document.getElementById('modal-ozet').innerHTML =
-    `<span style="color:var(--text2)">${rows.length} hareket</span>
+    `<span style="color:var(--text2)">${filtered.length} / ${modalRows.length} kayıt</span>
      &nbsp;|&nbsp; <span style="color:var(--accent3)">Borç: ${fmt(toplamBorc)}</span>
      &nbsp;|&nbsp; <span style="color:var(--accent2)">Alacak: ${fmt(toplamAlacak)}</span>
      &nbsp;|&nbsp; <span style="color:var(--accent4);font-weight:600">Bakiye: ${fmt(Math.abs(toplamBorc-toplamAlacak))}</span>`;
+
+  document.getElementById('modal-toplam').innerHTML = filtered.length
+    ? `<span style="color:var(--text2);font-size:12px">${q?'Filtreli toplam':'Toplam'}</span>
+       <span style="color:var(--accent3)">Borç: ${fmt(toplamBorc)}</span>
+       <span style="color:var(--accent2)">Alacak: ${fmt(toplamAlacak)}</span>
+       <span style="color:var(--accent4)">Net: ${fmt(Math.abs(toplamBorc-toplamAlacak))}</span>`
+    : '';
 }
 
 function closeModal() {
@@ -157,6 +243,68 @@ function closeModal() {
 }
 document.getElementById('detay-modal').addEventListener('click', e => {
   if (e.target.id === 'detay-modal') closeModal();
+});
+
+// ── DÜZENLEME ────────────────────────────────────────────────────────────────
+async function openDuzenle(r) {
+  document.getElementById('d-id').value      = r.id;
+  document.getElementById('d-tarih').value   = r.tarih || '';
+  document.getElementById('d-aciklama').value= r.aciklama || '';
+  document.getElementById('d-tutar').value   = r.tutar || 0;
+  document.getElementById('d-islem').value   = r.islem_tipi || 'Diğer';
+  document.getElementById('d-hata').style.display = 'none';
+
+  const hesaplar = await api('/api/muhasebe/hesaplar');
+  const opts = hesaplar.map(h => `<option value="${h.split(' — ')[0]}">${h}</option>`).join('');
+  document.getElementById('d-borc').innerHTML   = opts;
+  document.getElementById('d-alacak').innerHTML = opts;
+  if (r.borc_hesap)   document.getElementById('d-borc').value   = r.borc_hesap;
+  if (r.alacak_hesap) document.getElementById('d-alacak').value = r.alacak_hesap;
+
+  document.getElementById('duzenle-modal').classList.add('open');
+}
+
+function closeDuzenle() {
+  document.getElementById('duzenle-modal').classList.remove('open');
+}
+
+async function saveDuzenle() {
+  const id      = parseInt(document.getElementById('d-id').value);
+  const tarih   = document.getElementById('d-tarih').value;
+  const tutar   = parseFloat(document.getElementById('d-tutar').value) || 0;
+  const aciklama= document.getElementById('d-aciklama').value.trim();
+  const islem   = document.getElementById('d-islem').value;
+  const borc    = document.getElementById('d-borc').value;
+  const alacak  = document.getElementById('d-alacak').value;
+
+  if (!tarih)    { showHata('Tarih girin'); return; }
+  if (!(tutar>0)){ showHata('Tutar > 0 olmalı'); return; }
+
+  const r = await api('/api/muhasebe/yevmiye/guncelle', { id, tarih, tutar, aciklama, islem_tipi: islem, borc, alacak });
+  if (r.ok) {
+    toast('Güncellendi ✓');
+    closeDuzenle();
+    // Modal satırını güncelle
+    const idx = modalRows.findIndex(x => x.id === id);
+    if (idx >= 0) {
+      modalRows[idx] = { ...modalRows[idx], tarih, tutar, aciklama, islem_tipi: islem,
+                         borc_hesap: borc, alacak_hesap: alacak };
+    }
+    renderModal();
+    load(); // Mizan tablosunu da yenile
+  } else {
+    showHata(r.error || 'Güncelleme başarısız');
+  }
+}
+
+function showHata(msg) {
+  const el = document.getElementById('d-hata');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+document.getElementById('duzenle-modal').addEventListener('click', e => {
+  if (e.target.id === 'duzenle-modal') closeDuzenle();
 });
 
 load();

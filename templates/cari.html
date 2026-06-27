@@ -263,14 +263,14 @@ function renderCari(data) {
 }
 
 function filterCari() {
-  const q = document.getElementById('cari-search').value.toLowerCase();
+  const q = document.getElementById('cari-search').value.toLocaleLowerCase('tr-TR');
   const sadeceAcik = document.getElementById('cb-cari-aktif').checked;
 
   let result = allData;
 
   if (q) {
     result = result.filter(r =>
-      String(r.foy_no).includes(q) || String(r.oda_no).includes(q) || (r.musteri||'').toLowerCase().includes(q)
+      String(r.foy_no).includes(q) || String(r.oda_no).includes(q) || (r.musteri||'').toLocaleLowerCase('tr-TR').includes(q)
     );
   }
 

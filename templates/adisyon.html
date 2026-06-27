@@ -182,9 +182,9 @@ let foyAktifIndex = -1;
 
 function renderFoyList(q) {
   const liste = document.getElementById('a-foy-list');
-  const ql = (q || '').toLowerCase().trim();
+  const ql = (q || '').toLocaleLowerCase('tr-TR').trim();
   const filtreli = ql
-    ? foyListesi.filter(f => (`${f.foy_no} ${f.musteri} ${f.oda_no}`).toLowerCase().includes(ql))
+    ? foyListesi.filter(f => (`${f.foy_no} ${f.musteri} ${f.oda_no}`).toLocaleLowerCase('tr-TR').includes(ql))
     : foyListesi;
   foyAktifIndex = -1;
   if (!filtreli.length) {
@@ -258,12 +258,12 @@ function filterTable() {
 
 function renderTable() {
   const foyF = document.getElementById('foy-filter').value;
-  const ql = (document.getElementById('adis-q').value||'').toLowerCase().trim();
+  const ql = (document.getElementById('adis-q').value||'').toLocaleLowerCase('tr-TR').trim();
   let data = allAdisyonlar;
   if (foyF) data = data.filter(a => a.foy_no == foyF);
   if (onlyAcik) data = data.filter(a => a.odendi !== 1);
   if (ql) data = data.filter(a => {
-    const hay = `${a.musteri||''} ${a.aciklama||''} ${a.foy_no} ${a.oda_no||''} ${a.tutar} ${a.tarih||''}`.toLowerCase();
+    const hay = `${a.musteri||''} ${a.aciklama||''} ${a.foy_no} ${a.oda_no||''} ${a.tutar} ${a.tarih||''}`.toLocaleLowerCase('tr-TR');
     return hay.includes(ql);
   });
 

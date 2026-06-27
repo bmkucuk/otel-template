@@ -186,13 +186,13 @@ let sortDurum = {
 };
 
 function aramaDegisti() {
-  aramaTerimi = document.getElementById('arama').value.trim().toLowerCase();
+  aramaTerimi = document.getElementById('arama').value.trim().toLocaleLowerCase('tr-TR');
   uygulaFiltreVeSirala();
 }
 
 function metinEslesir(...alanlar) {
   if (!aramaTerimi) return true;
-  return alanlar.some(a => (a||'').toString().toLowerCase().includes(aramaTerimi));
+  return alanlar.some(a => (a||'').toString().toLocaleLowerCase('tr-TR').includes(aramaTerimi));
 }
 
 function sirala(tablo, alan) {

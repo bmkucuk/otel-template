@@ -241,13 +241,21 @@ def get_rezervasyonlar(q=None, otel=None):
     params = []
     if otel and otel != 'Tümü':
         sql += " AND otel=?"; params.append(otel)
-    if q:
-        sql += " AND (LOWER(musteri) LIKE ? OR CAST(foy_no AS TEXT) LIKE ? OR CAST(oda_no AS TEXT) LIKE ?)"
-        params += [f'%{q.lower()}%', f'%{q}%', f'%{q}%']
     sql += " ORDER BY foy_no DESC"
     rows = conn.execute(sql, params).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    result = [dict(r) for r in rows]
+    if q:
+        def tr_lower(s):
+            return s.replace('İ','i').replace('I','ı').replace('Ğ','ğ').replace('Ü','ü').replace('Ş','ş').replace('Ö','ö').replace('Ç','ç').lower()
+        q_tr = tr_lower(q)
+        def matches(r):
+            musteri = tr_lower(r.get('musteri') or '')
+            foy = str(r.get('foy_no') or '')
+            oda = str(r.get('oda_no') or '')
+            return q_tr in musteri or q_tr in foy or q_tr in oda
+        result = [r for r in result if matches(r)]
+    return result
 
 def get_rezervasyon(foy_no):
     conn = get_conn()

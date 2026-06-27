@@ -82,7 +82,32 @@
       <div class="form-group"><label>Alacak Hesabı</label><select id="f-alacak"></select></div>
     </div>
     <div class="form-row single">
-      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-tutar" value="0" step="any" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+    </div>
+    <!-- Döviz kasası seçilince görünen ek alanlar -->
+    <div id="f-doviz-row" style="display:none">
+      <div class="form-row" style="background:rgba(67,198,255,.08);border:1px solid rgba(67,198,255,.3);border-radius:8px;padding:10px;margin-bottom:10px">
+        <div class="form-group">
+          <label>Döviz Cinsi</label>
+          <select id="f-doviz-cinsi" style="background:var(--card2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;width:100%">
+            <option value="EUR">Euro (€)</option>
+            <option value="USD">Dolar ($)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Döviz Tutar</label>
+          <input type="number" id="f-doviz-tutar" placeholder="0.00" step="any" min="0"
+            style="background:var(--card2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;width:100%;font-size:16px;font-weight:700"
+            oninput="hesaplaTL()">
+        </div>
+        <div class="form-group">
+          <label>Kur (₺/Döviz)</label>
+          <input type="number" id="f-kur" placeholder="Örn: 38.50" step="any" min="0"
+            style="background:var(--card2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;width:100%"
+            oninput="hesaplaTL()">
+        </div>
+      </div>
+      <div id="f-tl-hesap" style="font-size:12px;color:var(--accent2);margin-bottom:8px;font-weight:600"></div>
     </div>
     <div class="form-row single">
       <div class="form-group"><label>Açıklama</label><input type="text" id="f-aciklama"></div>
@@ -90,6 +115,39 @@
     <div class="modal-footer">
       <button class="btn btn-default" onclick="closeModal()">İptal</button>
       <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gider Düzenleme Modalı -->
+<div class="modal-overlay" id="duzenle-modal">
+  <div class="modal" style="min-width:420px">
+    <h2>✏️ Gider Düzenle</h2>
+    <input type="hidden" id="d-id">
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="d-tarih"></div>
+      <div class="form-group"><label>İşlem Tipi</label>
+        <select id="d-islem">
+          <option>Maaş Ödemesi</option><option>Vergi Ödemesi</option><option>Fatura Ödemesi</option>
+          <option>Stok Alımı</option><option>Kasa - Banka Virman</option><option>Diğer</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Açıklama</label><input type="text" id="d-aciklama"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Borç Hesabı</label><select id="d-borc"></select></div>
+      <div class="form-group"><label>Alacak Hesabı</label><select id="d-alacak"></select></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Tutar (₺)</label>
+        <input type="number" id="d-tutar" step="any" min="0" style="font-size:18px;font-weight:700">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeDuzenleMod()">İptal</button>
+      <button class="btn btn-primary" onclick="saveDuzenle()">💾 Güncelle</button>
     </div>
   </div>
 </div>
@@ -136,12 +194,12 @@ function toggleSort(which) {
 function filterSortHareketler(data, q, dir) {
   let list = data;
   if (q && q.trim()) {
-    const term = q.trim().toLowerCase();
+    const term = q.trim().toLocaleLowerCase('tr-TR');
     list = list.filter(r => {
-      const tutarStr = String(r.giris || r.cikis || '').toLowerCase();
-      const tarihStr = (fmtDate(r.tarih) || '').toLowerCase();
-      return (r.aciklama||'').toLowerCase().includes(term) ||
-             (r.islem_tipi||'').toLowerCase().includes(term) ||
+      const tutarStr = String(r.giris || r.cikis || '').toLocaleLowerCase('tr-TR');
+      const tarihStr = (fmtDate(r.tarih) || '').toLocaleLowerCase('tr-TR');
+      return (r.aciklama||'').toLocaleLowerCase('tr-TR').includes(term) ||
+             (r.islem_tipi||'').toLocaleLowerCase('tr-TR').includes(term) ||
              tutarStr.includes(term) ||
              tarihStr.includes(term) ||
              (r.tarih||'').includes(term);
@@ -169,14 +227,28 @@ function gotoPage(which, p) {
 }
 
 function rowHtml(r) {
+  let dovizHtml = '';
+  if (r.doviz_cinsi && r.doviz_tutar) {
+    const sembol = r.doviz_cinsi === 'EUR' ? '€' : '$';
+    const dovizFmt = (r.doviz_tutar||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const kurFmt = r.kur ? ` @ ${(r.kur||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})}` : '';
+    dovizHtml = `<br><span style="font-size:10px;color:var(--accent2)">${dovizFmt} ${sembol}${kurFmt}</span>`;
+  }
+  // Sadece manuel gider kayıtları düzenlenebilir (kaynak_tablo yok, cikis > 0, açıklama sisteme bağlı değil)
+  const duzenlenebirmi = !r.kaynak_tablo && r.cikis > 0 && !baglantiliSayfa(r.kaynak_tablo, r.aciklama);
+  const duzenleBtnHtml = duzenlenebirmi
+    ? `<button onclick='openDuzenleMod(${JSON.stringify(r)})' title="Düzenle"
+        style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:14px;padding:4px">✏️</button>`
+    : '';
   return `<tr>
     <td>${fmtDate(r.tarih)}</td>
-    <td>${r.aciklama||'—'}</td>
+    <td>${r.aciklama||'—'}${dovizHtml}</td>
     <td style="font-size:11px;color:var(--text2)">${r.islem_tipi||'—'}</td>
     <td class="green" style="text-align:right">${r.giris > 0 ? fmt(r.giris) : '—'}</td>
     <td class="red" style="text-align:right">${r.cikis > 0 ? fmt(r.cikis) : '—'}</td>
     <td class="${r.bakiye_kum >= 0 ? 'green' : 'red'}" style="text-align:right;font-weight:600">${fmt(r.bakiye_kum)}</td>
-    <td style="text-align:center">
+    <td style="text-align:center;white-space:nowrap">
+      ${duzenleBtnHtml}
       <button onclick='silKasaKaydi(${r.id}, ${JSON.stringify(r.kaynak_tablo||null)}, ${JSON.stringify(r.aciklama||"")})'
         title="Sil" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:4px">🗑️</button>
     </td>
@@ -215,6 +287,40 @@ async function silKasaKaydi(id, kaynakTablo, aciklama) {
   else toast(r.error, 'error');
 }
 
+async function openDuzenleMod(r) {
+  document.getElementById('d-id').value = r.id;
+  document.getElementById('d-tarih').value = r.tarih || '';
+  document.getElementById('d-aciklama').value = r.aciklama || '';
+  document.getElementById('d-tutar').value = r.cikis || 0;
+  document.getElementById('d-islem').value = r.islem_tipi || 'Fatura Ödemesi';
+
+  const hesaplar = await api('/api/muhasebe/hesaplar');
+  const opts = hesaplar.map(h => `<option value="${h.split(' — ')[0]}">${h}</option>`).join('');
+  document.getElementById('d-borc').innerHTML = opts;
+  document.getElementById('d-alacak').innerHTML = opts;
+  if (r.borc_hesap)   document.getElementById('d-borc').value  = r.borc_hesap;
+  if (r.alacak_hesap) document.getElementById('d-alacak').value = r.alacak_hesap;
+
+  document.getElementById('duzenle-modal').classList.add('open');
+}
+function closeDuzenleMod() {
+  document.getElementById('duzenle-modal').classList.remove('open');
+}
+async function saveDuzenle() {
+  const id    = parseInt(document.getElementById('d-id').value);
+  const tutar = parseFloat(document.getElementById('d-tutar').value) || 0;
+  const tarih = document.getElementById('d-tarih').value;
+  const aciklama = document.getElementById('d-aciklama').value.trim();
+  const islemTipi = document.getElementById('d-islem').value;
+  const borc  = document.getElementById('d-borc').value;
+  const alacak = document.getElementById('d-alacak').value;
+  if (!tarih) { toast('Tarih girin', 'error'); return; }
+  if (!(tutar > 0)) { toast('Tutar > 0 olmalı', 'error'); return; }
+  const r = await api('/api/muhasebe/yevmiye/guncelle', { id, tarih, tutar, aciklama, islem_tipi: islemTipi, borc, alacak });
+  if (r.ok) { toast('Güncellendi ✓'); closeDuzenleMod(); load(); }
+  else toast(r.error || 'Hata', 'error');
+}
+
 function renderKasa() {
   const q = document.getElementById('kasa-q').value;
   const list = filterSortHareketler(kasaData, q, sortDir.kasa);
@@ -240,22 +346,36 @@ async function load() {
   const d = await api(`/api/muhasebe/kasa?yil=${yil}&hesap=`);
   tumBakiyeler = d.bakiyeler;
 
-  // KASA özet
-  const kasa = d.bakiyeler.find(b => b.kod === 'KASA') || {};
+  // KASA özet — TL + EUR + USD kartları
+  const kasa    = d.bakiyeler.find(b => b.kod === 'KASA')     || {};
+  const kasaEur = d.bakiyeler.find(b => b.kod === 'KASA-EUR') || {};
+  const kasaUsd = d.bakiyeler.find(b => b.kod === 'KASA-USD') || {};
+  const fmtDoviz = (v, decimals=2) => (v||0).toLocaleString('tr-TR',{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
   document.getElementById('kasa-ozet').innerHTML = `
-    <div class="stat-card"><div class="label">Kasa Bakiyesi</div>
+    <div class="stat-card"><div class="label">🟡 Kasa TL</div>
       <div class="value ${(kasa.bakiye||0) >= 0 ? 'green' : 'red'}">${fmt(kasa.bakiye||0)}</div>
       <div class="sub">Giriş: ${fmt(kasa.giris||0)} | Çıkış: ${fmt(kasa.cikis||0)}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer" onclick="selectKasaDoviz('KASA-EUR')">
+      <div class="label">🔵 Euro Kasa</div>
+      <div class="value ${(kasaEur.doviz_bakiye||0) >= 0 ? 'green' : 'red'}">${fmtDoviz(kasaEur.doviz_bakiye)} €</div>
+      <div class="sub">≈ ${fmt(kasaEur.bakiye||0)} TL karşılığı</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer" onclick="selectKasaDoviz('KASA-USD')">
+      <div class="label">🟢 Dolar Kasa</div>
+      <div class="value ${(kasaUsd.doviz_bakiye||0) >= 0 ? 'green' : 'red'}">${fmtDoviz(kasaUsd.doviz_bakiye)} $</div>
+      <div class="sub">≈ ${fmt(kasaUsd.bakiye||0)} TL karşılığı</div>
     </div>`;
 
-  // Kasa hareketleri
+  // Kasa hareketleri (TL)
   const kd = await api(`/api/muhasebe/kasa?yil=${yil}&hesap=KASA`);
   kasaData = kd.hareketler;
   curPage.kasa = 1;
+  aktifKasaDoviz = '';
   renderKasa();
 
-  // BANKA özet kartları
-  const bankalar = d.bakiyeler.filter(b => b.kod !== 'KASA');
+  // BANKA özet kartları (EUR/USD kasa burada değil, kasa sekmesinde)
+  const bankalar = d.bakiyeler.filter(b => !['KASA','KASA-EUR','KASA-USD'].includes(b.kod));
   document.getElementById('banka-ozet').innerHTML = bankalar.map(b => `
     <div class="stat-card" style="cursor:pointer" onclick="selectBanka('${b.kod}')">
       <div class="label">🏦 ${b.ad}</div>
@@ -274,7 +394,22 @@ async function load() {
   if (bankalar.length > 0 && !aktifBanka) {
     aktifBanka = bankalar[0].kod;
   }
-  if (aktifBanka) selectBanka(aktifBanka);
+  if (aktifBanka && bankalar.find(b=>b.kod===aktifBanka)) selectBanka(aktifBanka);
+}
+
+let aktifKasaDoviz = '';
+async function selectKasaDoviz(kod) {
+  aktifKasaDoviz = kod;
+  const yil = yilSel.value;
+  document.getElementById('kasa-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>';
+  const kd = await api(`/api/muhasebe/kasa?yil=${yil}&hesap=${encodeURIComponent(kod)}`);
+  kasaData = kd.hareketler.map(r => ({
+    ...r,
+    giris:  r.giris  > 0 ? r.giris  : 0,
+    cikis:  r.cikis  > 0 ? r.cikis  : 0,
+  }));
+  curPage.kasa = 1;
+  renderKasa();
 }
 
 async function selectBanka(kod) {
@@ -298,21 +433,60 @@ async function openModal() {
     document.getElementById(id).innerHTML = hesaplar.map(h => `<option>${h}</option>`).join('');
   });
   document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-tutar').value = '0';
+  document.getElementById('f-doviz-tutar').value = '';
+  document.getElementById('f-kur').value = '';
+  document.getElementById('f-tl-hesap').textContent = '';
+  document.getElementById('f-doviz-row').style.display = 'none';
+  // Borç hesabı değişince döviz alanı göster/gizle
+  document.getElementById('f-borc').addEventListener('change', onBorcDegis);
   document.getElementById('modal').classList.add('open');
 }
+
+function onBorcDegis() {
+  const borc = document.getElementById('f-borc').value;
+  const isDoviz = borc.includes('100-EUR') || borc.includes('100-USD');
+  document.getElementById('f-doviz-row').style.display = isDoviz ? 'block' : 'none';
+  if (isDoviz) {
+    const cinsi = borc.includes('EUR') ? 'EUR' : 'USD';
+    document.getElementById('f-doviz-cinsi').value = cinsi;
+  }
+}
+
+function hesaplaTL() {
+  const dovizTutar = parseFloat(document.getElementById('f-doviz-tutar').value) || 0;
+  const kur = parseFloat(document.getElementById('f-kur').value) || 0;
+  const tl = dovizTutar * kur;
+  document.getElementById('f-tutar').value = tl.toFixed(2);
+  const cinsi = document.getElementById('f-doviz-cinsi').value;
+  const sembol = cinsi === 'EUR' ? '€' : '$';
+  document.getElementById('f-tl-hesap').textContent = tl > 0
+    ? `${dovizTutar.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})} ${sembol} × ${kur.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})} = ${tl.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})} ₺`
+    : '';
+}
+
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
 async function save() {
+  const borcHesap = document.getElementById('f-borc').value.split(' — ')[0];
+  const isDoviz = borcHesap.includes('100-EUR') || borcHesap.includes('100-USD');
   const data = {
     tarih:      document.getElementById('f-tarih').value,
     belge_no:   document.getElementById('f-belge').value,
     islem_tipi: document.getElementById('f-islem').value,
-    borc:       document.getElementById('f-borc').value.split(' — ')[0],
+    borc:       borcHesap,
     alacak:     document.getElementById('f-alacak').value.split(' — ')[0],
     tutar:      parseFloat(document.getElementById('f-tutar').value) || 0,
     aciklama:   document.getElementById('f-aciklama').value,
     otel:       'GENEL',
   };
+  if (isDoviz) {
+    data.doviz_cinsi  = document.getElementById('f-doviz-cinsi').value;
+    data.doviz_tutar  = parseFloat(document.getElementById('f-doviz-tutar').value) || 0;
+    data.kur          = parseFloat(document.getElementById('f-kur').value) || 0;
+    if (!data.doviz_tutar) { toast('Döviz tutarı girin', 'error'); return; }
+    if (!data.kur)         { toast('Kur girin', 'error'); return; }
+  }
   const r = await api('/api/muhasebe/yevmiye/ekle', data);
   if (r.ok) { toast('Kayıt eklendi ✓'); closeModal(); load(); }
   else toast(r.error, 'error');

@@ -225,6 +225,36 @@ def api_yevmiye_ekle():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
 
+@muh.route('/api/muhasebe/yevmiye/guncelle', methods=['POST'])
+@admin_required
+def api_yevmiye_guncelle():
+    try:
+        d = request.get_json()
+        yev_id   = int(d['id'])
+        tarih    = d['tarih']
+        tutar    = float(d['tutar'])
+        aciklama = d.get('aciklama', '')
+        islem    = d.get('islem_tipi', '')
+        borc     = d.get('borc', '')
+        alacak   = d.get('alacak', '')
+        yil      = int(tarih[:4]); ay = int(tarih[5:7])
+        conn = mdb.get_conn()
+        sets = "tarih=?, tutar=?, aciklama=?, islem_tipi=?, yil=?, ay=?"
+        vals = [tarih, tutar, aciklama, islem, yil, ay]
+        if borc:
+            sets += ", borc_hesap=?"; vals.append(borc)
+        if alacak:
+            sets += ", alacak_hesap=?"; vals.append(alacak)
+        vals.append(yev_id)
+        conn.execute(f"UPDATE yevmiye SET {sets} WHERE id=? AND kaynak_tablo IS NULL", vals)
+        if conn.execute("SELECT changes()").fetchone()[0] == 0:
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Bu kayıt düzenlenemez (sisteme bağlı kayıt)'}), 400
+        conn.commit(); conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 400
+
 @muh.route('/api/muhasebe/yevmiye/sil', methods=['POST'])
 @admin_required
 def api_yevmiye_sil():
@@ -302,10 +332,12 @@ def api_bankalar():
 ACENTE_HESAP = {'BKG': '320-1', 'EXP': '320-2', 'JLY': '320-3', 'TTS': '320-4', 'ETS': '320-5'}
 
 BANKA_HESAP = {
-    'KASA': '100',
-    'IS':   '102-1',
-    'ZRH':  '102-2',
-    'DNZ':  '102-3',
+    'KASA':     '100',
+    'IS':       '102-1',
+    'ZRH':      '102-2',
+    'DNZ':      '102-3',
+    'KASA-EUR': '100-EUR',
+    'KASA-USD': '100-USD',
 }
 
 @muh.route('/api/muhasebe/kasa')
@@ -324,8 +356,20 @@ def api_kasa():
         cikis = conn.execute(
             "SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND alacak_hesap=?",
             (yil, h_kodu)).fetchone()[0]
-        bakiyeler.append({'kod': b['kod'], 'ad': b['ad'], 'hesap_kodu': h_kodu,
-                          'giris': giris, 'cikis': cikis, 'bakiye': giris - cikis})
+        entry = {'kod': b['kod'], 'ad': b['ad'], 'hesap_kodu': h_kodu,
+                 'giris': giris, 'cikis': cikis, 'bakiye': giris - cikis}
+        # Döviz kasaları için ayrıca döviz bakiyesi
+        if b['kod'] in ('KASA-EUR', 'KASA-USD'):
+            doviz = 'EUR' if b['kod'] == 'KASA-EUR' else 'USD'
+            doviz_giris = conn.execute(
+                "SELECT COALESCE(SUM(doviz_tutar),0) FROM yevmiye WHERE yil=? AND borc_hesap=? AND doviz_cinsi=?",
+                (yil, h_kodu, doviz)).fetchone()[0]
+            doviz_cikis = conn.execute(
+                "SELECT COALESCE(SUM(doviz_tutar),0) FROM yevmiye WHERE yil=? AND alacak_hesap=? AND doviz_cinsi=?",
+                (yil, h_kodu, doviz)).fetchone()[0]
+            entry['doviz_cinsi'] = doviz
+            entry['doviz_bakiye'] = doviz_giris - doviz_cikis
+        bakiyeler.append(entry)
     hareketler = []
     if hesap:
         h_kodu = BANKA_HESAP.get(hesap, hesap)
@@ -1092,12 +1136,32 @@ def api_mizan():
     satirlar.append({'tip':'bos'})
 
     satirlar.append({'tip':'baslik','kod':'━━','ad':'GİDERLER','borc':0,'alacak':0})
-    if maas:  satir('720','Personel Maaş', maas,  0, 'Gider')
-    if vergi: satir('770','Vergi',         vergi, 0, 'Gider')
-    if stok:  satir('740','Stok/Market',   stok,  0, 'Gider')
-    if dem:   satir('255','Demirbaş',      dem,   0, 'Gider')
-    if ortak: satir('500','Ortak Cari',    ortak, 0, 'Gider')
-    if komisyon: satir('730','Acente Komisyonu', komisyon, 0, 'Gider')
+    if maas:     satir('720','Personel Maaş',     maas,     0, 'Gider')
+    if komisyon: satir('730','Acente Komisyonu',  komisyon, 0, 'Gider')
+    if vergi:    satir('770','Vergi',             vergi,    0, 'Gider')
+    if stok:     satir('740','Stok/Market',       stok,     0, 'Gider')
+    if dem:      satir('255','Demirbaş',          dem,      0, 'Gider')
+    if ortak:    satir('500','Ortak Cari',        ortak,    0, 'Gider')
+
+    # Yevmiyeden kaydedilmiş diğer tüm gider hesapları (hardcoded olmayanlar)
+    islenecekler = {'720','730','770','740','255','500'}
+    muh_conn2 = mdb.get_conn()
+    gider_hesaplar = muh_conn2.execute("""
+        SELECT h.kod, h.ad,
+               COALESCE(SUM(CASE WHEN y.borc_hesap=h.kod THEN y.tutar ELSE 0 END),0) AS borc,
+               COALESCE(SUM(CASE WHEN y.alacak_hesap=h.kod THEN y.tutar ELSE 0 END),0) AS alacak
+        FROM hesaplar h
+        LEFT JOIN yevmiye y ON (y.borc_hesap=h.kod OR y.alacak_hesap=h.kod) AND y.yil=?
+        WHERE h.tip='Gider' AND h.aktif=1
+        GROUP BY h.kod
+        HAVING borc>0 OR alacak>0
+        ORDER BY h.kod
+    """, (yil,)).fetchall()
+    muh_conn2.close()
+    for row in gider_hesaplar:
+        if row[0] not in islenecekler:
+            satir(row[0], row[1], row[2], row[3], 'Gider')
+            islenecekler.add(row[0])
     satirlar.append({'tip':'bos'})
 
     satirlar.append({'tip':'baslik','kod':'━━','ad':'ÖZKAYNAKLAR','borc':0,'alacak':0})

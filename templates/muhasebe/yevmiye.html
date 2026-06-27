@@ -120,10 +120,10 @@ function onSearchInput() {
 }
 
 function render() {
-  const q = document.getElementById('q').value.trim().toLowerCase();
+  const q = document.getElementById('q').value.trim().toLocaleLowerCase('tr-TR');
   let data = allRows;
   if (q) {
-    data = data.filter(r => Object.values(r).some(v => String(v ?? '').toLowerCase().includes(q)));
+    data = data.filter(r => Object.values(r).some(v => String(v ?? '').toLocaleLowerCase('tr-TR').includes(q)));
   }
   data = [...data];
   if (sortOrder === 'DESC') data.reverse();

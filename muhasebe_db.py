@@ -369,17 +369,20 @@ def get_personel(sadece_aktif=True):
     return rows
 
 def ekle_yevmiye(tarih, belge_no, islem_tipi, borc, alacak, tutar,
-                  aciklama="", otel="GENEL", fatura_no="", kaynak_tablo=None, kaynak_id=None):
+                  aciklama="", otel="GENEL", fatura_no="", kaynak_tablo=None, kaynak_id=None,
+                  doviz_cinsi="", doviz_tutar=0, kur=0):
     conn = get_conn()
     t = tarih if isinstance(tarih, str) else tarih.isoformat()
     yil = int(t[:4]); ay = int(t[5:7])
     conn.execute("""
         INSERT INTO yevmiye
         (tarih,belge_no,islem_tipi,borc_hesap,alacak_hesap,tutar,
-         aciklama,otel,fatura_no,yil,ay,kaynak_tablo,kaynak_id)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+         aciklama,otel,fatura_no,yil,ay,kaynak_tablo,kaynak_id,
+         doviz_cinsi,doviz_tutar,kur)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (t, belge_no, islem_tipi, borc, alacak, tutar,
-          aciklama, otel, fatura_no, yil, ay, kaynak_tablo, kaynak_id))
+          aciklama, otel, fatura_no, yil, ay, kaynak_tablo, kaynak_id,
+          doviz_cinsi or '', doviz_tutar or 0, kur or 0))
     conn.commit(); conn.close()
 
 def get_yevmiye(yil=None, ay=None, hesap=None, limit=None, order='DESC'):

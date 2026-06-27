@@ -208,9 +208,10 @@ def api_yevmiye():
     yil = request.args.get('yil', date.today().year, type=int)
     ay  = request.args.get('ay', 0, type=int) or None
     q   = request.args.get('q', '')
+    hesap = request.args.get('hesap', '')
     order = request.args.get('order', 'DESC').upper()
     if order not in ('ASC', 'DESC'): order = 'DESC'
-    rows = mdb.get_yevmiye(yil, ay, order=order)
+    rows = mdb.get_yevmiye(yil, ay, hesap=hesap or None, order=order)
     if q:
         rows = [r for r in rows if any(q.lower() in str(v).lower() for v in r.values())]
     return jsonify(rows)

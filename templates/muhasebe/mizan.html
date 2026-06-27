@@ -17,6 +17,36 @@
     <tbody id="tbody"><tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr></tbody>
   </table>
 </div>
+
+<!-- Hesap Detay Modalı -->
+<div class="modal-overlay" id="detay-modal">
+  <div class="modal" style="min-width:700px;max-width:900px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 id="modal-baslik" style="margin:0">Hesap Detayı</h2>
+      <button onclick="closeModal()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer">✕</button>
+    </div>
+    <div style="margin-bottom:12px;display:flex;gap:16px">
+      <div id="modal-ozet" style="font-size:13px;color:var(--text2)"></div>
+    </div>
+    <div class="table-wrap" style="max-height:420px;overflow-y:auto">
+      <table>
+        <thead><tr>
+          <th style="width:100px">Tarih</th>
+          <th>Açıklama</th>
+          <th style="width:120px">İşlem Tipi</th>
+          <th style="width:110px;text-align:right">Borç</th>
+          <th style="width:110px;text-align:right">Alacak</th>
+        </tr></thead>
+        <tbody id="modal-tbody">
+          <tr><td colspan="5" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;text-align:right">
+      <button class="btn btn-default" onclick="closeModal()">Kapat</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -30,6 +60,8 @@ for (let y = thisYear-2; y <= thisYear+1; y++) {
   yilSel.appendChild(o);
 }
 
+const aktifHesaplar = ['100','101','102','102-1','102-2','102-3','120','153','195','255'];
+
 async function load() {
   const yil = yilSel.value;
   const d = await api(`/api/muhasebe/mizan?yil=${yil}`);
@@ -39,14 +71,12 @@ async function load() {
 
     const isBaslik = r.tip === 'baslik';
     const isToplam = r.tip === 'toplam';
-    const isNet = r.tip === 'net';
+    const isNet    = r.tip === 'net';
+    const isGider  = r.tip === 'veri' && r.kod && !isBaslik && !isToplam && !isNet;
     const bold = isBaslik || isToplam || isNet;
 
     const borc   = r.borc   || 0;
     const alacak = r.alacak || 0;
-    // Aktif hesaplar: bakiye = borç - alacak (borç > alacak = pozitif/yeşil)
-    // Pasif/Gelir hesaplar: bakiye = alacak - borç
-    const aktifHesaplar = ['100','101','102','102-1','102-2','102-3','120','153','195','255'];
     const isAktif = aktifHesaplar.includes(r.kod);
     const bakiye = isAktif ? (borc - alacak) : (alacak - borc);
 
@@ -54,24 +84,80 @@ async function load() {
     let kodColor = '', adColor = '';
     if (isBaslik) { rowStyle = 'background:var(--header)'; kodColor = adColor = 'color:var(--accent)'; }
     if (isToplam) { adColor = 'color:var(--accent4)'; }
-    if (isNet) { rowStyle = 'background:var(--sidebar)'; }
+    if (isNet)    { rowStyle = 'background:var(--sidebar)'; }
+
+    // Gider satırları tıklanabilir
+    const clickable = isGider && (borc > 0 || alacak > 0);
+    if (clickable) {
+      rowStyle += ';cursor:pointer';
+      adColor = 'color:var(--text)';
+    }
+    const onclick = clickable ? `onclick="openDetay('${r.kod}','${r.ad.replace(/'/g,"\\'")}',${yilSel.value})"` : '';
+    const hoverTitle = clickable ? `title="Detayları gör"` : '';
+    const detayIcon = clickable ? ` <span style="font-size:11px;color:var(--accent2);margin-left:4px">🔍</span>` : '';
 
     const borcStr   = borc   > 0 ? fmt(borc)   : '—';
     const alacakStr = alacak > 0 ? fmt(alacak) : '—';
     const bakiyeStr = (borc || alacak) ? fmt(Math.abs(bakiye)) : '—';
-    // 120 Müşteri Cari: bakiye varsa kırmızı (tahsil edilmemiş alacak uyarısı)
     const bakiyeRenk = r.kod === '120' ? (bakiye > 0 ? 'color:var(--accent3)' : 'color:var(--accent2)') :
                        (bakiye >= 0 ? 'color:var(--accent2)' : 'color:var(--accent3)');
 
-    return `<tr style="${rowStyle}${bold?';font-weight:700':''}">
+    return `<tr style="${rowStyle}${bold?';font-weight:700':''}" ${onclick} ${hoverTitle}
+      ${clickable ? 'onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'"' : ''}>
       <td style="${kodColor}">${r.kod}</td>
-      <td style="${adColor}">${r.ad}</td>
+      <td style="${adColor}">${r.ad}${detayIcon}</td>
       <td style="text-align:right;color:${borc>0?(isAktif?'var(--accent2)':'var(--accent3)'):'var(--text2)'}">${borcStr}</td>
       <td style="text-align:right;color:${alacak>0?'var(--accent2)':'var(--text2)'}">${alacakStr}</td>
       <td style="text-align:right;${bakiyeRenk}">${bakiyeStr}</td>
     </tr>`;
   }).join('');
 }
+
+async function openDetay(kod, ad, yil) {
+  document.getElementById('modal-baslik').textContent = `${kod} — ${ad}`;
+  document.getElementById('modal-ozet').innerHTML = '<span class="spinner"></span>';
+  document.getElementById('modal-tbody').innerHTML =
+    '<tr><td colspan="5" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>';
+  document.getElementById('detay-modal').classList.add('open');
+
+  const rows = await api(`/api/muhasebe/yevmiye?yil=${yil}&hesap=${encodeURIComponent(kod)}&order=ASC`);
+
+  let toplamBorc = 0, toplamAlacak = 0;
+  const tbody = rows.map(r => {
+    const borc   = r.borc_hesap   === kod ? r.tutar : 0;
+    const alacak = r.alacak_hesap === kod ? r.tutar : 0;
+    toplamBorc   += borc;
+    toplamAlacak += alacak;
+    return `<tr>
+      <td>${fmtDate(r.tarih)}</td>
+      <td>${r.aciklama || '—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${r.islem_tipi || '—'}</td>
+      <td style="text-align:right;color:${borc>0?'var(--accent3)':'var(--text2)'}">${borc>0?fmt(borc):'—'}</td>
+      <td style="text-align:right;color:${alacak>0?'var(--accent2)':'var(--text2)'}">${alacak>0?fmt(alacak):'—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">Kayıt bulunamadı</td></tr>';
+
+  document.getElementById('modal-tbody').innerHTML = tbody +
+    `<tr style="font-weight:700;background:var(--header)">
+      <td colspan="2" style="color:var(--accent)">TOPLAM</td>
+      <td></td>
+      <td style="text-align:right;color:var(--accent3)">${toplamBorc>0?fmt(toplamBorc):'—'}</td>
+      <td style="text-align:right;color:var(--accent2)">${toplamAlacak>0?fmt(toplamAlacak):'—'}</td>
+    </tr>`;
+
+  document.getElementById('modal-ozet').innerHTML =
+    `<span style="color:var(--text2)">${rows.length} hareket</span>
+     &nbsp;|&nbsp; <span style="color:var(--accent3)">Borç: ${fmt(toplamBorc)}</span>
+     &nbsp;|&nbsp; <span style="color:var(--accent2)">Alacak: ${fmt(toplamAlacak)}</span>
+     &nbsp;|&nbsp; <span style="color:var(--accent4);font-weight:600">Bakiye: ${fmt(Math.abs(toplamBorc-toplamAlacak))}</span>`;
+}
+
+function closeModal() {
+  document.getElementById('detay-modal').classList.remove('open');
+}
+document.getElementById('detay-modal').addEventListener('click', e => {
+  if (e.target.id === 'detay-modal') closeModal();
+});
 
 load();
 </script>

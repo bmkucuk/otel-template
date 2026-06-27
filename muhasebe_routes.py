@@ -1143,7 +1143,7 @@ def api_mizan():
     if ortak:    satir('500','Ortak Cari',        ortak,    0, 'Gider')
 
     # Yevmiyeden kaydedilmiş diğer tüm gider hesapları (hardcoded olmayanlar)
-    islenecekler = {'720','730','770','740','255','500','153'}
+    islenecekler = {'720','730','770','740','255','500'}
     muh_conn2 = mdb.get_conn()
     gider_hesaplar = muh_conn2.execute("""
         SELECT h.kod, h.ad,

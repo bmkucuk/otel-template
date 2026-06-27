@@ -213,7 +213,7 @@ def init_db():
         ("102-3",  "Denizbank",                 "Aktif",     "Banka"),
         ("120",    "Müşteri Cari",               "Aktif",     "Alacak"),
         ("150",    "Stok",                       "Aktif",     "Stok"),
-        ("153",    "Stok/Market Gideri",         "Gider",     "Gider"),
+        ("153",    "Genel Giderler",              "Gider",     "Gider"),
         ("195",    "Personel Avans",             "Aktif",     "Dönen Varlık"),
         ("255",    "Demirbaş Gideri",             "Gider",     "Gider"),
         ("320-1",  "Booking Cari",               "Pasif",     "Acente"),

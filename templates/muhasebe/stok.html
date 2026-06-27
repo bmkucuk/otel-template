@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active = "muh-stok" %}
-{% block title %}Stok{% endblock %}
-{% block page_title %}📦 Stok / Market Alımları{% endblock %}
+{% block title %}Genel Giderler{% endblock %}
+{% block page_title %}📦 Genel Giderler{% endblock %}
 
 {% block content %}
 <div class="toolbar">
@@ -13,7 +13,7 @@
     <option>Kırtasiye</option><option>Diğer</option>
   </select>
   <div style="flex:1"></div>
-  <button class="btn btn-primary" onclick="openModal()">＋ Alım Ekle</button>
+  <button class="btn btn-primary" onclick="openModal()">＋ Gider Ekle</button>
 </div>
 
 <div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
@@ -37,7 +37,7 @@
     <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="f-aciklama"></div></div>
     <div class="form-row">
       <div class="form-group"><label>Kategori</label>
-        <select id="f-kat"><option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option><option>Kırtasiye</option><option>Diğer</option></select>
+        <select id="f-kat"><option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option><option>Kırtasiye</option><option>Elektrik</option><option>Su</option><option>Telefon</option><option>İnternet</option><option>Diğer</option></select>
       </div>
       <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
     </div>

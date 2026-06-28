@@ -764,7 +764,7 @@ def _acente_detay_hesapla(hesap, kod, yil):
     fatura_disi_bakiye = 0.0
     BANKA_AD = {'102-1': 'İş Bankası', '102-2': 'Ziraat Bankası', '102-3': 'Denizbank'}
     for r in rows:
-        m = _re.search(r'Föy#(\d+)\s+(.*?)\s+\[ACENTE-OTO\]', r['aciklama'] or '')
+        m = _re.search(r'[Ff][Öö][Yy]#(\d+)\s+(.*?)\s+\[ACENTE-OTO\]', r['aciklama'] or '', _re.IGNORECASE)
         if m:
             foy_no, misafir = m.group(1), m.group(2)
             f = foyler.setdefault(foy_no, {'foy_no': foy_no, 'misafir': misafir,
@@ -774,7 +774,7 @@ def _acente_detay_hesapla(hesap, kod, yil):
             else:
                 f['komisyon'] += r['tutar']
             continue
-        mf = _re.search(r'Föy#(\d+)\s+(.*?)\s+\[ACENTE-FATURA\]', r['aciklama'] or '')
+        mf = _re.search(r'[Ff][Öö][Yy]#(\d+)\s+(.*?)\s+\[ACENTE-FATURA\]', r['aciklama'] or '', _re.IGNORECASE)
         if mf:
             faturalanan.add(mf.group(1))
             fn = _re.search(r'\[FATURA:(.*?)\]', r['aciklama'] or '')
@@ -784,7 +784,7 @@ def _acente_detay_hesapla(hesap, kod, yil):
                 'tahsil_edildi': False  # sonra tahsilat kaydına bakılacak
             })
             continue
-        mt = _re.search(r'Föy#(\d+)\s+(.*?)\s+\[ACENTE-TAHSILAT\]', r['aciklama'] or '')
+        mt = _re.search(r'[Ff][Öö][Yy]#(\d+)\s+(.*?)\s+\[ACENTE-TAHSILAT\]', r['aciklama'] or '', _re.IGNORECASE)
         if mt:
             # Tahsilat kaydını kesilen_faturalar listesindeki ilgili föye işaretle
             for kf in kesilen_faturalar:

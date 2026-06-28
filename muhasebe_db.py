@@ -336,9 +336,15 @@ def init_db():
     # Migration: 760 KK komisyon hesabı
     c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES('760','Banka Komisyon Giderleri','Gider','Gider')")
 
-    # Migration: tüm açıklama alanlarını büyük harfe çevir
+    # Migration: açıklama alanlarını büyük harfe çevir
+    # NOT: yevmiye tablosunda sistem etiketleri [ACENTE-OTO], [ACENTE-FATURA] vb. var
+    # bunlar regex ile parse ediliyor, uppercase yapılmamalı!
     c.execute("UPDATE stok SET aciklama=UPPER(aciklama) WHERE aciklama != UPPER(aciklama)")
-    c.execute("UPDATE yevmiye SET aciklama=UPPER(aciklama) WHERE aciklama != UPPER(aciklama)")
+    c.execute("""UPDATE yevmiye SET aciklama=UPPER(aciklama)
+        WHERE aciklama != UPPER(aciklama)
+        AND aciklama NOT LIKE '%[ACENTE-%'
+        AND aciklama NOT LIKE '%[FATURA:%'
+        AND aciklama NOT LIKE '%[TAHSILAT%'""")
     c.execute("UPDATE [demirbaş] SET aciklama=UPPER(aciklama) WHERE aciklama != UPPER(aciklama)")
     c.execute("UPDATE kk_komisyon SET aciklama=UPPER(aciklama) WHERE aciklama IS NOT NULL AND aciklama != UPPER(aciklama)")
 

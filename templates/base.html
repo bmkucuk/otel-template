@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}{{ lisans_bilgi().otel.get('ad', 'Otel Yönetim') }}{% endblock %}</title>
+<title>{% block title %}Otel Leo & Cunda Villa{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ── KARANLIK TEMA (varsayılan) ── */
-:root, [data-tema="dark"] {
+:root {
   --bg:       #0a1326;
   --sidebar:  #080f1f;
   --card:     #14213d;
@@ -19,51 +18,15 @@
   --accent2:  #43c6ff;
   --accent3:  #ff6f7d;
   --accent4:  #ffd23f;
+  --leo:      #54b6ff;
+  --cv:       #3ddc84;
   --pos:      #2fdd9b;
   --text:     #f2f6ff;
   --text2:    #9bb0d6;
   --header:   #080f1f;
   --radius:   10px;
-  --input-bg: #0a1326;
-  --shadow:   0 4px 20px rgba(0,0,0,.4);
-}
-
-/* ── AÇIK TEMA ── */
-[data-tema="light"] {
-  --bg:       #f1f5f9;
-  --sidebar:  #ffffff;
-  --card:     #ffffff;
-  --card2:    #f8fafc;
-  --border:   #e2e8f0;
-  --accent:   #d97706;
-  --accent2:  #0284c7;
-  --accent3:  #e11d48;
-  --accent4:  #d97706;
-  --pos:      #059669;
-  --text:     #0f172a;
-  --text2:    #64748b;
-  --header:   #ffffff;
-  --radius:   10px;
-  --input-bg: #ffffff;
-  --shadow:   0 4px 20px rgba(0,0,0,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-
-/* Açık tema input uyumluluğu */
-[data-tema="light"] input, [data-tema="light"] select, [data-tema="light"] textarea {
-  background: var(--input-bg) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
-}
-[data-tema="light"] .panel, [data-tema="light"] .table-wrap {
-  box-shadow: var(--shadow);
-}
-[data-tema="light"] table th {
-  background: #f8fafc;
-}
-[data-tema="light"] #sidebar {
-  box-shadow: 2px 0 8px rgba(0,0,0,.06);
-}
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;border:2px solid var(--bg)}
 ::-webkit-scrollbar-track{background:transparent}
@@ -95,7 +58,7 @@ body.page-oda-durumu #content{overflow:hidden;padding:0;display:flex;flex-direct
 .cards-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:17px 19px;flex:1;min-width:140px;position:relative}
 .stat-card .label{font-size:11px;color:var(--text2);margin-bottom:9px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
-.stat-card .value{font-size:28px;font-weight:700;color:var(--text);font-family:'Geist Mono',monospace;line-height:1}
+.stat-card .value{font-size:clamp(12px,1.3vw,20px);font-weight:700;color:var(--text);font-family:'Geist Mono',monospace;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat-card .sub{font-size:11px;color:var(--text2);margin-top:6px}
 
 /* ── Tables ── */
@@ -178,7 +141,7 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
 <div id="sidebar">
   <div class="brand">
     <span class="icon">🏨</span>
-    <span class="name">{{ lisans_bilgi().otel.get("ad", "Otel Yönetim") }}</span>
+    <span class="name">Otel Leo<br>& Cunda Villa</span>
   </div>
   <nav>
     <a href="/dashboard" class="{% if active=='dashboard' %}active{% endif %}">
@@ -245,6 +208,7 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
     <a href="/geri-yukle" class="btn-sm" style="margin-bottom:6px;color:var(--accent4)">📤 Geri Yükle</a>
     {% endif %}
     {% if session.get('role') == 'admin' %}
+    <a href="/yardim" class="btn-sm {% if active=='yardim' %}active{% endif %}" style="margin-bottom:6px">📖 Kullanım Kılavuzu</a>
     <a href="/islem-gecmisi" class="btn-sm {% if active=='islem-gecmisi' %}active{% endif %}">🕵️ İşlem Geçmişi</a>
     {% endif %}
     {% if session.get('role') in ['admin', 'partner'] %}
@@ -268,11 +232,6 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
       </div>
       {% endif %}
       <div class="meta" id="date-display">—</div>
-      <button class="btn btn-print-hide" onclick="temaDegistir()" id="tema-btn"
-        title="Tema değiştir"
-        style="padding:5px 12px;font-size:12px;background:var(--card2);color:var(--text2);border:1px solid var(--border)">
-        🌙
-      </button>
       <button class="btn btn-print-hide" onclick="window.print()"
         style="padding:5px 12px;font-size:12px;background:var(--card2);color:var(--text2);border:1px solid var(--border)">
         🖨️ Yazdır
@@ -305,26 +264,6 @@ function validateForm(fields) {
   }
   return true;
 }
-
-// ── Tema Sistemi ─────────────────────────────────────────────────────────────
-function temayiUygula(mod) {
-  document.documentElement.setAttribute('data-tema', mod);
-  const btn = document.getElementById('tema-btn');
-  if (btn) btn.textContent = mod === 'dark' ? '🌙' : '☀️';
-}
-
-function temaDegistir() {
-  const mevcut = document.documentElement.getAttribute('data-tema') || 'dark';
-  const yeni   = mevcut === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('otel-tema', yeni);
-  temayiUygula(yeni);
-}
-
-// Sayfa yüklenince tema uygula — sadece localStorage, kişisel tercih
-(function() {
-  const kayitli = localStorage.getItem('otel-tema') || '{{ tema_mod }}';
-  temayiUygula(kayitli);
-})();
 
 function toast(msg, type='ok', ms=3000) {
   const t = document.getElementById('toast');

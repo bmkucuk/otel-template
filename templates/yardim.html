@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+{% set active = "yardim" %}
+{% block title %}Kullanım Kılavuzu{% endblock %}
+{% block page_title %}📖 Kullanım Kılavuzu{% endblock %}
+
+{% block content %}
+<style>
+.kl-section { margin-bottom: 36px; }
+.kl-baslik {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  border-left: 3px solid var(--accent); padding-left: 12px;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.kl-kart {
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 20px; margin-bottom: 10px;
+}
+.kl-kart h4 { font-size: 13px; font-weight: 600; color: var(--accent2); margin-bottom: 6px; }
+.kl-kart p, .kl-kart li { font-size: 13px; color: var(--text2); line-height: 1.7; }
+.kl-kart ul { padding-left: 18px; }
+.kl-adim {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 8px;
+}
+.kl-adim-no {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent); color: #000; font-size: 12px;
+  font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.kl-adim-icerik { flex: 1; }
+.kl-adim-icerik strong { font-size: 13px; color: var(--text); display: block; margin-bottom: 3px; }
+.kl-adim-icerik span { font-size: 12px; color: var(--text2); line-height: 1.6; }
+.kl-uyari {
+  background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+  border-radius: 8px; padding: 10px 14px; margin-top: 8px;
+  font-size: 12px; color: #f87171;
+}
+.kl-ipucu {
+  background: rgba(74,222,128,.08); border: 1px solid rgba(74,222,128,.2);
+  border-radius: 8px; padding: 10px 14px; margin-top: 8px;
+  font-size: 12px; color: #4ade80;
+}
+.kl-divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+.kl-toc { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.kl-toc a {
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 14px; font-size: 12px;
+  color: var(--text2); text-decoration: none;
+}
+.kl-toc a:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+
+<!-- İçindekiler -->
+<div class="kl-toc">
+  <a href="#rezervasyon">📝 Rezervasyon</a>
+  <a href="#oda">🛏️ Oda Durumu</a>
+  <a href="#cari">💳 Cari & Adisyon</a>
+  <a href="#kasa">🏦 Kasa & Banka</a>
+  <a href="#giderler">📦 Giderler</a>
+  <a href="#acenteler">🤝 Acenteler</a>
+  <a href="#personel">👥 Personel</a>
+  <a href="#vergi">🧾 Vergi</a>
+  <a href="#mizan">⚖️ Mizan</a>
+  <a href="#hatalar">⚠️ Sık Yapılan Hatalar</a>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="rezervasyon">
+  <div class="kl-baslik">📝 Rezervasyon & Rez. Formu</div>
+
+  <div class="kl-kart">
+    <h4>Yeni Rezervasyon Nasıl Girilir?</h4>
+    <p>Sol menüden <strong>Rez. Formu</strong>'na tıkla.</p>
+  </div>
+
+  <div class="kl-adim">
+    <div class="kl-adim-no">1</div>
+    <div class="kl-adim-icerik">
+      <strong>Misafir bilgilerini doldur</strong>
+      <span>Ad soyad, oda no, giriş-çıkış tarihi, misafir sayısı, kanal (Booking, Telefon vb.) ve günlük fiyat.</span>
+    </div>
+  </div>
+  <div class="kl-adim">
+    <div class="kl-adim-no">2</div>
+    <div class="kl-adim-icerik">
+      <strong>Kaydet butonuna bas</strong>
+      <span>Rezervasyon sisteme eklenir, föy numarası otomatik verilir. Sayfa en üste döner, yazdırma önizlemesi açılır.</span>
+    </div>
+  </div>
+  <div class="kl-adim">
+    <div class="kl-adim-no">3</div>
+    <div class="kl-adim-icerik">
+      <strong>Kapora varsa gir</strong>
+      <span>Kayıt sonrası açılan önizlemede "Kapora Ekle" bölümünden kapora tutarı ve ödeme şeklini gir.</span>
+    </div>
+  </div>
+  <div class="kl-adim">
+    <div class="kl-adim-no">4</div>
+    <div class="kl-adim-icerik">
+      <strong>Yazdır veya Temizle</strong>
+      <span>Yazdır butonu kayıt formunu yazıcıya gönderir. Temizle butonu formu sıfırlar, yeni rezervasyona hazırlar.</span>
+    </div>
+  </div>
+
+  <div class="kl-kart" style="margin-top:10px">
+    <h4>Rezervasyon Düzenleme</h4>
+    <p><strong>Rezervasyonlar</strong> sayfasından ilgili föye tıkla → Rez. Formu açılır, bilgileri güncelle → Kaydet.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>Check-in / Check-out</h4>
+    <ul>
+      <li><strong>Check-in:</strong> Rezervasyonlar listesinde ilgili satırdaki "Check-in" butonuna bas. Oda durumu güncellenir.</li>
+      <li><strong>Check-out:</strong> Önce Cari sayfasından bakiyeyi sıfırla (tahsilat al), sonra "Check-out" butonuna bas.</li>
+    </ul>
+  </div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="oda">
+  <div class="kl-baslik">🛏️ Oda Durumu</div>
+
+  <div class="kl-kart">
+    <h4>Ne Gösterir?</h4>
+    <p>Tüm odaların anlık durumunu takvim görünümünde gösterir: <strong>Dolu / Boş / Temizleniyor</strong>. Oda üzerine tıklayarak rezervasyon detayına geçilebilir.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>HK (Housekeeping) Durumu</h4>
+    <p>Check-out sonrası oda otomatik "Temizleniyor" durumuna geçer. Temizlik tamamlanınca HK Listesi sayfasından veya Telegram botu üzerinden "Temiz" olarak işaretlenir.</p>
+  </div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="cari">
+  <div class="kl-baslik">💳 Cari & Adisyon</div>
+
+  <div class="kl-kart">
+    <h4>Cari Nedir?</h4>
+    <p>Her misafirin föy bazlı hesap özetidir. Konaklama tutarı, yapılan ödemeler ve kalan bakiye burada görülür.</p>
+  </div>
+
+  <div class="kl-adim">
+    <div class="kl-adim-no">1</div>
+    <div class="kl-adim-icerik">
+      <strong>Tahsilat al</strong>
+      <span>Cari sayfasında ilgili föyü seç → "Tahsilat Al" butonuna bas → Tutarı ve ödeme şeklini (Nakit / KK / Banka) gir → Kaydet. Kasa veya banka otomatik güncellenir.</span>
+    </div>
+  </div>
+  <div class="kl-adim">
+    <div class="kl-adim-no">2</div>
+    <div class="kl-adim-icerik">
+      <strong>Adisyon ekle</strong>
+      <span>Misafir ekstra harcama yaptıysa (restoran, minibar vb.) Adisyon sayfasından ilgili föy numarasını girerek kaydet. Tutar otomatik olarak o misafirin cari hesabına eklenir.</span>
+    </div>
+  </div>
+
+  <div class="kl-uyari">⚠️ Tahsilatları mutlaka Cari sayfasından yap — Kasa&Banka sayfasından tahsilat girme.</div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="kasa">
+  <div class="kl-baslik">🏦 Kasa & Banka</div>
+
+  <div class="kl-kart">
+    <h4>Ne İçin Kullanılır?</h4>
+    <p>Kasadan bankaya para yatırma, bankadan kasaya çekme ve döviz işlemleri için kullanılır.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>Kayıt Nasıl Eklenir?</h4>
+    <ul>
+      <li>Sağ üstteki <strong>+ Kayıt Ekle</strong> butonuna bas.</li>
+      <li>İşlem tipini seç: <strong>Kasa-Banka Virman</strong>, <strong>Döviz Alış</strong>, <strong>Döviz Satış</strong> veya <strong>Diğer</strong>.</li>
+      <li>Borç ve alacak hesabını seç (sadece kasa ve banka hesapları listelenir).</li>
+      <li>Tutarı gir ve kaydet.</li>
+    </ul>
+  </div>
+
+  <div class="kl-uyari">⚠️ Bu sayfadan sadece kasa/banka arası virman ve döviz işlemi yapılır. Misafir tahsilatı → Cari, gider ödemesi → Giderler sayfasından yapılmalı.</div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="giderler">
+  <div class="kl-baslik">📦 Giderler</div>
+
+  <div class="kl-kart">
+    <h4>Sekmeler Ne Anlama Gelir?</h4>
+    <ul>
+      <li><strong>Tüm Giderler:</strong> Tüm gider kategorilerinin birleşik listesi, arama ve filtreleme imkânı.</li>
+      <li><strong>Demirbaş:</strong> TV, buzdolabı, mobilya gibi uzun ömürlü alımlar.</li>
+      <li><strong>Elektrik/Su/Doğalgaz (740):</strong> Fatura ödemeleri.</li>
+      <li><strong>Market/Gıda/Stok (741):</strong> Günlük alışveriş, temizlik malzemeleri.</li>
+      <li><strong>Bakım/Onarım (742):</strong> Tadilat, teknik servis ödemeleri.</li>
+      <li><strong>Sigorta (743):</strong> Sigorta primleri.</li>
+      <li><strong>Muhasebe/Danışmanlık (744):</strong> Mali müşavir, danışmanlık ücretleri.</li>
+      <li><strong>Kira (745):</strong> Aylık kira ödemeleri.</li>
+      <li><strong>💳 KK Komisyonu (760):</strong> POS komisyon giderleri. Föy numarası seçilerek kaydedilir.</li>
+      <li><strong>Diğer Giderler (780):</strong> Yukarıdakilere girmeyen diğer harcamalar.</li>
+    </ul>
+  </div>
+
+  <div class="kl-kart">
+    <h4>Gider Nasıl Eklenir?</h4>
+    <p>İlgili sekmeye geç → sağ üstteki <strong>+ Kayıt Ekle</strong> butonuna bas → tarih, açıklama, tutar ve ödeme hesabını doldur → Kaydet. Yevmiyeye otomatik işlenir.</p>
+  </div>
+
+  <div class="kl-ipucu">✅ Açıklamaları büyük harfle yazman gerekmez — sistem otomatik büyük harfe çevirir.</div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="acenteler">
+  <div class="kl-baslik">🤝 Acenteler</div>
+
+  <div class="kl-kart">
+    <h4>Acente İşleyişi</h4>
+    <p>Booking, Expedia, JollyTur gibi acentelerden gelen rezervasyonlar sisteme girildiğinde acente cari hesabı otomatik oluşur. Acenteler sayfasında bu bakiyeler takip edilir.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>Fatura Kesme Akışı (3 Adım)</h4>
+  </div>
+
+  <div class="kl-adim">
+    <div class="kl-adim-no">1</div>
+    <div class="kl-adim-icerik">
+      <strong>Föyleri seç</strong>
+      <span>Acente filtresiyle ilgili acenteyi seç → Föy Bazlı Döküm tablosunda faturalanacak föyleri işaretle (☐ Tümünü Seç butonu veya tek tek). Farklı acentelere ait föyler aynı faturaya eklenemez.</span>
+    </div>
+  </div>
+  <div class="kl-adim">
+    <div class="kl-adim-no">2</div>
+    <div class="kl-adim-icerik">
+      <strong>Fatura kes</strong>
+      <span>"🧾 Seçilenleri Faturalandır" butonuna bas → Fatura No gir (zorunlu, mükerrer olamaz) → Fatura tarihini seç → "Faturalandır" butonuna bas. Föyler "Faturalı" durumuna geçer.</span>
+    </div>
+  </div>
+  <div class="kl-adim">
+    <div class="kl-adim-no">3</div>
+    <div class="kl-adim-icerik">
+      <strong>Tahsilat al</strong>
+      <span>Para bankaya geldiğinde sayfanın üstündeki <strong>Bekleyen Alacaklar</strong> panelinde ilgili faturayı bul → "💰 Tahsilat Al" butonuna bas → Tarih ve bankayı seç → Kaydet.</span>
+    </div>
+  </div>
+
+  <div class="kl-kart" style="margin-top:10px">
+    <h4>Alacak Takip Paneli</h4>
+    <p>Sayfanın üstündeki panel kesilmiş tüm faturaları gösterir:</p>
+    <ul>
+      <li>🟢 <strong>0-7 gün:</strong> Normal</li>
+      <li>🟡 <strong>8-15 gün:</strong> Yakında ödenmeli</li>
+      <li>🔴 <strong>15+ gün:</strong> Gecikmiş — hatırlatma yapılmalı</li>
+      <li>✅ <strong>Ödendi:</strong> Tahsilat alınmış</li>
+    </ul>
+  </div>
+
+  <div class="kl-uyari">⚠️ Fatura iptali yapılırsa hem fatura hem tahsilat kaydı birlikte silinir, föyler tekrar "Bekliyor" durumuna döner.</div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="personel">
+  <div class="kl-baslik">👥 Personel</div>
+
+  <div class="kl-kart">
+    <h4>Maaş Ödemesi</h4>
+    <ul>
+      <li>Personel sayfasında ilgili personeli seç → "Maaş Öde" butonuna bas.</li>
+      <li>Ödeme tarihi, tutar ve hangi bankadan ödeneceğini gir → Kaydet.</li>
+      <li>Yevmiyeye otomatik işlenir.</li>
+    </ul>
+  </div>
+
+  <div class="kl-kart">
+    <h4>Avans</h4>
+    <p>Personele avans verildiğinde "Avans Ver" butonuyla kaydedilir. Maaş ödendiğinde avans otomatik mahsup edilir.</p>
+  </div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="vergi">
+  <div class="kl-baslik">🧾 Vergi</div>
+
+  <div class="kl-kart">
+    <h4>Vergi Ödemesi Nasıl Kaydedilir?</h4>
+    <ul>
+      <li>Vergi sayfasına git → <strong>+ Vergi Ekle</strong> butonuna bas.</li>
+      <li>Vergi türünü, tutarı, ödeme tarihini ve hangi bankadan ödendiğini gir → Kaydet.</li>
+      <li>Yevmiyeye 360 (Ödenecek Vergi) hesabından otomatik işlenir.</li>
+    </ul>
+  </div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="mizan">
+  <div class="kl-baslik">⚖️ Mizan</div>
+
+  <div class="kl-kart">
+    <h4>Mizan Nedir?</h4>
+    <p>Tüm hesapların dönem sonu bakiyelerini özet olarak gösteren muhasebe tablosudur. Borç ve alacak toplamları eşitlenmelidir.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>Önemli Hesap Kodları</h4>
+    <ul>
+      <li><strong>100:</strong> Kasa (nakit)</li>
+      <li><strong>102-x:</strong> Banka hesapları</li>
+      <li><strong>120:</strong> Müşteri cari alacakları</li>
+      <li><strong>320-x:</strong> Acente borçları (Booking, Expedia vb.)</li>
+      <li><strong>600:</strong> Konaklama gelirleri</li>
+      <li><strong>720:</strong> Personel maaşları</li>
+      <li><strong>740-780:</strong> Genel giderler</li>
+      <li><strong>760:</strong> Banka/KK komisyon giderleri</li>
+    </ul>
+  </div>
+</div>
+
+<hr class="kl-divider">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="kl-section" id="hatalar">
+  <div class="kl-baslik">⚠️ Sık Yapılan Hatalar</div>
+
+  <div class="kl-kart">
+    <h4>❌ Misafir tahsilatını Kasa&Banka'dan girme</h4>
+    <p>Tahsilatlar <strong>Cari</strong> sayfasından alınmalı. Kasa&Banka sadece kasa-banka arası virman ve döviz işlemleri içindir.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>❌ Gider ödemesini Kasa&Banka'dan girme</h4>
+    <p>Elektrik, market, bakım gibi giderler <strong>Giderler</strong> sayfasındaki ilgili sekmeden girilmeli.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>❌ Maaş ödemesini Kasa&Banka'dan girme</h4>
+    <p>Maaş ödemeleri <strong>Personel</strong> sayfasından yapılmalı.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>❌ Acente tahsilatını Kasa&Banka'dan girme</h4>
+    <p>Acentelerden gelen ödemeler <strong>Acenteler</strong> sayfasındaki "💰 Tahsilat Al" butonu ile işlenmeli.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>❌ Aynı fatura numarasını tekrar kullanma</h4>
+    <p>Sistem mükerrer fatura numarasına izin vermez. Her fatura için benzersiz bir numara girilmeli (örn. BKG-2026-001).</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>❌ Farklı acentelerin föylerini aynı faturaya ekleme</h4>
+    <p>Booking föyleri sadece Booking faturasına, JollyTur föyleri sadece JollyTur faturasına eklenebilir.</p>
+  </div>
+
+  <div class="kl-kart">
+    <h4>❌ Tahsilat alınmadan check-out yapma</h4>
+    <p>Check-out öncesi misafirin bakiyesi sıfırlanmalı. Cari sayfasından bakiye kontrol edilip gerekirse tahsilat alınmalı.</p>
+  </div>
+</div>
+
+{% endblock %}

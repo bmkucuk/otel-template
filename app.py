@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Otel Yönetim Sistemi — Template (SQLite sürümü)"""
+"""Otel Leo & Cunda Villa — Web Yönetim (SQLite sürümü)"""
 import os
-import config_loader as cfg
 import smtplib
 import tempfile
 from datetime import date, datetime
@@ -56,19 +55,6 @@ AKTIF_KULLANICILAR = {}  # {username: {'role':..., 'giris':datetime, 'son_aktivi
 AKTIF_ESIK_DK = 10  # bu süre içinde istek atmayan kullanıcı "aktif" sayılmaz
 
 @app.before_request
-def _lisans_kontrol():
-    acik_yollar = ['/login', '/kurulum', '/static', '/telegram-webhook', '/askida', '/demo-bitti', '/sadmin']
-    if not any(request.path.startswith(y) for y in acik_yollar):
-        # Kurulum tamamlanmamışsa sihirbaza yönlendir
-        if cfg.get('otel.ad', 'Otel Adı') == 'Otel Adı':
-            return redirect('/kurulum')
-        durum = cfg.lisans_durumu()
-        if durum == 'askida':
-            return redirect('/askida')
-        elif durum == 'demo_bitti':
-            return redirect('/demo-bitti')
-
-@app.before_request
 def _aktivite_guncelle():
     u = session.get('user')
     if u:
@@ -104,22 +90,6 @@ def admin_required(f):
 # Muhasebe blueprint
 app.register_blueprint(muh)
 
-# ── Template context processor ───────────────────────────────────────────────
-@app.context_processor
-def inject_lisans():
-    def _lisans():
-        c = cfg.load_config()
-        return {
-            'durum':    cfg.lisans_durumu(),
-            'kalan':    cfg.demo_kalan_gun(),
-            'otel':     c.get('otel', {}),
-            'ortaklar': c.get('ortaklar', [])
-        }
-    return {
-        'lisans_bilgi': _lisans,
-        'tema_mod': cfg.tema_mod()
-    }
-
 # DB başlat
 db.init_db()
 mdb.init_db()
@@ -146,6 +116,12 @@ def login():
                    'giris_basarisiz', 'auth', '/login', f"{username} için başarısız giriş denemesi", 401)
         return render_template('login.html', error='Kullanıcı adı veya şifre yanlış')
     return render_template('login.html', error=None)
+
+@app.route('/yardim')
+def yardim():
+    if 'kullanici' not in session:
+        return redirect(url_for('login'))
+    return render_template('yardim.html')
 
 @app.route('/logout')
 def logout():
@@ -331,7 +307,7 @@ def api_gunluk_liste():
     # Kahvaltı listesi: konaklıyorlar (giris < tarih <= cikis) VEYA çıkış günü (cikis = tarih)
     # Giriş günü kahvaltı YOK, çıkış günü VAR
     kahvalti = conn.execute(
-        "SELECT oda_no, otel, musteri, yetiskin, cocuk, giris, cikis, foy_no "
+        "SELECT oda_no, otel, musteri, yetiskin, cocuk, giris, cikis, foy_no, kahvalti "
         "FROM rezervasyonlar "
         "WHERE giris < ? AND cikis >= ? AND (durum IS NULL OR durum != 'Kapora Yandı') "
         "AND (kahvalti IS NULL OR kahvalti != 'Kahvaltısız') "
@@ -342,7 +318,8 @@ def api_gunluk_liste():
         d = {
             'oda_no': r['oda_no'], 'otel': r['otel'], 'musteri': r['musteri'],
             'yetiskin': r['yetiskin'], 'cocuk': r['cocuk'],
-            'giris': r['giris'], 'cikis': r['cikis'], 'foy_no': r['foy_no']
+            'giris': r['giris'], 'cikis': r['cikis'], 'foy_no': r['foy_no'],
+            'kahvalti': r['kahvalti'] if 'kahvalti' in r.keys() else 'Kahvaltılı'
         }
         if include_hk:
             def _safe_num(key):
@@ -461,8 +438,8 @@ def api_hk_listesi():
 
 
 import os
-TELEGRAM_TOKEN   = os.environ.get('TELEGRAM_TOKEN', '') or cfg.get('sistem.telegram_token', '')
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '') or cfg.get('sistem.telegram_chat_id', '')
+TELEGRAM_TOKEN   = os.environ.get('TELEGRAM_TOKEN', '')
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
 
 def telegram_gonder(mesaj):
     import threading
@@ -577,9 +554,8 @@ def api_hk_durum():
 def api_dashboard():
     today = bugun().isoformat()
     girisler, cikislar, aktifler, kahvalti = db.get_dashboard(today)
-    kisa_ad   = cfg.otel_bilgi().get('kisa_ad', 'OTEL')
-    leo_aktif = sum(1 for r in aktifler if r['otel'] == kisa_ad)
-    cv_aktif  = 0
+    leo_aktif = sum(1 for r in aktifler if r['otel'] == 'LEO')
+    cv_aktif  = sum(1 for r in aktifler if r['otel'] == 'CV')
     toplam_alacak = sum((r.get('rez_bakiye') or 0) + (r.get('adis_bakiye') or 0)
                         for r in db.get_rezervasyonlar()
                         if r.get('durum') != 'Kapora Yandı')
@@ -590,10 +566,10 @@ def api_dashboard():
             'bugun_cikis':   len(cikislar),
             'leo_aktif':     leo_aktif,
             'cv_aktif':      cv_aktif,
-            'kahvalti_kisi': kahvalti,
+            'kahvalti_kisi': kahvalti['toplam'],
+            'kahvalti_normal': kahvalti['normal'],
+            'kahvalti_super': kahvalti['super'],
             'toplam_alacak': toplam_alacak,
-            'toplam_oda':    cfg.otel_bilgi().get('toplam_oda', 20),
-            'otel_adi':      cfg.otel_bilgi().get('ad', 'Otel'),
         },
         'girisler': girisler,
         'cikislar': cikislar,
@@ -619,11 +595,9 @@ def api_oda_durumu():
     today = bugun().isoformat()
 
     rezervasyonlar = [r for r in db.get_rezervasyonlar() if r.get("durum") != "Kapora Yandı"]
-    otel_cfg   = cfg.otel_bilgi()
-    bas        = otel_cfg.get('oda_baslangic', 1)
-    bit        = otel_cfg.get('oda_bitis', 20) + 1
-    kisa_ad    = otel_cfg.get('kisa_ad', 'OTEL')
-    all_rooms  = [(kisa_ad, o) for o in range(bas, bit)]
+    cv_odalar  = list(range(1, 11))
+    leo_odalar = list(range(11, 30))
+    all_rooms  = [('CV', o) for o in cv_odalar] + [('LEO', o) for o in leo_odalar]
 
     grid = []
     for otel_label, oda_no in all_rooms:
@@ -662,14 +636,10 @@ def api_musaitlik():
         return jsonify({'odalar': [], 'error': 'Geçersiz tarih aralığı'})
 
     rezervasyonlar = [r for r in db.get_rezervasyonlar() if r.get('durum') != 'Kapora Yandı']
-    otel_cfg   = cfg.otel_bilgi()
-    bas        = otel_cfg.get('oda_baslangic', 1)
-    bit        = otel_cfg.get('oda_bitis', 20) + 1
-    kisa_ad    = otel_cfg.get('kisa_ad', 'OTEL')
-    leo_odalar = [(kisa_ad, o) for o in range(bas, bit)]
-    cv_odalar  = []
+    cv_odalar  = [('CV', o) for o in range(1, 11)]
+    leo_odalar = [('LEO', o) for o in range(11, 30)]
     all_rooms  = cv_odalar + leo_odalar
-    if otel in ([cfg.otel_bilgi().get('kisa_ad', 'OTEL')]):
+    if otel in ('LEO', 'CV'):
         all_rooms = [r for r in all_rooms if r[0] == otel]
 
     musait = []
@@ -742,7 +712,7 @@ def api_rez_yeni():
         foy_no = int(data.get('foy_no') or 0)
         yevmiye_rez_kaydet(
             foy_no, float(data.get('toplam_fiyat') or 0),
-            data.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL')), data.get('giris'),
+            data.get('otel', 'LEO'), data.get('giris'),
             data.get('musteri', ''),
             kapora=float(data.get('kapora') or 0),
             kapora_tarihi=data.get('kapora_tarihi')
@@ -750,7 +720,7 @@ def api_rez_yeni():
         acente_kod = KANAL_MAP.get(data.get('kanal', ''), data.get('kanal', ''))
         if acente_kod in ACENTE_OTO_KODLAR:
             acente_oto_kaydet(foy_no, float(data.get('toplam_fiyat') or 0),
-                              data.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL')),
+                              data.get('otel', 'LEO'),
                               data.get('giris') or bugun().isoformat(),
                               data.get('musteri', ''), acente_kod)
         else:
@@ -788,12 +758,12 @@ def api_checkin():
         if r.get('checkin'):
             return jsonify({'ok': False, 'error': 'Check-in zaten yapılmış'}), 400
 
-        otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
+        otel = r.get('otel', 'LEO')
         musteri = r.get('musteri', '')
         toplam = float(r.get('toplam_fiyat') or 0)
         kapora = float(r.get('kapora') or 0)
         tarih = bugun().isoformat()
-        gelir_hesap = '600'
+        gelir_hesap = '600' if otel == 'LEO' else '601'
         aciklama = f'Föy#{foy_no} {musteri} check-in'
 
         # Check-in kaydını güncelle
@@ -825,12 +795,12 @@ def api_checkin_iptal():
         if not r or not r.get('checkin'):
             return jsonify({'ok': False, 'error': 'Check-in bulunamadı'}), 400
 
-        otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
+        otel = r.get('otel', 'LEO')
         musteri = r.get('musteri', '')
         toplam = float(r.get('toplam_fiyat') or 0)
         kapora = float(r.get('kapora') or 0)
         tarih = bugun().isoformat()
-        gelir_hesap = '600'
+        gelir_hesap = '600' if otel == 'LEO' else '601'
         aciklama = f'Föy#{foy_no} {musteri} check-in iptal (storno)'
 
         # Check-in iptal
@@ -863,8 +833,8 @@ def api_kapora_yandi():
         kapora = float(r.get('kapora') or 0)
         if kapora <= 0:
             return jsonify({'ok': False, 'error': 'Kapora yok'}), 400
-        otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
-        gelir_hesap = '600'
+        otel = r.get('otel', 'LEO')
+        gelir_hesap = '600' if otel == 'LEO' else '601'
         musteri = r.get('musteri', '')
         tarih = bugun().isoformat()
         # Yevmiye: Alınan Avanslar borç / Diğer Olağan Gelir alacak (340/649)
@@ -893,7 +863,7 @@ def api_rez_guncelle():
         foy_no = int(data.get('foy_no') or 0)
         yevmiye_rez_kaydet(
             foy_no, float(data.get('toplam_fiyat') or 0),
-            data.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL')), data.get('giris'),
+            data.get('otel', 'LEO'), data.get('giris'),
             data.get('musteri', ''),
             kapora=float(data.get('kapora') or 0),
             kapora_tarihi=data.get('kapora_tarihi'),
@@ -902,7 +872,7 @@ def api_rez_guncelle():
         acente_kod = KANAL_MAP.get(data.get('kanal', ''), data.get('kanal', ''))
         if acente_kod in ACENTE_OTO_KODLAR:
             acente_oto_kaydet(foy_no, float(data.get('toplam_fiyat') or 0),
-                              data.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL')),
+                              data.get('otel', 'LEO'),
                               data.get('giris') or bugun().isoformat(),
                               data.get('musteri', ''), acente_kod)
         else:
@@ -917,7 +887,7 @@ def yevmiye_rez_kaydet(foy_no, toplam_fiyat, otel, giris, musteri,
     """Rezervasyon konaklama geliri ve kaporayı yevmiyeye yazar."""
     try:
         tarih = giris or bugun().isoformat()
-        gelir_hesap = '600'
+        gelir_hesap = '600' if otel == 'LEO' else '601'
         aciklama_kon = f'Föy#{foy_no} {musteri} konaklama'
         aciklama_kap = f'Föy#{foy_no} {musteri} kapora'
         conn = mdb.get_conn()
@@ -1057,7 +1027,7 @@ def migrate_acente_otomatik():
             mconn.execute("DELETE FROM acente_cari WHERE foy_no=?", (foy_no,))
             mconn.commit()
             acente_oto_kaydet(
-                foy_no, float(r['toplam_fiyat'] or 0), r['otel'] or cfg.otel_bilgi().get('kisa_ad','OTEL'),
+                foy_no, float(r['toplam_fiyat'] or 0), r['otel'] or 'LEO',
                 r['giris'] or bugun().isoformat(), r['musteri'] or '', acente_kod
             )
             count += 1
@@ -1183,9 +1153,9 @@ def api_rez_tah():
             rez = db.get_rezervasyonlar()
             r = next((x for x in rez if x['foy_no'] == foy_no), None)
             tarih = d.get('tarih') or bugun().isoformat()
-            otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL')) if r else 'LEO'
+            otel = r.get('otel', 'LEO') if r else 'LEO'
             musteri = r.get('musteri', '') if r else ''
-            gelir_hesap = '600'
+            gelir_hesap = '600' if otel == 'LEO' else '601'
             conn = mdb.get_conn()
             mdb._yevmiye_ekle(conn, tarih, 'Rezervasyon Tahsilat - ' + odeme,
                               hesap_kodu, '120', tutar,
@@ -1213,7 +1183,7 @@ def api_adis_tah():
 
         rez = db.get_rezervasyonlar()
         r = next((x for x in rez if x['foy_no'] == foy_no), None)
-        otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL')) if r else 'LEO'
+        otel = r.get('otel', 'LEO') if r else 'LEO'
         musteri = r.get('musteri', '') if r else ''
 
         toplam_odeme = 0
@@ -1646,10 +1616,10 @@ def excel_yedek_olustur():
 
 
 def yedek_mail_gonder():
-    """Excel yedeğini oluşturup yedek mail adresine gönderir."""
+    """Excel yedeğini oluşturup cundavilla@gmail.com'a gönderir."""
     gmail_user = os.environ.get('GMAIL_USER', 'bmkucuk@gmail.com')
     gmail_pass = os.environ.get('GMAIL_APP_PASSWORD', '')
-    alici      = cfg.get('sistem.yedek_mail_alici', gmail_user)
+    alici      = 'villa@cundavilla.com'
     if not gmail_pass:
         print('[YEDEK] GMAIL_APP_PASSWORD tanımlı değil, mail atlanıyor.')
         return
@@ -1662,7 +1632,7 @@ def yedek_mail_gonder():
         msg['To']      = alici
         msg['Subject'] = f"🏨 Otel Yönetim Günlük Yedek — {bugun().strftime('%d.%m.%Y')}"
         msg.attach(MIMEText(
-            f"Merhaba,\n\n{cfg.otel_bilgi().get('ad', 'Otel')} yönetim sistemi günlük yedeği ektedir.\n"
+            f"Merhaba,\n\nOtel Leo & Cunda Villa yönetim sistemi günlük yedeği ektedir.\n"
             f"Tarih: {bugun().strftime('%d.%m.%Y')}\n\n"
             f"Bu mail otomatik olarak gönderilmiştir.", 'plain', 'utf-8'))
 
@@ -1858,176 +1828,13 @@ if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=port)
 
 
-# ── Tema ────────────────────────────────────────────────────────────────────
-
-@app.route('/api/tema-kaydet', methods=['POST'])
-@login_required
-def api_tema_kaydet():
-    data = request.get_json()
-    mod  = data.get('mod', 'dark')
-    if mod not in ('dark', 'light'):
-        return jsonify({'ok': False})
-    c = cfg.load_config()
-    c['tema']['mod'] = mod
-    cfg.save_config(c)
-    return jsonify({'ok': True, 'mod': mod})
-
-
-
-
-# ── Kurulum Sihirbazı ─────────────────────────────────────────────────────────
-
-def kurulum_tamamlandi_mi():
-    """config.json'da otel adı girilmişse kurulum tamamlanmış demektir."""
-    return cfg.get('otel.ad', 'Otel Adı') != 'Otel Adı'
-
-@app.route('/kurulum')
-def kurulum_sayfasi():
-    if kurulum_tamamlandi_mi():
-        return redirect('/login')
-    return render_template('kurulum.html')
-
-@app.route('/kurulum/telegram-test', methods=['POST'])
-def kurulum_telegram_test():
-    """Token ile getUpdates yapıp chat_id bulur."""
-    import urllib.request, json as _json
-    data  = request.get_json()
-    token = data.get('token', '').strip()
-    if not token:
-        return jsonify({'ok': False, 'hata': 'Token boş'})
-    try:
-        url = f'https://api.telegram.org/bot{token}/getUpdates'
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=8) as r:
-            resp = _json.loads(r.read())
-        if not resp.get('ok'):
-            return jsonify({'ok': False, 'hata': 'Geçersiz token'})
-        # Chat ID bul
-        for update in reversed(resp.get('result', [])):
-            chat = update.get('message', {}).get('chat', {})
-            if chat.get('type') in ('group', 'supergroup'):
-                return jsonify({'ok': True, 'chat_id': str(chat['id']),
-                                'chat_adi': chat.get('title', '')})
-        return jsonify({'ok': False,
-                        'hata': 'Grup mesajı bulunamadı. Botu gruba ekleyip bir mesaj yazın.'})
-    except Exception as e:
-        return jsonify({'ok': False, 'hata': str(e)})
-
-@app.route('/kurulum/kaydet', methods=['POST'])
-def kurulum_kaydet():
-    """Sihirbazdan gelen veriyi config.json ve DB'ye yazar."""
-    import hashlib
-    from datetime import date as _date
-
-    data  = request.get_json()
-    otel  = data.get('otel', {})
-    odalar = data.get('odalar', {})
-    kullanicilar = data.get('kullanicilar', [])
-    enteg = data.get('entegrasyon', {})
-
-    if not otel.get('ad') or not otel.get('kisa_ad'):
-        return jsonify({'ok': False, 'hata': 'Otel adı ve kısa kod zorunludur'})
-
-    # 1. config.json güncelle
-    c = cfg.load_config()
-    c['otel']['ad']            = otel.get('ad', '')
-    c['otel']['kisa_ad']       = otel.get('kisa_ad', '').upper()
-    c['otel']['sehir']         = otel.get('sehir', '')
-    c['otel']['telefon']       = otel.get('telefon', '')
-    c['otel']['toplam_oda']    = int(odalar.get('sayi', 20))
-    c['otel']['oda_baslangic'] = int(odalar.get('bas', 1))
-    c['otel']['oda_bitis']     = int(odalar.get('bitis', 20))
-    c['sistem']['yedek_mail_alici']  = enteg.get('yedek_mail', '')
-    c['sistem']['telegram_token']    = enteg.get('tg_token', '')
-    c['sistem']['telegram_chat_id']  = enteg.get('tg_chat', '')
-    c['sistem']['demo_baslangic']    = _date.today().isoformat()
-    c['sistem']['demo_sure_gun']     = 3
-    c['sistem']['lisans_aktif']      = False
-    c['sistem']['askiya_alindi']     = False
-
-    # Partner bilgilerini config'e yaz
-    ortaklar = []
-    for u in kullanicilar:
-        if u.get('rol') == 'partner':
-            ortaklar.append({
-                'kod':    u.get('kisalt', 'P' + str(u.get('idx', 1))),
-                'kisalt': u.get('kisalt', 'P' + str(u.get('idx', 1))),
-                'ad':     u.get('adsoyad', u.get('kullanici', ''))
-            })
-    c['ortaklar'] = ortaklar
-    cfg.save_config(c)
-
-    # 2. Kullanıcıları DB'ye yaz
-    conn = db.get_conn()
-    conn.execute("DELETE FROM kullanicilar WHERE username != 'superadmin'")
-    for u in kullanicilar:
-        h = hashlib.sha256(u['sifre'].encode()).hexdigest()
-        rol = u.get('rol', 'resepsiyon')
-        conn.execute(
-            "INSERT OR REPLACE INTO kullanicilar(username, ad, hash, role) VALUES(?,?,?,?)",
-            (u['kullanici'], u['kullanici'], h, rol)
-        )
-    conn.commit()
-    conn.close()
-
-    # 3. TELEGRAM_TOKEN env'e yaz (runtime için)
-    if enteg.get('tg_token'):
-        os.environ['TELEGRAM_TOKEN']   = enteg['tg_token']
-        os.environ['TELEGRAM_CHAT_ID'] = enteg.get('tg_chat', '')
-
-    return jsonify({'ok': True})
-
-# ── Lisans Sayfaları ──────────────────────────────────────────────────────────
-
-@app.route('/askida')
-def sayfa_askida():
-    return render_template('lisans/askida.html')
-
-@app.route('/demo-bitti')
-def sayfa_demo_bitti():
-    return render_template('lisans/demo_bitti.html')
-
-# ── Süper Admin API (sadece SUPERADMIN_KEY ile erişilebilir) ─────────────────
+# ── Süper Admin Paneli ────────────────────────────────────────────────────────
 
 SUPERADMIN_KEY = os.environ.get('SUPERADMIN_KEY', '')
 
-def superadmin_kontrol():
+def _sadmin_kontrol():
     key = request.headers.get('X-Admin-Key', '') or request.args.get('key', '')
     return key and key == SUPERADMIN_KEY
-
-@app.route('/sadmin/aktif', methods=['POST'])
-def sadmin_aktif():
-    if not superadmin_kontrol():
-        return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
-    c = cfg.load_config()
-    c['sistem']['askiya_alindi'] = False
-    c['sistem']['lisans_aktif']  = True
-    cfg.save_config(c)
-    return jsonify({'ok': True, 'durum': 'aktif'})
-
-@app.route('/sadmin/askiya-al', methods=['POST'])
-def sadmin_askiya_al():
-    if not superadmin_kontrol():
-        return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
-    c = cfg.load_config()
-    c['sistem']['askiya_alindi'] = True
-    cfg.save_config(c)
-    return jsonify({'ok': True, 'durum': 'askida'})
-
-@app.route('/sadmin/demo-uzat', methods=['POST'])
-def sadmin_demo_uzat():
-    if not superadmin_kontrol():
-        return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
-    data = request.get_json() or {}
-    gun  = int(data.get('gun', 3))
-    c    = cfg.load_config()
-    from datetime import date
-    c['sistem']['demo_baslangic'] = date.today().isoformat()
-    c['sistem']['demo_sure_gun']  = gun
-    c['sistem']['lisans_aktif']   = False
-    c['sistem']['askiya_alindi']  = False
-    cfg.save_config(c)
-    return jsonify({'ok': True, 'gun': gun})
 
 @app.route('/sadmin')
 def sadmin_sayfa():
@@ -2035,22 +1842,46 @@ def sadmin_sayfa():
 
 @app.route('/sadmin/durum')
 def sadmin_durum():
-    if not superadmin_kontrol():
+    if not _sadmin_kontrol():
         return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
-    c = cfg.load_config()
     return jsonify({
-        'ok':     True,
-        'durum':  cfg.lisans_durumu(),
-        'kalan':  cfg.demo_kalan_gun(),
-        'config': c
+        'ok':    True,
+        'durum': 'aktif',
+        'kalan': 0,
+        'config': {
+            'otel': {'ad': 'Otel Leo & Cunda Villa', 'kisa_ad': 'LEO', 'toplam_oda': 29, 'sehir': 'Ayvalık'},
+            'sistem': {
+                'demo_baslangic': '',
+                'demo_sure_gun': 0,
+                'lisans_aktif': True,
+                'askiya_alindi': False,
+                'telegram_token': os.environ.get('TELEGRAM_TOKEN',''),
+                'not': ''
+            }
+        }
     })
 
 @app.route('/sadmin/not-kaydet', methods=['POST'])
 def sadmin_not_kaydet():
-    if not superadmin_kontrol():
+    if not _sadmin_kontrol():
         return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
-    data = request.get_json()
-    c = cfg.load_config()
-    c['sistem']['not'] = data.get('not', '')
-    cfg.save_config(c)
     return jsonify({'ok': True})
+
+@app.route('/sadmin/aktif', methods=['POST'])
+def sadmin_aktif():
+    if not _sadmin_kontrol():
+        return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
+    return jsonify({'ok': True, 'durum': 'aktif'})
+
+@app.route('/sadmin/askiya-al', methods=['POST'])
+def sadmin_askiya_al():
+    if not _sadmin_kontrol():
+        return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
+    return jsonify({'ok': True, 'durum': 'askida'})
+
+@app.route('/sadmin/demo-uzat', methods=['POST'])
+def sadmin_demo_uzat():
+    if not _sadmin_kontrol():
+        return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
+    return jsonify({'ok': True})
+

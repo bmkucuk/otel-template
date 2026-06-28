@@ -306,7 +306,7 @@ async function loadAlacakPanel() {
           Düzenle
         </button>
         <button class="btn btn-danger" style="padding:3px 8px;font-size:11px"
-          onclick="alacakFaturaIptal('${f.foy_no}')">
+          onclick="alacakFaturaIptal('${f.fatura_no}', ${JSON.stringify(f.foyler||[])})">
           Sil
         </button>
       </td>
@@ -602,15 +602,20 @@ async function confirmFaturaKes() {
 }
 
 async function faturaIptal(foyNo) {
+  // Föy no üzerinden fatura no'yu bul
+  const fat = kesilenListesi.find(x => x.foy_no === foyNo);
+  const faturaNo = fat?.fatura_no;
   if (!confirm(`Föy #${foyNo} için kesilmiş faturayı iptal etmek istiyor musunuz?`)) return;
-  const r = await api('/api/muhasebe/acente-fatura-iptal', { foy_no: foyNo });
+  const payload = faturaNo ? { fatura_no: faturaNo } : { foy_no: foyNo };
+  const r = await api('/api/muhasebe/acente-fatura-iptal', payload);
   if (r.ok) { toast('Fatura iptal edildi ✓'); loadAlacakPanel(); load(); }
   else toast(r.error, 'error');
 }
-async function alacakFaturaIptal(foyNo) {
-  if (!confirm(`Föy #${foyNo} faturasını iptal etmek istediğinize emin misiniz?\nFöy yeniden "Bekliyor" durumuna dönecek.`)) return;
-  const r = await api('/api/muhasebe/acente-fatura-iptal', { foy_no: foyNo });
-  if (r.ok) { toast('Fatura iptal edildi ✓'); loadAlacakPanel(); load(); }
+async function alacakFaturaIptal(faturaN, foyListesi) {
+  const foyStr = (foyListesi||[faturaN]).map(f=>f.foy_no||f).join(', ');
+  if (!confirm(`"${faturaN}" numaralı fatura iptal edilecek.\nKapsanan föyler: ${foyStr}\n\nBu işlem fatura ve tahsilat kayıtlarını siler. Emin misiniz?`)) return;
+  const r = await api('/api/muhasebe/acente-fatura-iptal', { fatura_no: faturaN });
+  if (r.ok) { toast('Fatura ve tahsilatlar iptal edildi ✓'); loadAlacakPanel(); load(); }
   else toast(r.error, 'error');
 }
 

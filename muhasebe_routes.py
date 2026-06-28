@@ -880,21 +880,55 @@ def api_acente_fatura_kes():
 
 @muh.route('/api/muhasebe/acente-fatura-iptal', methods=['POST'])
 def api_acente_fatura_iptal():
-    """Tek bir föy için kesilmiş faturayı (bankaya gelen tahsilat kaydını) geri alır.
-    Föy yeniden 'Bekliyor' durumuna döner, dilenirse tekrar faturalandırılabilir."""
+    """Fatura numarasına göre o faturadaki TÜM föyleri iptal eder.
+    [ACENTE-FATURA] ve [ACENTE-TAHSILAT] kayıtlarını siler.
+    Föyler yeniden 'Bekliyor' durumuna döner."""
+    import re as _re
     try:
         d = request.get_json()
-        foy_no = str(d.get('foy_no', ''))
-        if not foy_no:
-            return jsonify({'ok': False, 'error': 'Föy no eksik'}), 400
+        fatura_no = str(d.get('fatura_no', '')).strip()
+        foy_no    = str(d.get('foy_no', '')).strip()  # geriye dönük uyumluluk
+
         conn = mdb.get_conn()
-        silinen = conn.execute("""
-            DELETE FROM yevmiye WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-FATURA]%'
-        """, (f'Föy#{foy_no} %',))
-        adet = silinen.rowcount
+
+        # Fatura no ile sil (yeni yol)
+        if fatura_no:
+            fat_rows = conn.execute(
+                "SELECT id, aciklama FROM yevmiye WHERE aciklama LIKE '%[ACENTE-FATURA]%' AND aciklama LIKE ?",
+                (f'%[FATURA:{fatura_no}]%',)
+            ).fetchall()
+            if not fat_rows:
+                conn.close()
+                return jsonify({'ok': False, 'error': f'"{fatura_no}" numaralı fatura bulunamadı'}), 404
+
+            # Her föy için hem fatura hem tahsilat kaydını sil
+            for row in fat_rows:
+                m = _re.search(r'[Ff][Öö][Yy]#(\d+)', row['aciklama'] or '', _re.IGNORECASE)
+                if m:
+                    fn = m.group(1)
+                    # Tahsilat kaydını sil
+                    conn.execute(
+                        "DELETE FROM yevmiye WHERE aciklama LIKE '%[ACENTE-TAHSILAT]%' AND aciklama LIKE ?",
+                        (f'%#{fn} %',)
+                    )
+                # Fatura kaydını sil
+                conn.execute('DELETE FROM yevmiye WHERE id=?', (row['id'],))
+
+        # Eski yol: tek föy no ile
+        elif foy_no:
+            conn.execute(
+                "DELETE FROM yevmiye WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-FATURA]%'",
+                (f'Föy#{foy_no} %',)
+            )
+            conn.execute(
+                "DELETE FROM yevmiye WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-TAHSILAT]%'",
+                (f'%#{foy_no} %',)
+            )
+        else:
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Fatura no veya föy no eksik'}), 400
+
         conn.commit(); conn.close()
-        if adet == 0:
-            return jsonify({'ok': False, 'error': 'Bu föy için faturalandırılmış kayıt bulunamadı'}), 404
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400

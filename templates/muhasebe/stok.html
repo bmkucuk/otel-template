@@ -523,16 +523,18 @@ let hesapEditId = null;
 
 async function loadHesap() {
   const yil = document.getElementById('hes-yil-sel').value;
-  // Hesap koduna karşılık gelen tüm kategori adları
   const katAdlari = Object.entries(KAT_HESAP)
     .filter(([k,v]) => v === activeHesapKod)
     .map(([k]) => k);
-  // Tüm stok kayıtlarını çek, JS tarafında filtrele (doğrudan ve kategori ile)
   const data = await api(`/api/muhasebe/stok?yil=${yil}`);
-  const filtered = data.filter(r =>
-    r.hesap_kodu === activeHesapKod ||
-    (!r.hesap_kodu && katAdlari.includes(r.kategori))
-  );
+  console.log('[DEBUG] activeHesapKod='+activeHesapKod+' katAdlari='+JSON.stringify(katAdlari));
+  console.log('[DEBUG] tüm kayıtlar:', data.map(r=>({id:r.id,kat:r.kategori,hk:r.hesap_kodu})));
+  const filtered = data.filter(r => {
+    const hk = r.hesap_kodu || '';
+    const kat = r.kategori || '';
+    return hk === activeHesapKod || (hk === '' && katAdlari.includes(kat));
+  });
+  console.log('[DEBUG] filtered:', filtered.length, 'kayıt');
   const toplam = filtered.reduce((s,r) => s+r.tutar, 0);
   document.getElementById('hes-kartlar').innerHTML =
     `<div class="stat-card"><div class="label">${activeHesapAd}</div><div class="value red">${fmt(toplam)}</div><div class="sub">${filtered.length} kayıt</div></div>`;

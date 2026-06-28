@@ -1462,6 +1462,21 @@ def api_kk_komisyon_ekle():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
 
+@muh.route('/api/muhasebe/kk_komisyon/guncelle', methods=['POST'])
+def api_kk_komisyon_guncelle():
+    try:
+        d = request.get_json()
+        conn = mdb.get_conn()
+        conn.execute(
+            "UPDATE kk_komisyon SET tarih=?,foy_no=?,aciklama=?,tutar=?,alacak_hesap=? WHERE id=?",
+            (d['tarih'], d.get('foy_no'), d.get('aciklama',''),
+             float(d['tutar']), d.get('alacak_hesap','102-1'), d['id'])
+        )
+        conn.commit(); conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 400
+
 @muh.route('/api/muhasebe/kk_komisyon/sil', methods=['POST'])
 def api_kk_komisyon_sil():
     try:

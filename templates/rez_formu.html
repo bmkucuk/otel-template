@@ -314,7 +314,7 @@
       </div>
       <div class="kf-pcell">
         <b>Kahvaltı</b>
-        <select id="kf-kahvalti"><option>Kahvaltılı</option><option>Kahvaltısız</option></select>
+        <select id="kf-kahvalti"><option>Kahvaltılı</option><option>Kahvaltısız</option><option>Süper Kahvaltı</option></select>
       </div>
       <div class="kf-pcell">
         <b>Ek Yatak</b>
@@ -837,6 +837,7 @@ function autoSetCikis() {
 }
 
 async function resetForm() {
+  window.scrollTo({top: 0, behavior: 'smooth'});
   editFoy = null;
   cariReadOnly = false;
   document.getElementById('kf-mod-rozet').style.display = 'none';
@@ -1070,6 +1071,7 @@ function fillPrintView(data, gun) {
 }
 
 function yazdir() {
+  window.scrollTo({top: 0, behavior: 'smooth'});
   // Ekrandaki güncel verilerle yazdırma görünümünü doldur (henüz kaydedilmemiş olabilir)
   const giris = document.getElementById('kf-giris').value;
   const cikis = document.getElementById('kf-cikis').value;

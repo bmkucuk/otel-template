@@ -527,10 +527,12 @@ def api_maas_ekle():
 def api_stok():
     yil = request.args.get('yil', date.today().year, type=int)
     kat = request.args.get('kat', '')
+    hesap_kodu = request.args.get('hesap_kodu', '')
     conn = mdb.get_conn()
     q = "SELECT * FROM stok WHERE strftime('%Y',tarih)=?"
     params = [str(yil)]
     if kat: q += " AND kategori=?"; params.append(kat)
+    if hesap_kodu: q += " AND hesap_kodu=?"; params.append(hesap_kodu)
     q += " ORDER BY tarih ASC"
     rows = [dict(r) for r in conn.execute(q, params).fetchall()]
     conn.close()
@@ -544,7 +546,8 @@ def api_stok_ekle():
         mdb.ekle_stok(d['tarih'], d['aciklama'], float(d['tutar']),
                      d.get('kategori', 'Diğer'), d.get('belge_no', ''),
                      odeme_kod, bool(d.get('fatura_var', False)),
-                     d.get('otel', 'GENEL'), d.get('not_', ''))
+                     d.get('otel', 'GENEL'), d.get('not_', ''),
+                     d.get('hesap_kodu', ''))
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
@@ -1351,11 +1354,11 @@ def api_stok_guncelle():
     try:
         d = request.get_json()
         conn = mdb.get_conn()
-        conn.execute("""UPDATE stok SET tarih=?,belge_no=?,aciklama=?,kategori=?,tutar=?,
+        conn.execute("""UPDATE stok SET tarih=?,belge_no=?,aciklama=?,kategori=?,hesap_kodu=?,tutar=?,
                      odeme_hesap=?,fatura_var=?,otel=?,not_=? WHERE id=?""",
             (d['tarih'], d.get('belge_no',''), d['aciklama'], d.get('kategori',''),
-             float(d['tutar']), d.get('odeme_hesap',''), int(d.get('fatura_var',False)),
-             d.get('otel','GENEL'), d.get('not_',''), d['id']))
+             d.get('hesap_kodu',''), float(d['tutar']), d.get('odeme_hesap',''),
+             int(d.get('fatura_var',False)), d.get('otel','GENEL'), d.get('not_',''), d['id']))
         # Yevmiye güncelle
         conn.execute("""UPDATE yevmiye SET tarih=?,tutar=?,aciklama=?,alacak_hesap=?
                      WHERE kaynak_tablo='stok' AND kaynak_id=?""",

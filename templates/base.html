@@ -223,9 +223,6 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
     <a href="/muhasebe/stok" class="{% if active=='muh-stok' %}active{% endif %}">
       <span class="icon">📦</span> Genel Giderler
     </a>
-    <a href="/muhasebe/demirbaş" class="{% if active=='muh-demirbas' %}active{% endif %}">
-      <span class="icon">🪑</span> Demirbaş
-    </a>
     {% if session.get('role') in ['admin', 'partner'] %}
     <a href="/muhasebe/vergi" class="{% if active=='muh-vergi' %}active{% endif %}">
       <span class="icon">🧾</span> Vergi

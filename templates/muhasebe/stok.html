@@ -4,167 +4,560 @@
 {% block page_title %}📦 Genel Giderler{% endblock %}
 
 {% block content %}
-<div class="toolbar">
-  <label style="color:var(--text2);font-size:12px">Yıl:</label>
-  <select class="filter" id="yil-sel" onchange="load()"></select>
-  <select class="filter" id="kat-sel" onchange="load()">
-    <option value="">Tüm Kategoriler</option>
-    <option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option>
-    <option>Kırtasiye</option><option>Diğer</option>
-  </select>
-  <div style="flex:1"></div>
-  <button class="btn btn-primary" onclick="openModal()">＋ Gider Ekle</button>
+<!-- Tab Nav -->
+<div class="tab-nav" style="display:flex;gap:0;border-bottom:2px solid var(--border2);margin-bottom:18px;overflow-x:auto">
+  <button class="tab-btn active" onclick="switchTab('genel',this)" data-tab="genel" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;white-space:nowrap;margin-bottom:-2px">📦 Genel Giderler</button>
+  <button class="tab-btn" onclick="switchTab('demirbas',this)" data-tab="demirbas" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🪑 Demirbaş</button>
+  <button class="tab-btn" onclick="switchTab('t740',this)" data-tab="t740" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">⚡ Elektrik/Su/Doğalgaz</button>
+  <button class="tab-btn" onclick="switchTab('t741',this)" data-tab="t741" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🛒 Market/Gıda/Stok</button>
+  <button class="tab-btn" onclick="switchTab('t742',this)" data-tab="t742" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🔧 Bakım/Onarım</button>
+  <button class="tab-btn" onclick="switchTab('t743',this)" data-tab="t743" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🛡️ Sigorta</button>
+  <button class="tab-btn" onclick="switchTab('t744',this)" data-tab="t744" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">📋 Muhasebe/Danışmanlık</button>
+  <button class="tab-btn" onclick="switchTab('t745',this)" data-tab="t745" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🏠 Kira</button>
+  <button class="tab-btn" onclick="switchTab('t780',this)" data-tab="t780" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">📌 Diğer Giderler</button>
 </div>
 
-<div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
-
-<div class="table-wrap">
-  <table>
-    <thead><tr><th style="width:100px">Tarih</th><th>Açıklama</th><th style="width:110px">Kategori</th><th style="width:90px;text-align:right">Tutar</th><th style="width:120px">Ödeme Hesabı</th><th style="width:60px;text-align:center">Fatura</th><th style="width:80px">Not</th><th style="width:130px"></th></tr></thead>
-    <tbody id="tbody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span></td></tr></tbody>
-  </table>
+<!-- ============================================================ -->
+<!-- SEKME: GENEL GİDERLER -->
+<!-- ============================================================ -->
+<div id="tab-genel">
+  <div class="toolbar">
+    <label style="color:var(--text2);font-size:12px">Yıl:</label>
+    <select class="filter" id="yil-sel" onchange="loadGenel()"></select>
+    <select class="filter" id="kat-sel" onchange="loadGenel()">
+      <option value="">Tüm Kategoriler</option>
+      <option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option>
+      <option>Kırtasiye</option><option>Diğer</option>
+    </select>
+    <div style="flex:1"></div>
+    <button class="btn btn-primary" onclick="openGenelModal()">＋ Gider Ekle</button>
+  </div>
+  <div class="cards-row" id="genel-kartlar" style="margin-bottom:16px"></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th style="width:100px">Tarih</th><th>Açıklama</th>
+        <th style="width:110px">Kategori</th><th style="width:90px;text-align:right">Tutar</th>
+        <th style="width:120px">Ödeme Hesabı</th><th style="width:60px;text-align:center">Fatura</th>
+        <th style="width:80px">Not</th><th style="width:130px"></th>
+      </tr></thead>
+      <tbody id="genel-tbody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span></td></tr></tbody>
+    </table>
+  </div>
+  <div id="genel-info" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
 </div>
-<div id="info" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
 
-<!-- Modal -->
-<div class="modal-overlay" id="modal">
+<!-- ============================================================ -->
+<!-- SEKME: DEMİRBAŞ -->
+<!-- ============================================================ -->
+<div id="tab-demirbas" style="display:none">
+  <div class="toolbar">
+    <label style="color:var(--text2);font-size:12px">Yıl:</label>
+    <select class="filter" id="dem-yil-sel" onchange="loadDem()"></select>
+    <div style="flex:1"></div>
+    <button class="btn btn-primary" onclick="openDemModal()">＋ Demirbaş Ekle</button>
+  </div>
+  <div class="cards-row" id="dem-kartlar" style="margin-bottom:16px"></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Tarih</th><th>Açıklama</th><th>Miktar</th><th>Birim Fiyat</th>
+        <th>Toplam</th><th>Ödeme Hesabı</th><th>Fatura No</th><th>Not</th><th></th>
+      </tr></thead>
+      <tbody id="dem-tbody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span></td></tr></tbody>
+    </table>
+  </div>
+  <div id="dem-info" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SEKME: HESAP BAZLI (740-780) -->
+<!-- ============================================================ -->
+<div id="tab-hesap" style="display:none">
+  <div class="toolbar">
+    <label style="color:var(--text2);font-size:12px">Yıl:</label>
+    <select class="filter" id="hes-yil-sel" onchange="loadHesap()"></select>
+    <div style="flex:1"></div>
+    <button class="btn btn-primary" onclick="openHesapModal()">＋ Kayıt Ekle</button>
+  </div>
+  <div class="cards-row" id="hes-kartlar" style="margin-bottom:16px"></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th style="width:100px">Tarih</th><th>Açıklama</th>
+        <th style="width:90px;text-align:right">Tutar</th>
+        <th style="width:120px">Ödeme Hesabı</th>
+        <th style="width:60px;text-align:center">Fatura</th>
+        <th style="width:80px">Not</th><th style="width:130px"></th>
+      </tr></thead>
+      <tbody id="hes-tbody"><tr class="loading-row"><td colspan="7"><span class="spinner"></span></td></tr></tbody>
+    </table>
+  </div>
+  <div id="hes-info" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAL: GENEL GİDER -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="modal-genel">
   <div class="modal">
-    <h2 id="modal-baslik">Stok Alımı Ekle</h2>
+    <h2 id="genel-modal-baslik">Gider Ekle</h2>
     <div class="form-row">
-      <div class="form-group"><label>Tarih</label><input type="date" id="f-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
-      <div class="form-group"><label>Belge No</label><input type="text" id="f-belge"></div>
+      <div class="form-group"><label>Tarih</label><input type="date" id="gf-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
+      <div class="form-group"><label>Belge No</label><input type="text" id="gf-belge"></div>
     </div>
-    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="f-aciklama"></div></div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="gf-aciklama"></div></div>
     <div class="form-row">
       <div class="form-group"><label>Kategori</label>
-        <select id="f-kat"><option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option><option>Kırtasiye</option><option>Elektrik</option><option>Su</option><option>Telefon</option><option>İnternet</option><option>Diğer</option></select>
+        <select id="gf-kat"><option>Market/Gıda</option><option>Temizlik</option><option>İçecek</option><option>Kırtasiye</option><option>Elektrik</option><option>Su</option><option>Telefon</option><option>İnternet</option><option>Diğer</option></select>
       </div>
-      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="gf-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
     </div>
     <div class="form-row single">
-      <div class="form-group"><label>Ödeme Hesabı</label><select id="f-hesap"></select></div>
+      <div class="form-group"><label>Ödeme Hesabı</label><select id="gf-hesap"></select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Not</label><input type="text" id="f-not"></div>
+      <div class="form-group"><label>Not</label><input type="text" id="gf-not"></div>
       <div class="form-group" style="justify-content:flex-end;padding-top:20px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="f-fatura"> Fatura Var
+          <input type="checkbox" id="gf-fatura"> Fatura Var
         </label>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-default" onclick="closeModal()">İptal</button>
-      <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
+      <button class="btn btn-default" onclick="closeGenelModal()">İptal</button>
+      <button class="btn btn-primary" onclick="saveGenel()">💾 Kaydet</button>
     </div>
   </div>
 </div>
+
+<!-- ============================================================ -->
+<!-- MODAL: DEMİRBAŞ -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="modal-dem">
+  <div class="modal">
+    <h2 id="dem-modal-baslik">Demirbaş Ekle</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="df-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
+      <div class="form-group"><label>Fatura No</label><input type="text" id="df-fatura"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Açıklama</label><input type="text" id="df-aciklama" placeholder="TV, buzdolabı, mobilya..."></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Miktar</label><input type="number" id="df-miktar" value="1" min="1" onfocus="if(this.value=='1'||this.value=='0')this.value=''" onblur="if(this.value=='')this.value='1'" oninput="calcToplam()"></div>
+      <div class="form-group"><label>Birim Fiyat (₺)</label><input type="number" id="df-birim" value="0" min="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'" oninput="calcToplam()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Toplam (₺)</label>
+        <input type="number" id="df-toplam" value="0" readonly style="background:var(--bg);color:var(--accent2);font-weight:700">
+      </div>
+      <div class="form-group"><label>Ödeme Hesabı</label><select id="df-hesap"></select></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Not</label><input type="text" id="df-not"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeDemModal()">İptal</button>
+      <button class="btn btn-primary" onclick="saveDem()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAL: HESAP BAZLI (740-780) -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="modal-hesap">
+  <div class="modal">
+    <h2 id="hes-modal-baslik">Kayıt Ekle</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Tarih</label><input type="date" id="hf-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
+      <div class="form-group"><label>Belge No</label><input type="text" id="hf-belge"></div>
+    </div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="hf-aciklama"></div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="hf-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+      <div class="form-group"><label>Ödeme Hesabı</label><select id="hf-hesap"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Not</label><input type="text" id="hf-not"></div>
+      <div class="form-group" style="justify-content:flex-end;padding-top:20px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="hf-fatura"> Fatura Var
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeHesapModal()">İptal</button>
+      <button class="btn btn-primary" onclick="saveHesap()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-let allData = [];
-const thisYear = new Date().getFullYear();
-const yilSel = document.getElementById('yil-sel');
-for (let y = thisYear-2; y <= thisYear+1; y++) {
-  const o = document.createElement('option');
-  o.value = y; o.textContent = y;
-  if (y === thisYear) o.selected = true;
-  yilSel.appendChild(o);
+/* ============================================================
+   SEKME YÖNETİMİ
+   ============================================================ */
+const HESAP_TABS = {
+  t740: {kod:'740', ad:'Elektrik/Su/Doğalgaz', icon:'⚡'},
+  t741: {kod:'741', ad:'Market/Gıda/Stok',     icon:'🛒'},
+  t742: {kod:'742', ad:'Bakım/Onarım',          icon:'🔧'},
+  t743: {kod:'743', ad:'Sigorta',               icon:'🛡️'},
+  t744: {kod:'744', ad:'Muhasebe/Danışmanlık',  icon:'📋'},
+  t745: {kod:'745', ad:'Kira',                  icon:'🏠'},
+  t780: {kod:'780', ad:'Diğer Giderler',        icon:'📌'},
+};
+
+let activeTab = 'genel';
+let activeHesapKod = null;
+let activeHesapAd  = null;
+
+function switchTab(tabId, btn) {
+  activeTab = tabId;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.style.color = 'var(--text2)';
+    b.style.borderBottom = '2px solid transparent';
+  });
+  btn.style.color = 'var(--accent)';
+  btn.style.borderBottom = '2px solid var(--accent)';
+
+  document.getElementById('tab-genel').style.display   = 'none';
+  document.getElementById('tab-demirbas').style.display = 'none';
+  document.getElementById('tab-hesap').style.display   = 'none';
+
+  if (tabId === 'genel') {
+    document.getElementById('tab-genel').style.display = '';
+    loadGenel();
+  } else if (tabId === 'demirbas') {
+    document.getElementById('tab-demirbas').style.display = '';
+    loadDem();
+  } else if (HESAP_TABS[tabId]) {
+    activeHesapKod = HESAP_TABS[tabId].kod;
+    activeHesapAd  = HESAP_TABS[tabId].ad;
+    document.getElementById('tab-hesap').style.display = '';
+    loadHesap();
+  }
 }
 
-async function load() {
-  const yil = yilSel.value;
+/* ============================================================
+   YIL SEÇİCİLERİ
+   ============================================================ */
+const thisYear = new Date().getFullYear();
+['yil-sel','dem-yil-sel','hes-yil-sel'].forEach(id => {
+  const s = document.getElementById(id);
+  for (let y = thisYear-2; y <= thisYear+1; y++) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if (y === thisYear) o.selected = true;
+    s.appendChild(o);
+  }
+});
+
+const hesapAdiMap = {
+  '100':'Nakit','102-1':'İş Bankası','102-2':'Ziraat',
+  '102-3':'Deniz Bank','105-1':'EUR Kasa','105-2':'USD Kasa'
+};
+function hesapAdi(k){ return hesapAdiMap[k] || k || '—'; }
+
+/* ============================================================
+   GENEL GİDERLER
+   ============================================================ */
+let genelData = [];
+let genelEditId = null;
+
+async function loadGenel() {
+  const yil = document.getElementById('yil-sel').value;
   const kat = document.getElementById('kat-sel').value;
   const data = await api(`/api/muhasebe/stok?yil=${yil}&kat=${encodeURIComponent(kat)}`);
-
-  // Kategori toplamları
   const katTop = {};
   let toplam = 0;
   data.forEach(r => {
     const k = r.kategori || 'Diğer';
-    katTop[k] = (katTop[k] || 0) + r.tutar;
+    katTop[k] = (katTop[k]||0) + r.tutar;
     toplam += r.tutar;
   });
-  document.getElementById('kartlar').innerHTML =
+  document.getElementById('genel-kartlar').innerHTML =
     `<div class="stat-card"><div class="label">Toplam Alım</div><div class="value red">${fmt(toplam)}</div><div class="sub">${data.length} kayıt</div></div>` +
     Object.entries(katTop).slice(0,4).map(([k,t]) =>
       `<div class="stat-card"><div class="label">${k}</div><div class="value yellow">${fmt(t)}</div></div>`
     ).join('');
-
-  document.getElementById('tbody').innerHTML = data.map(r => `<tr>
+  document.getElementById('genel-tbody').innerHTML = data.map(r => `<tr>
     <td>${r.tarih}</td><td>${r.aciklama}</td><td>${r.kategori||'—'}</td>
     <td class="red" style="text-align:right;white-space:nowrap">${fmt(r.tutar)}</td>
-    <td>${r.odeme_hesap==='100'?'Nakit':r.odeme_hesap==='102-1'?'İş Bankası':r.odeme_hesap==='102-2'?'Ziraat':r.odeme_hesap==='102-3'?'Deniz Bank':r.odeme_hesap||'—'}</td>
+    <td>${hesapAdi(r.odeme_hesap)}</td>
     <td>${r.fatura_var ? '<span class="green">✅</span>' : '<span class="red">❌</span>'}</td>
     <td>${r.not_||'—'}</td>
-    <td style="white-space:nowrap"><button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="duzenle(${r.id})">Düzenle</button><button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="sil(${r.id},'${r.aciklama}')">Sil</button></td>
+    <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="genelDuzenle(${r.id})">Düzenle</button>
+      <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="genelSil(${r.id},'${r.aciklama}')">Sil</button>
+    </td>
   </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
-  allData = data;
-  document.getElementById('info').textContent = `${data.length} kayıt | Toplam: ${fmt(toplam)}`;
+  genelData = data;
+  document.getElementById('genel-info').textContent = `${data.length} kayıt | Toplam: ${fmt(toplam)}`;
 }
 
-let editId = null;
-
-async function openModal() {
-  editId = null;
-  document.getElementById('modal-baslik').textContent = 'Stok Alımı Ekle';
+async function openGenelModal() {
+  genelEditId = null;
+  document.getElementById('genel-modal-baslik').textContent = 'Gider Ekle';
   const bankalar = await api('/api/muhasebe/bankalar');
-  document.getElementById('f-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
-  document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
-  document.getElementById('modal').classList.add('open');
+  document.getElementById('gf-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
+  document.getElementById('gf-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('gf-belge').value = '';
+  document.getElementById('gf-aciklama').value = '';
+  document.getElementById('gf-tutar').value = '0';
+  document.getElementById('gf-not').value = '';
+  document.getElementById('gf-fatura').checked = false;
+  document.getElementById('modal-genel').classList.add('open');
 }
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function closeGenelModal() { document.getElementById('modal-genel').classList.remove('open'); }
 
-async function save() {
+async function saveGenel() {
   const data = {
-    tarih: document.getElementById('f-tarih').value,
-    belge_no: document.getElementById('f-belge').value,
-    aciklama: document.getElementById('f-aciklama').value,
-    kategori: document.getElementById('f-kat').value,
-    tutar: parseFloat(document.getElementById('f-tutar').value)||0,
-    odeme_hesap: document.getElementById('f-hesap').value,
-    fatura_var: document.getElementById('f-fatura').checked,
-    not_: document.getElementById('f-not').value,
+    tarih: document.getElementById('gf-tarih').value,
+    belge_no: document.getElementById('gf-belge').value,
+    aciklama: document.getElementById('gf-aciklama').value,
+    kategori: document.getElementById('gf-kat').value,
+    tutar: parseFloat(document.getElementById('gf-tutar').value)||0,
+    odeme_hesap: document.getElementById('gf-hesap').value,
+    fatura_var: document.getElementById('gf-fatura').checked,
+    not_: document.getElementById('gf-not').value,
   };
   if (!validateForm([
-    {id:'f-tarih',    label:'Tarih'},
-    {id:'f-aciklama', label:'Açıklama'},
-    {id:'f-tutar',    label:'Tutar'},
-    {id:'f-hesap',    label:'Ödeme Hesabı'},
+    {id:'gf-tarih',label:'Tarih'},
+    {id:'gf-aciklama',label:'Açıklama'},
+    {id:'gf-tutar',label:'Tutar'},
   ])) return;
-  const url = editId ? '/api/muhasebe/stok/guncelle' : '/api/muhasebe/stok/ekle';
-  if (editId) data.id = editId;
+  const url = genelEditId ? '/api/muhasebe/stok/guncelle' : '/api/muhasebe/stok/ekle';
+  if (genelEditId) data.id = genelEditId;
   const r = await api(url, data);
-  if (r.ok) { toast(editId ? 'Güncellendi ✓' : 'Alım kaydedildi ✓'); closeModal(); load(); }
+  if (r.ok) { toast(genelEditId ? 'Güncellendi ✓' : 'Kaydedildi ✓'); closeGenelModal(); loadGenel(); }
   else toast(r.error, 'error');
 }
 
-async function duzenle(id) {
-  const r = allData.find(x => x.id === id);
-  if (!r) return;
-  editId = id;
-  document.getElementById('modal-baslik').textContent = 'Stok Düzenle';
+async function genelDuzenle(id) {
+  const r = genelData.find(x => x.id === id); if (!r) return;
+  genelEditId = id;
+  document.getElementById('genel-modal-baslik').textContent = 'Gider Düzenle';
   const bankalar = await api('/api/muhasebe/bankalar');
-  document.getElementById('f-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
-  document.getElementById('f-tarih').value = r.tarih || '';
-  document.getElementById('f-belge').value = r.belge_no || '';
-  document.getElementById('f-aciklama').value = r.aciklama || '';
-  document.getElementById('f-kat').value = r.kategori || 'Market/Gıda';
-  document.getElementById('f-tutar').value = r.tutar || 0;
-  document.getElementById('f-hesap').value = r.odeme_hesap || '';
-  document.getElementById('f-not').value = r.not_ || '';
-  document.getElementById('f-fatura').checked = !!r.fatura_var;
-  document.getElementById('modal').classList.add('open');
+  document.getElementById('gf-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
+  document.getElementById('gf-tarih').value = r.tarih||'';
+  document.getElementById('gf-belge').value = r.belge_no||'';
+  document.getElementById('gf-aciklama').value = r.aciklama||'';
+  document.getElementById('gf-kat').value = r.kategori||'Market/Gıda';
+  document.getElementById('gf-tutar').value = r.tutar||0;
+  document.getElementById('gf-hesap').value = r.odeme_hesap||'';
+  document.getElementById('gf-not').value = r.not_||'';
+  document.getElementById('gf-fatura').checked = !!r.fatura_var;
+  document.getElementById('modal-genel').classList.add('open');
 }
 
-async function sil(id, aciklama) {
+async function genelSil(id, aciklama) {
   if (!confirm(`"${aciklama}" kaydını silmek istediğinize emin misiniz?`)) return;
   const r = await api('/api/muhasebe/stok/sil', {id, aciklama});
-  if (r.ok) { toast('Silindi ✓'); load(); }
+  if (r.ok) { toast('Silindi ✓'); loadGenel(); }
   else toast(r.error, 'error');
 }
 
-document.getElementById('modal').addEventListener('click', e => { if (e.target.id==='modal') closeModal(); });
-load();
+/* ============================================================
+   DEMİRBAŞ
+   ============================================================ */
+let demData = [];
+let demEditId = null;
+
+async function loadDem() {
+  const yil = document.getElementById('dem-yil-sel').value;
+  const data = await api(`/api/muhasebe/demirbas?yil=${yil}`);
+  const toplam = data.reduce((s,r) => s+(r.toplam||0), 0);
+  document.getElementById('dem-kartlar').innerHTML =
+    `<div class="stat-card"><div class="label">Toplam Demirbaş</div><div class="value red">${fmt(toplam)}</div><div class="sub">${data.length} kayıt</div></div>`;
+  document.getElementById('dem-tbody').innerHTML = data.map(r => `<tr>
+    <td>${r.tarih||'—'}</td><td>${r.aciklama}</td>
+    <td style="text-align:right">${r.miktar||1}</td>
+    <td style="text-align:right">${fmt(r.birim_fiyat)}</td>
+    <td class="red" style="text-align:right">${fmt(r.toplam)}</td>
+    <td>${hesapAdi(r.odeme_hesap)}</td>
+    <td>${r.fatura_no||'—'}</td>
+    <td>${r.not_||'—'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="demDuzenle(${r.id})">Düzenle</button>
+      <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="demSil(${r.id})">Sil</button>
+    </td>
+  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
+  demData = data;
+  document.getElementById('dem-info').textContent = `${data.length} kayıt | Toplam: ${fmt(toplam)}`;
+}
+
+async function openDemModal() {
+  demEditId = null;
+  document.getElementById('dem-modal-baslik').textContent = 'Demirbaş Ekle';
+  const bankalar = await api('/api/muhasebe/bankalar');
+  document.getElementById('df-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
+  document.getElementById('df-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('df-miktar').value = 1;
+  document.getElementById('df-birim').value = 0;
+  document.getElementById('df-toplam').value = 0;
+  document.getElementById('df-aciklama').value = '';
+  document.getElementById('df-fatura').value = '';
+  document.getElementById('df-not').value = '';
+  document.getElementById('modal-dem').classList.add('open');
+}
+function closeDemModal() { document.getElementById('modal-dem').classList.remove('open'); }
+
+function calcToplam() {
+  const m = parseFloat(document.getElementById('df-miktar').value)||0;
+  const b = parseFloat(document.getElementById('df-birim').value)||0;
+  document.getElementById('df-toplam').value = (m*b).toFixed(2);
+}
+
+async function saveDem() {
+  const data = {
+    tarih:       document.getElementById('df-tarih').value,
+    aciklama:    document.getElementById('df-aciklama').value,
+    miktar:      parseFloat(document.getElementById('df-miktar').value)||1,
+    birim_fiyat: parseFloat(document.getElementById('df-birim').value)||0,
+    odeme_hesap: document.getElementById('df-hesap').value,
+    fatura_no:   document.getElementById('df-fatura').value,
+    not_:        document.getElementById('df-not').value,
+  };
+  if (!validateForm([
+    {id:'df-tarih',label:'Tarih'},
+    {id:'df-aciklama',label:'Açıklama'},
+    {id:'df-birim',label:'Birim Fiyat'},
+  ])) return;
+  const url = demEditId ? '/api/muhasebe/demirbas/guncelle' : '/api/muhasebe/demirbas/ekle';
+  if (demEditId) data.id = demEditId;
+  const r = await api(url, data);
+  if (r.ok) { toast(demEditId ? 'Güncellendi ✓' : 'Demirbaş kaydedildi ✓'); closeDemModal(); loadDem(); }
+  else toast(r.error, 'error');
+}
+
+async function demDuzenle(id) {
+  const r = demData.find(x => x.id === id); if (!r) return;
+  demEditId = id;
+  document.getElementById('dem-modal-baslik').textContent = 'Demirbaş Düzenle';
+  const bankalar = await api('/api/muhasebe/bankalar');
+  document.getElementById('df-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
+  document.getElementById('df-tarih').value = r.tarih||'';
+  document.getElementById('df-fatura').value = r.fatura_no||'';
+  document.getElementById('df-aciklama').value = r.aciklama||'';
+  document.getElementById('df-miktar').value = r.miktar||1;
+  document.getElementById('df-birim').value = r.birim_fiyat||0;
+  document.getElementById('df-toplam').value = r.toplam||0;
+  document.getElementById('df-hesap').value = r.odeme_hesap||'';
+  document.getElementById('df-not').value = r.not_||'';
+  document.getElementById('modal-dem').classList.add('open');
+}
+
+async function demSil(id) {
+  if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
+  const r = await api('/api/muhasebe/demirbas/sil', {id});
+  if (r.ok) { toast('Silindi ✓'); loadDem(); }
+  else toast(r.error, 'error');
+}
+
+/* ============================================================
+   HESAP BAZLI (740-780)
+   ============================================================ */
+let hesapData = [];
+let hesapEditId = null;
+
+async function loadHesap() {
+  const yil = document.getElementById('hes-yil-sel').value;
+  document.getElementById('hes-modal-baslik').textContent = activeHesapAd + ' Ekle';
+  const data = await api(`/api/muhasebe/stok?yil=${yil}&hesap_kodu=${activeHesapKod}`);
+  const toplam = data.reduce((s,r) => s+r.tutar, 0);
+  document.getElementById('hes-kartlar').innerHTML =
+    `<div class="stat-card"><div class="label">${activeHesapAd}</div><div class="value red">${fmt(toplam)}</div><div class="sub">${data.length} kayıt</div></div>`;
+  document.getElementById('hes-tbody').innerHTML = data.map(r => `<tr>
+    <td>${r.tarih}</td><td>${r.aciklama}</td>
+    <td class="red" style="text-align:right;white-space:nowrap">${fmt(r.tutar)}</td>
+    <td>${hesapAdi(r.odeme_hesap)}</td>
+    <td>${r.fatura_var ? '<span class="green">✅</span>' : '<span class="red">❌</span>'}</td>
+    <td>${r.not_||'—'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="hesapDuzenle(${r.id})">Düzenle</button>
+      <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="hesapSil(${r.id},'${r.aciklama}')">Sil</button>
+    </td>
+  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
+  hesapData = data;
+  document.getElementById('hes-info').textContent = `${data.length} kayıt | Toplam: ${fmt(toplam)}`;
+}
+
+async function openHesapModal() {
+  hesapEditId = null;
+  document.getElementById('hes-modal-baslik').textContent = activeHesapAd + ' Ekle';
+  const bankalar = await api('/api/muhasebe/bankalar');
+  document.getElementById('hf-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
+  document.getElementById('hf-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('hf-belge').value = '';
+  document.getElementById('hf-aciklama').value = '';
+  document.getElementById('hf-tutar').value = '0';
+  document.getElementById('hf-not').value = '';
+  document.getElementById('hf-fatura').checked = false;
+  document.getElementById('modal-hesap').classList.add('open');
+}
+function closeHesapModal() { document.getElementById('modal-hesap').classList.remove('open'); }
+
+async function saveHesap() {
+  const data = {
+    tarih: document.getElementById('hf-tarih').value,
+    belge_no: document.getElementById('hf-belge').value,
+    aciklama: document.getElementById('hf-aciklama').value,
+    kategori: activeHesapAd,
+    hesap_kodu: activeHesapKod,
+    tutar: parseFloat(document.getElementById('hf-tutar').value)||0,
+    odeme_hesap: document.getElementById('hf-hesap').value,
+    fatura_var: document.getElementById('hf-fatura').checked,
+    not_: document.getElementById('hf-not').value,
+  };
+  if (!validateForm([
+    {id:'hf-tarih',label:'Tarih'},
+    {id:'hf-aciklama',label:'Açıklama'},
+    {id:'hf-tutar',label:'Tutar'},
+  ])) return;
+  const url = hesapEditId ? '/api/muhasebe/stok/guncelle' : '/api/muhasebe/stok/ekle';
+  if (hesapEditId) data.id = hesapEditId;
+  const r = await api(url, data);
+  if (r.ok) { toast(hesapEditId ? 'Güncellendi ✓' : 'Kaydedildi ✓'); closeHesapModal(); loadHesap(); }
+  else toast(r.error, 'error');
+}
+
+async function hesapDuzenle(id) {
+  const r = hesapData.find(x => x.id === id); if (!r) return;
+  hesapEditId = id;
+  document.getElementById('hes-modal-baslik').textContent = activeHesapAd + ' Düzenle';
+  const bankalar = await api('/api/muhasebe/bankalar');
+  document.getElementById('hf-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
+  document.getElementById('hf-tarih').value = r.tarih||'';
+  document.getElementById('hf-belge').value = r.belge_no||'';
+  document.getElementById('hf-aciklama').value = r.aciklama||'';
+  document.getElementById('hf-tutar').value = r.tutar||0;
+  document.getElementById('hf-hesap').value = r.odeme_hesap||'';
+  document.getElementById('hf-not').value = r.not_||'';
+  document.getElementById('hf-fatura').checked = !!r.fatura_var;
+  document.getElementById('modal-hesap').classList.add('open');
+}
+
+async function hesapSil(id, aciklama) {
+  if (!confirm(`"${aciklama}" kaydını silmek istediğinize emin misiniz?`)) return;
+  const r = await api('/api/muhasebe/stok/sil', {id, aciklama});
+  if (r.ok) { toast('Silindi ✓'); loadHesap(); }
+  else toast(r.error, 'error');
+}
+
+/* ============================================================
+   MODAL KAPAMA (OVERLAY CLICK)
+   ============================================================ */
+['modal-genel','modal-dem','modal-hesap'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target.id === id) document.getElementById(id).classList.remove('open');
+  });
+});
+
+/* İLK YÜKLEMEye */
+loadGenel();
 </script>
 {% endblock %}

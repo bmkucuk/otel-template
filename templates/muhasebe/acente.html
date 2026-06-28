@@ -53,7 +53,8 @@
   </div>
   <table>
     <thead><tr>
-      <th style="width:34px"><input type="checkbox" id="detay-hepsi" onchange="toggleHepsi(this)"></th>
+      <th style="width:50px"><button id="detay-hepsi-btn" onclick="toggleHepsiBtn()" title="Tümünü Seç / Kaldır"
+        style="background:var(--card2);border:1px solid var(--border);border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:var(--text2)">☐ Tüm</button></th>
       <th style="width:95px;cursor:pointer" onclick="sirala('detay','tarih')">Tarih <span id="sort-detay-tarih"></span></th>
       <th style="width:70px;cursor:pointer" onclick="sirala('detay','foy_no')">Föy <span id="sort-detay-foy_no"></span></th>
       <th>Misafir</th>
@@ -511,11 +512,11 @@ function renderDetayTablosu() {
   }).join('') || '';
   guncelleSecimOzeti();
   // Header checkbox'ı bekleyen föy sayısına göre senkronla
-  const hepsiCb = document.getElementById('detay-hepsi');
-  if (hepsiCb) {
-    const bekleyenler = detayFoyler.filter(f => !f.fatura_edildi);
-    hepsiCb.indeterminate = secilenFoylar.size > 0 && secilenFoylar.size < bekleyenler.length;
-    hepsiCb.checked = bekleyenler.length > 0 && secilenFoylar.size === bekleyenler.length;
+  const btn = document.getElementById('detay-hepsi-btn');
+  if (btn) {
+    const bkl = detayFoyler.filter(f => !f.fatura_edildi).map(f => String(f.foy_no));
+    const hepsi = bkl.length > 0 && bkl.every(fno => secilenFoylar.has(fno));
+    btn.textContent = hepsi ? '☑ Tüm' : (secilenFoylar.size > 0 ? '◑ Tüm' : '☐ Tüm');
   }
 }
 
@@ -543,33 +544,35 @@ function toggleFoy(foyNo, acenteKod, cb) {
   }
   guncelleSecimOzeti();
 }
-function toggleHepsi(cb) {
+function toggleHepsiBtn() {
   const tumMod = !document.getElementById('acente-sel').value;
   const bekleyenler = detayFoyler.filter(f => !f.fatura_edildi);
-  console.log('[toggleHepsi] checked='+cb.checked+' tumMod='+tumMod+' detayFoyler='+detayFoyler.length+' bekleyenler='+bekleyenler.length);
+  const hepsiFoylar = bekleyenler.map(f => String(f.foy_no));
+  const hepsiSecili = hepsiFoylar.length > 0 && hepsiFoylar.every(fno => secilenFoylar.has(fno));
+  const btn = document.getElementById('detay-hepsi-btn');
+
   secilenFoylar.clear();
 
-  if (cb.checked) {
+  if (!hepsiSecili) {
+    // Seç
     if (tumMod) {
       let ilkAcente = null;
       bekleyenler.forEach(f => {
         if (!ilkAcente) ilkAcente = f.acente_kod;
         if (f.acente_kod === ilkAcente) secilenFoylar.add(String(f.foy_no));
       });
-      console.log('[toggleHepsi] tumMod seçilen:', [...secilenFoylar]);
       if (ilkAcente) toast(`Sadece ${ilkAcente} acentesine ait föyler seçildi.`, 'info');
     } else {
       bekleyenler.forEach(f => secilenFoylar.add(String(f.foy_no)));
-      console.log('[toggleHepsi] acente modu seçilen:', [...secilenFoylar]);
     }
+    if (btn) btn.textContent = '☑ Tüm';
+  } else {
+    // Kaldır
+    if (btn) btn.textContent = '☐ Tüm';
   }
 
-  const chks = document.querySelectorAll('.detay-chk');
-  console.log('[toggleHepsi] DOM checkbox sayısı:', chks.length);
-  chks.forEach(chk => {
-    const match = secilenFoylar.has(chk.dataset.foy);
-    console.log('  chk data-foy='+chk.dataset.foy+' match='+match);
-    chk.checked = match;
+  document.querySelectorAll('.detay-chk').forEach(chk => {
+    chk.checked = secilenFoylar.has(chk.dataset.foy);
   });
   guncelleSecimOzeti();
 }

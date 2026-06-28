@@ -535,6 +535,7 @@ async function loadHesap() {
     <td>${hesapAdi(r.alacak_hesap)}</td>
     <td style="font-size:11px;color:var(--text2)">${r.islem_tipi||'—'}</td>
     <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="hesapDuzenle(${r.id})">Düzenle</button>
       <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="hesapSil(${r.id},'${(r.aciklama||'').replace(/'/g,'')}')">Sil</button>
     </td>
   </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
@@ -558,23 +559,36 @@ async function openHesapModal() {
 function closeHesapModal() { document.getElementById('modal-hesap').classList.remove('open'); }
 
 async function saveHesap() {
-  const data = {
-    tarih: document.getElementById('hf-tarih').value,
-    belge_no: document.getElementById('hf-belge').value,
-    aciklama: document.getElementById('hf-aciklama').value,
-    kategori: activeHesapAd,
-    hesap_kodu: activeHesapKod,
-    tutar: parseFloat(document.getElementById('hf-tutar').value)||0,
-    odeme_hesap: document.getElementById('hf-hesap').value,
-    fatura_var: document.getElementById('hf-fatura').checked,
-    not_: document.getElementById('hf-not').value,
-  };
   if (!validateForm([{id:'hf-tarih',label:'Tarih'},{id:'hf-aciklama',label:'Açıklama'},{id:'hf-tutar',label:'Tutar'}])) return;
-  const url = hesapEditId ? '/api/muhasebe/stok/guncelle' : '/api/muhasebe/stok/ekle';
-  if (hesapEditId) data.id = hesapEditId;
-  const r = await api(url, data);
-  if (r.ok) { toast(hesapEditId ? 'Güncellendi ✓' : 'Kaydedildi ✓'); closeHesapModal(); loadHesap(); }
-  else toast(r.error, 'error');
+  if (hesapEditId) {
+    // Yevmiye güncelle
+    const r = await api('/api/muhasebe/yevmiye/guncelle', {
+      id: hesapEditId,
+      tarih: document.getElementById('hf-tarih').value,
+      tutar: parseFloat(document.getElementById('hf-tutar').value)||0,
+      aciklama: activeHesapAd + ': ' + document.getElementById('hf-aciklama').value,
+      borc: activeHesapKod,
+      alacak: document.getElementById('hf-hesap').value,
+      islem_tipi: 'Stok Alımı',
+    });
+    if (r.ok) { toast('Güncellendi ✓'); closeHesapModal(); loadHesap(); }
+    else toast(r.error, 'error');
+  } else {
+    const data = {
+      tarih: document.getElementById('hf-tarih').value,
+      belge_no: document.getElementById('hf-belge').value,
+      aciklama: document.getElementById('hf-aciklama').value,
+      kategori: activeHesapAd,
+      hesap_kodu: activeHesapKod,
+      tutar: parseFloat(document.getElementById('hf-tutar').value)||0,
+      odeme_hesap: document.getElementById('hf-hesap').value,
+      fatura_var: document.getElementById('hf-fatura').checked,
+      not_: document.getElementById('hf-not').value,
+    };
+    const r = await api('/api/muhasebe/stok/ekle', data);
+    if (r.ok) { toast('Kaydedildi ✓'); closeHesapModal(); loadHesap(); }
+    else toast(r.error, 'error');
+  }
 }
 
 async function hesapDuzenle(id) {
@@ -585,9 +599,14 @@ async function hesapDuzenle(id) {
   document.getElementById('hf-hesap').innerHTML = bankalar.map(b => `<option>${b.ad}</option>`).join('');
   document.getElementById('hf-tarih').value = r.tarih||'';
   document.getElementById('hf-belge').value = r.belge_no||'';
-  document.getElementById('hf-aciklama').value = r.aciklama||'';
+  // yevmiye kaydında açıklama "kategori: metin" formatında gelebilir
+  const aciklama = r.aciklama || '';
+  const kolonPos = aciklama.indexOf(': ');
+  document.getElementById('hf-aciklama').value = kolonPos > -1 ? aciklama.substring(kolonPos+2) : aciklama;
   document.getElementById('hf-tutar').value = r.tutar||0;
-  document.getElementById('hf-hesap').value = r.odeme_hesap||'';
+  // alacak_hesap = ödeme hesabı (yevmiye kaydı)
+  const odemeHesap = r.odeme_hesap || r.alacak_hesap || '';
+  document.getElementById('hf-hesap').value = odemeHesap;
   document.getElementById('hf-not').value = r.not_||'';
   document.getElementById('hf-fatura').checked = !!r.fatura_var;
   document.getElementById('modal-hesap').classList.add('open');

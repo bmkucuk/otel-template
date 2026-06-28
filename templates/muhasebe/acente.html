@@ -49,7 +49,7 @@
     <div class="section-title" style="margin:0;border:0;font-size:13px">📋 Föy Bazlı Döküm</div>
     <div style="flex:1"></div>
     <span id="secim-ozet" style="font-size:12px;color:var(--text2)"></span>
-    <button class="btn btn-primary" id="fatura-kes-btn" style="font-size:12px;padding:6px 14px;display:none" onclick="openFaturaModal()">🧾 Seçilenleri Faturalandır</button>
+    <button class="btn btn-primary" id="fatura-kes-btn" style="font-size:12px;padding:6px 14px;" onclick="openFaturaModal()">🧾 Seçilenleri Faturalandır</button>
   </div>
   <table>
     <thead><tr>
@@ -275,9 +275,17 @@ async function loadAlacakPanel() {
       <td class="${renkClass}" style="text-align:right;font-weight:600">${fmt(f.tutar)}</td>
       <td style="text-align:center">${etiket}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-primary" style="padding:3px 10px;font-size:11px"
-          onclick="openTahsilatModal('${f.foy_no}','${f.acente_kod}','${f.misafir||''}',${f.tutar},'${f.fatura_no||''}')">
+        <button class="btn btn-primary" style="padding:3px 8px;font-size:11px;margin-right:4px"
+          onclick="openTahsilatModal('${f.foy_no}','${f.acente_kod}','${(f.misafir||'').replace(/'/g,'')}',${f.tutar},'${f.fatura_no||''}')">
           💰 Tahsilat Al
+        </button>
+        <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000"
+          onclick="openFaturaDuzenleModal('${f.foy_no}')">
+          Düzenle
+        </button>
+        <button class="btn btn-danger" style="padding:3px 8px;font-size:11px"
+          onclick="alacakFaturaIptal('${f.foy_no}')">
+          Sil
         </button>
       </td>
     </tr>`;
@@ -455,7 +463,7 @@ function renderDetayTablosu() {
   document.getElementById('detay-tbody').innerHTML = detayFoyler.map(f => {
     if (f.fatura_edildi) {
       return `<tr style="opacity:.55">
-        <td></td><td>${f.tarih||'—'}</td>
+        <td><input type="checkbox" disabled title="Bu föy faturalandırıldı"></td><td>${f.tarih||'—'}</td>
         <td><a href="/rezervasyonlar?q=${f.foy_no}" style="color:var(--accent)">${f.foy_no}</a></td>
         <td>${f.misafir||'—'}</td>${acHucre(f)}
         <td style="text-align:right">${fmt(f.rez_tutari)}</td>
@@ -495,7 +503,9 @@ function guncelleSecimOzeti() {
   const n = secilenFoylar.size;
   const toplam = detayFoyler.filter(f => secilenFoylar.has(f.foy_no)).reduce((s,f)=>s+f.net,0);
   document.getElementById('secim-ozet').textContent = n ? `${n} föy seçildi — ${fmt(toplam)}` : '';
-  document.getElementById('fatura-kes-btn').style.display = n ? '' : 'none';
+  const btn = document.getElementById('fatura-kes-btn');
+  btn.disabled = n === 0;
+  btn.style.opacity = n === 0 ? '0.4' : '1';
 }
 function openFaturaModal() {
   const secilenler = detayFoyler.filter(f => secilenFoylar.has(f.foy_no));
@@ -529,6 +539,12 @@ async function confirmFaturaKes() {
 
 async function faturaIptal(foyNo) {
   if (!confirm(`Föy #${foyNo} için kesilmiş faturayı iptal etmek istiyor musunuz?`)) return;
+  const r = await api('/api/muhasebe/acente-fatura-iptal', { foy_no: foyNo });
+  if (r.ok) { toast('Fatura iptal edildi ✓'); loadAlacakPanel(); load(); }
+  else toast(r.error, 'error');
+}
+async function alacakFaturaIptal(foyNo) {
+  if (!confirm(`Föy #${foyNo} faturasını iptal etmek istediğinize emin misiniz?\nFöy yeniden "Bekliyor" durumuna dönecek.`)) return;
   const r = await api('/api/muhasebe/acente-fatura-iptal', { foy_no: foyNo });
   if (r.ok) { toast('Fatura iptal edildi ✓'); loadAlacakPanel(); load(); }
   else toast(r.error, 'error');

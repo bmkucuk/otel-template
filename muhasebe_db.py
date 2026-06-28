@@ -475,7 +475,10 @@ def get_yevmiye(yil=None, ay=None, hesap=None, limit=None, order='DESC'):
     params = []
     if yil:   q += " AND yil=?";              params.append(yil)
     if ay:    q += " AND ay=?";               params.append(ay)
-    if hesap: q += " AND (borc_hesap=? OR alacak_hesap=?)"; params += [hesap, hesap]
+    if hesap:
+        q += " AND (borc_hesap=? OR alacak_hesap=?)"; params += [hesap, hesap]
+        # Borç=Alacak olan sıfır etkili fatura etiket kayıtlarını gösterme
+        q += " AND NOT (borc_hesap=alacak_hesap AND tutar>0)"
     q += f" ORDER BY tarih {order}, id {order}"
     if limit:
         q += f" LIMIT {limit}"

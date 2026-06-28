@@ -499,7 +499,7 @@ function renderDetayTablosu() {
       </tr>`;
     }
     return `<tr>
-      <td><input type="checkbox" class="detay-chk" data-foy="${f.foy_no}" data-acente="${f.acente_kod||''}" ${secilenFoylar.has(f.foy_no)?'checked':''} onchange="toggleFoy('${f.foy_no}','${f.acente_kod||''}',this)"></td>
+      <td><input type="checkbox" class="detay-chk" data-foy="${f.foy_no}" data-acente="${f.acente_kod||''}" ${secilenFoylar.has(String(f.foy_no))?'checked':''} onchange="toggleFoy('${f.foy_no}','${f.acente_kod||''}',this)"></td>
       <td>${f.tarih||'—'}</td>
       <td><a href="/rezervasyonlar?q=${f.foy_no}" style="color:var(--accent)">${f.foy_no}</a></td>
       <td>${f.misafir||'—'}</td>${acHucre(f)}
@@ -537,34 +537,37 @@ function toggleFoy(foyNo, acenteKod, cb) {
         return;
       }
     }
-    secilenFoylar.add(foyNo);
+    secilenFoylar.add(String(foyNo));
   } else {
-    secilenFoylar.delete(foyNo);
+    secilenFoylar.delete(String(foyNo));
   }
   guncelleSecimOzeti();
 }
 function toggleHepsi(cb) {
+  const tumMod = !document.getElementById('acente-sel').value;
+  const bekleyenler = detayFoyler.filter(f => !f.fatura_edildi);
   secilenFoylar.clear();
+
   if (cb.checked) {
-    const tumMod = !document.getElementById('acente-sel').value;
     if (tumMod) {
+      // Tüm acenteler modu: sadece ilk acentenin föyleri
       let ilkAcente = null;
-      detayFoyler.forEach(f => {
-        if (f.fatura_edildi) return;
+      bekleyenler.forEach(f => {
         if (!ilkAcente) ilkAcente = f.acente_kod;
-        if (f.acente_kod === ilkAcente) secilenFoylar.add(f.foy_no);
+        if (f.acente_kod === ilkAcente) secilenFoylar.add(String(f.foy_no));
       });
-      if (ilkAcente) toast(`Sadece ${ilkAcente} acentesine ait föyler seçildi. Farklı acente föyleri için ayrı fatura kesilmeli.`, 'info');
+      if (ilkAcente) toast(`Sadece ${ilkAcente} acentesine ait föyler seçildi.`, 'info');
     } else {
-      // Acente seçiliyken: sayfadaki tüm bekleyen (faturalanmamış) föyleri seç
-      detayFoyler.forEach(f => { if (!f.fatura_edildi) secilenFoylar.add(f.foy_no); });
+      // Acente seçili: tüm bekleyenleri seç
+      bekleyenler.forEach(f => secilenFoylar.add(String(f.foy_no)));
     }
   }
-  renderDetayTablosu();
-  // Header checkbox durumunu güncelle
-  const bekleyenler = detayFoyler.filter(f => !f.fatura_edildi);
-  cb.indeterminate = secilenFoylar.size > 0 && secilenFoylar.size < bekleyenler.length;
-  cb.checked = bekleyenler.length > 0 && secilenFoylar.size === bekleyenler.length;
+
+  // Önce seçimi tabloya yansıt (render çağırmadan, sadece checkbox'ları güncelle)
+  document.querySelectorAll('.detay-chk').forEach(chk => {
+    chk.checked = secilenFoylar.has(chk.dataset.foy);
+  });
+  guncelleSecimOzeti();
 }
 function guncelleSecimOzeti() {
   const n = secilenFoylar.size;

@@ -908,8 +908,8 @@ def api_acente_fatura_iptal():
                     fn = m.group(1)
                     # Tahsilat kaydını sil
                     conn.execute(
-                        "DELETE FROM yevmiye WHERE aciklama LIKE '%[ACENTE-TAHSILAT]%' AND aciklama LIKE ?",
-                        (f'%#{fn} %',)
+                        "DELETE FROM yevmiye WHERE aciklama LIKE '%ACENTE-TAHSILAT%' AND aciklama LIKE ?",
+                        (f'%#{fn}%',)
                     )
                 # Fatura kaydını sil
                 conn.execute('DELETE FROM yevmiye WHERE id=?', (row['id'],))
@@ -1550,10 +1550,12 @@ def api_acente_tahsilat_al():
         banka_hesap = '102-2' if banka == 'ZRH' else '102-3' if banka == 'DNZ' else '102-1'
 
         conn = mdb.get_conn()
-        # Zaten tahsil edildi mi?
+        # Zaten tahsil edildi mi? (büyük/küçük harf ve boşluk farkına duyarsız)
         zaten = conn.execute("""
-            SELECT 1 FROM yevmiye WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-TAHSILAT]%'
-        """, (f'Föy#{foy_no} %',)).fetchone()
+            SELECT 1 FROM yevmiye
+            WHERE aciklama LIKE '%ACENTE-TAHSILAT%'
+            AND aciklama LIKE ?
+        """, (f'%#{foy_no}%',)).fetchone()
         if zaten:
             conn.close()
             return jsonify({'ok': False, 'error': 'Bu föy için tahsilat zaten yapılmış'}), 400
@@ -1600,13 +1602,17 @@ def api_acente_alacak_ozet():
     # Tüm tahsilat kayıtları — foy_no → tahsilat tarihi
     tah_rows = conn.execute("""
         SELECT tarih, aciklama FROM yevmiye
-        WHERE aciklama LIKE '%[ACENTE-TAHSILAT]%'
+        WHERE aciklama LIKE '%ACENTE-TAHSILAT%'
     """).fetchall()
     tahsilat_map = {}  # foy_no -> tahsilat_tarihi
     for t in tah_rows:
+        # Hem küçük hem büyük harf, hem köşeli parantez içi hem dışı eşleş
         m = _re.search(r'[Ff][Öö][Yy]#(\d+)', t['aciklama'] or '', _re.IGNORECASE)
         if m:
-            tahsilat_map[m.group(1)] = t['tarih']
+            fno = m.group(1)
+            # En yeni tarihi sakla
+            if fno not in tahsilat_map or t['tarih'] > tahsilat_map[fno]:
+                tahsilat_map[fno] = t['tarih']
 
     faturalar = {}  # fatura_key -> fatura dict
 

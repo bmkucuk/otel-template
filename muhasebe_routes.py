@@ -966,9 +966,24 @@ def api_acente_fatura_duzenle():
         else:
             yeni_aciklama = eski_aciklama
 
+        # Sadece tarih ve açıklama (fatura_no) güncelle — borc_hesap dokunma
         conn.execute("""
-            UPDATE yevmiye SET tarih=?, borc_hesap=?, aciklama=? WHERE id=?
-        """, (tarih, banka_hesap, yeni_aciklama, row['id']))
+            UPDATE yevmiye SET tarih=?, aciklama=? WHERE id=?
+        """, (tarih, yeni_aciklama, row['id']))
+
+        # Fatura no değiştiyse, aynı faturanın diğer föy kayıtlarını da güncelle
+        if fatura_no:
+            other_rows = conn.execute("""
+                SELECT id, aciklama FROM yevmiye
+                WHERE aciklama LIKE '%[ACENTE-FATURA]%'
+                AND aciklama LIKE ?
+                AND id != ?
+            """, (f'%[FATURA:{d.get("eski_fatura_no","XXXXXNOCATCH")}]%', row['id'])).fetchall()
+            import re as _re2
+            for oth in other_rows:
+                yeni_ack = _re2.sub(r'\[FATURA:.*?\]', f'[FATURA:{fatura_no}]', oth['aciklama'])
+                conn.execute("UPDATE yevmiye SET aciklama=? WHERE id=?", (yeni_ack, oth['id']))
+
         conn.commit(); conn.close()
         return jsonify({'ok': True})
     except Exception as e:

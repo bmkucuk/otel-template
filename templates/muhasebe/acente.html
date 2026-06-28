@@ -661,7 +661,7 @@ async function confirmFaturaDuzenle() {
     fatura_no: document.getElementById('fd-fatura-no').value.trim(),
     odeme_banka: document.getElementById('fd-banka').value,
   });
-  if (r.ok) { toast('Güncellendi ✓'); closeFaturaDuzenleModal(); load(); }
+  if (r.ok) { toast('Güncellendi ✓'); closeFaturaDuzenleModal(); loadAlacakPanel(); load(); }
   else toast(r.error, 'error');
 }
 

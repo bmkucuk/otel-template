@@ -430,9 +430,17 @@ async function selectBanka(kod) {
 }
 
 async function openModal() {
-  const hesaplar = await api('/api/muhasebe/hesaplar');
+  // Sadece kasa, banka ve döviz hesapları — diğerleri kendi modülünden yapılır
+  const KASA_BANKA_HESAPLARI = [
+    '100 — Kasa TL',
+    '100-EUR — Euro Kasa',
+    '100-USD — Dolar Kasa',
+    '102-1 — İş Bankası',
+    '102-2 — Ziraat Bankası',
+    '102-3 — Denizbank',
+  ];
   ['f-borc','f-alacak'].forEach(id => {
-    document.getElementById(id).innerHTML = hesaplar.map(h => `<option>${h}</option>`).join('');
+    document.getElementById(id).innerHTML = KASA_BANKA_HESAPLARI.map(h => `<option>${h}</option>`).join('');
   });
   document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
   document.getElementById('f-tutar').value = '0';

@@ -338,9 +338,11 @@ def api_bankalar():
 
 # Banka kodu → yevmiye hesap kodu eşleştirmesi
 def uc(s):
-    """Açıklama metinlerini büyük harfe çevirir."""
+    """Açıklama metinlerini Türkçe büyük harfe çevirir (i→İ, ı→I vb.)"""
     if not s: return s
-    return str(s).upper()
+    s = str(s)
+    s = s.replace('i', 'İ').replace('ı', 'I')
+    return s.upper()
 
 ACENTE_HESAP = {'BKG': '320-1', 'EXP': '320-2', 'JLY': '320-3', 'TTS': '320-4', 'ETS': '320-5'}
 

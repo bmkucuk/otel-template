@@ -10,9 +10,11 @@ _data_dir = '/data' if os.path.isdir('/data') else '.'
 DB_PATH = os.path.join(_data_dir, 'muhasebe.db')
 
 def uc(s):
-    """Açıklama metinlerini büyük harfe çevirir."""
+    """Açıklama metinlerini Türkçe büyük harfe çevirir (i→İ, ı→I vb.)"""
     if not s: return s
-    return str(s).upper()
+    s = str(s)
+    s = s.replace('i', 'İ').replace('ı', 'I')
+    return s.upper()
 
 def get_conn():
     conn = sqlite3.connect(str(DB_PATH))
@@ -336,17 +338,17 @@ def init_db():
     # Migration: 760 KK komisyon hesabı
     c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES('760','Banka Komisyon Giderleri','Gider','Gider')")
 
-    # Migration: açıklama alanlarını büyük harfe çevir
-    # NOT: yevmiye tablosunda sistem etiketleri [ACENTE-OTO], [ACENTE-FATURA] vb. var
-    # bunlar regex ile parse ediliyor, uppercase yapılmamalı!
-    c.execute("UPDATE stok SET aciklama=UPPER(aciklama) WHERE aciklama != UPPER(aciklama)")
-    c.execute("""UPDATE yevmiye SET aciklama=UPPER(aciklama)
-        WHERE aciklama != UPPER(aciklama)
-        AND aciklama NOT LIKE '%[ACENTE-%'
-        AND aciklama NOT LIKE '%[FATURA:%'
-        AND aciklama NOT LIKE '%[TAHSILAT%'""")
-    c.execute("UPDATE [demirbaş] SET aciklama=UPPER(aciklama) WHERE aciklama != UPPER(aciklama)")
-    c.execute("UPDATE kk_komisyon SET aciklama=UPPER(aciklama) WHERE aciklama IS NOT NULL AND aciklama != UPPER(aciklama)")
+    # Migration: açıklama alanlarını Türkçe büyük harfe çevir
+    def _tr_up(s):
+        if not s: return s
+        return s.replace('i','İ').replace('ı','I').upper()
+    for tbl, col in [('stok','aciklama'),('[demirbaş]','aciklama'),('kk_komisyon','aciklama')]:
+        for row in c.execute(f"SELECT rowid,{col} FROM {tbl} WHERE {col} IS NOT NULL").fetchall():
+            u = _tr_up(row[1])
+            if u != row[1]: c.execute(f"UPDATE {tbl} SET {col}=? WHERE rowid=?", (u, row[0]))
+    for row in c.execute("SELECT rowid,aciklama FROM yevmiye WHERE aciklama NOT LIKE '%[ACENTE-%' AND aciklama NOT LIKE '%[FATURA:%' AND aciklama NOT LIKE '%[TAHSILAT%'").fetchall():
+        u = _tr_up(row[1])
+        if u != row[1]: c.execute("UPDATE yevmiye SET aciklama=? WHERE rowid=?", (u, row[0]))
 
     # Migration: stok tablosuna hesap_kodu kolonu
     stok_cols = [r[1] for r in c.execute("PRAGMA table_info(stok)").fetchall()]

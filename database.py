@@ -10,8 +10,11 @@ DB_PATH = os.environ.get("DB_PATH", os.path.join(_data_dir, "otel.db"))
 
 
 def uc(s):
+    """Türkçe büyük harf (i→İ, ı→I vb.)"""
     if not s: return s
-    return str(s).upper()
+    s = str(s)
+    s = s.replace('i', 'İ').replace('ı', 'I')
+    return s.upper()
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)

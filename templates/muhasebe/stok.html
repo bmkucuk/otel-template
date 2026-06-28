@@ -12,10 +12,10 @@
   <button class="tab-btn" onclick="switchTab('t741',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🛒 Market/Gıda/Stok</button>
   <button class="tab-btn" onclick="switchTab('t742',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🔧 Bakım/Onarım</button>
   <button class="tab-btn" onclick="switchTab('t743',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🛡️ Sigorta</button>
+  <button class="tab-btn" onclick="switchTab('kk',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">💳 KK Komisyonu</button>
   <button class="tab-btn" onclick="switchTab('t744',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">📋 Muhasebe/Danışmanlık</button>
   <button class="tab-btn" onclick="switchTab('t745',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🏠 Kira</button>
   <button class="tab-btn" onclick="switchTab('t780',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">📌 Diğer Giderler</button>
-  <button class="tab-btn" onclick="switchTab('kk',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">💳 KK Komisyonu</button>
 </div>
 
 <!-- SEKME: GENEL GİDERLER -->
@@ -609,7 +609,21 @@ let kkRezervasyonlar = [];
 
 async function loadKK() {
   const yil = document.getElementById('kk-yil-sel').value;
-  const data = await api(`/api/muhasebe/kk_komisyon?yil=${yil}`);
+  // Hem kk_komisyon tablosundan hem yevmiyeden 760 kodlu kayıtları çek
+  const [data1, data2] = await Promise.all([
+    api(`/api/muhasebe/kk_komisyon?yil=${yil}`),
+    api(`/api/muhasebe/gider_sekme?yil=${yil}&hesap_kodu=760`)
+  ]);
+  // kk_komisyon tablosundaki id'leri set et, yevmiyeden gelenleri de ekle (mükerrer olmasin)
+  const kkIds = new Set(data1.map(r => `kk_${r.id}`));
+  const data2Mapped = data2
+    .filter(r => r.kaynak_tablo !== 'kk_komisyon')
+    .map(r => ({
+      id: r.id, tarih: r.tarih, foy_no: null,
+      aciklama: r.aciklama, tutar: r.tutar,
+      alacak_hesap: r.alacak_hesap
+    }));
+  const data = [...data1, ...data2Mapped];
   const toplam = data.reduce((s,r) => s+(r.tutar||0), 0);
   document.getElementById('kk-kartlar').innerHTML =
     `<div class="stat-card"><div class="label">Toplam KK Komisyonu</div><div class="value red">${fmt(toplam)}</div><div class="sub">${data.length} kayıt</div></div>`;

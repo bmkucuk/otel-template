@@ -822,9 +822,19 @@ def api_acente_fatura_kes():
         hesap = ACENTE_HESAP.get(kod)
         if not hesap or not foy_nolar:
             return jsonify({'ok': False, 'error': 'Acente veya föy seçimi eksik'}), 400
+        if not fatura_no:
+            return jsonify({'ok': False, 'error': 'Fatura No zorunludur'}), 400
         banka_hesap = '102-2' if banka == 'ZRH' else '102-3' if banka == 'DNZ' else '102-1'
 
         conn = mdb.get_conn()
+        # Mükerrer fatura no kontrolü
+        mukerrer = conn.execute(
+            "SELECT 1 FROM yevmiye WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-FATURA]%'",
+            (f'%[FATURA:{fatura_no}]%',)
+        ).fetchone()
+        if mukerrer:
+            conn.close()
+            return jsonify({'ok': False, 'error': f'"{fatura_no}" numaralı fatura zaten kesilmiş'}), 400
         toplam = 0.0
         detaylar = []
         for foy_no in foy_nolar:

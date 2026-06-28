@@ -177,15 +177,25 @@
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <h2 id="modal-baslik">Fatura Tahsilatı Ekle</h2>
+    <div class="form-row single">
+      <div class="form-group">
+        <label>Fatura No</label>
+        <select id="f-fatura-sec" onchange="faturaSecildi()">
+          <option value="">— Kesilen fatura seçin —</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single" id="f-detay-satir" style="display:none">
+      <div class="form-group">
+        <div style="background:var(--card2);border-radius:8px;padding:10px 14px;font-size:13px">
+          <span id="f-acente-label" style="color:var(--accent2);font-weight:600"></span>
+          <span style="color:var(--text2)"> — </span>
+          <span id="f-tutar-label" style="color:var(--accent2);font-weight:700"></span>
+        </div>
+      </div>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>Tarih</label><input type="date" id="f-tarih" onclick="try{this.showPicker()}catch(e){}"></div>
-      <div class="form-group"><label>Acente</label><select id="f-acente"></select></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>Tutar (₺)</label><input type="number" id="f-gelen" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
-      <div class="form-group"><label>Fatura No</label><input type="text" id="f-fatura-no" placeholder="Örn. JLY-2026-0042"></div>
-    </div>
-    <div class="form-row single">
       <div class="form-group"><label>Ödeme Bankası</label>
         <select id="f-odeme-banka">
           <option value="IS">İş Bankası</option>
@@ -194,7 +204,9 @@
         </select>
       </div>
     </div>
-    <div class="form-row single"><div class="form-group"><label>Otel</label><select id="f-otel"><option>LEO</option><option>CV</option></select></div></div>
+    <input type="hidden" id="f-acente">
+    <input type="hidden" id="f-gelen">
+    <input type="hidden" id="f-fatura-no">
     <div class="modal-footer">
       <button class="btn btn-default" onclick="closeModal()">İptal</button>
       <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
@@ -501,11 +513,13 @@ function closeFaturaModal() { document.getElementById('fatura-modal').classList.
 
 async function confirmFaturaKes() {
   const acenteSecili = document.getElementById('acente-sel').value;
+  const faturaNo = document.getElementById('fm-fatura-no').value.trim();
+  if (!faturaNo) { toast('Fatura No zorunludur', 'error'); return; }
   const r = await api('/api/muhasebe/acente-fatura-kes', {
     acente_kod: acenteSecili,
     foy_nolar: Array.from(secilenFoylar),
     tarih: document.getElementById('fm-tarih').value,
-    fatura_no: document.getElementById('fm-fatura-no').value.trim(),
+    fatura_no: faturaNo,
   });
   if (r.ok) {
     toast(`${r.detaylar.length} föy faturalandı ✓ — Tahsilat gelince "Tahsilat Al" butonunu kullanın`);
@@ -547,43 +561,58 @@ async function confirmFaturaDuzenle() {
 }
 
 /* ── Manuel Tahsilat ── */
+let bekleyenFaturalar = [];  // alacak-ozet'ten gelen ödenmemiş faturalar
+
 async function openModal() {
   editId = null;
   document.getElementById('modal-baslik').textContent = 'Fatura Tahsilatı Ekle';
-  const sel = document.getElementById('f-acente');
-  sel.innerHTML = acenteler.map(a => `<option value="${a.kod}">${a.kod} — ${a.ad}</option>`).join('');
   document.getElementById('f-tarih').value = new Date().toISOString().split('T')[0];
-  document.getElementById('f-gelen').value = 0;
-  document.getElementById('f-fatura-no').value = '';
+  document.getElementById('f-detay-satir').style.display = 'none';
+  // Bekleyen faturaları çek
+  const d = await api('/api/muhasebe/acente-alacak-ozet');
+  bekleyenFaturalar = d.acenteler ? d.acenteler.flatMap(a =>
+    a.faturalar.map(f => ({...f, acente_kod: a.acente_kod, toplam_tutar: f.tutar}))
+  ) : [];
+  const sel = document.getElementById('f-fatura-sec');
+  sel.innerHTML = '<option value="">— Kesilen fatura seçin —</option>' +
+    bekleyenFaturalar.map(f =>
+      `<option value="${f.foy_no}|${f.acente_kod}|${f.tutar}|${f.fatura_no||''}">${f.fatura_no||'#'+f.foy_no} — ${f.acente_kod} — ${f.misafir||''} — ${fmt(f.tutar)}</option>`
+    ).join('');
   document.getElementById('modal').classList.add('open');
 }
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function faturaSecildi() {
+  const val = document.getElementById('f-fatura-sec').value;
+  const detay = document.getElementById('f-detay-satir');
+  if (!val) { detay.style.display = 'none'; return; }
+  const [foyNo, acenteKod, tutar, faturaNo] = val.split('|');
+  document.getElementById('f-acente').value = acenteKod;
+  document.getElementById('f-gelen').value = tutar;
+  document.getElementById('f-fatura-no').value = faturaNo;
+  document.getElementById('f-acente-label').textContent = acenteKod + (faturaNo ? ' — ' + faturaNo : '');
+  document.getElementById('f-tutar-label').textContent = fmt(parseFloat(tutar));
+  detay.style.display = '';
+}
+
 async function save() {
-  if (!validateForm([{id:'f-tarih',label:'Tarih'},{id:'f-acente',label:'Acente'},{id:'f-gelen',label:'Tutar'}])) return;
-  const data = {
+  const val = document.getElementById('f-fatura-sec').value;
+  if (!val) { toast('Lütfen bir fatura seçin', 'error'); return; }
+  const [foyNo, acenteKod, tutar, faturaNo] = val.split('|');
+  // Tahsilat al endpoint'ini kullan
+  const r = await api('/api/muhasebe/acente-tahsilat-al', {
+    foy_no: parseInt(foyNo),
+    acente_kod: acenteKod,
     tarih: document.getElementById('f-tarih').value,
-    acente_kod: document.getElementById('f-acente').value,
-    gelen_odeme: parseFloat(document.getElementById('f-gelen').value)||0,
-    otel: document.getElementById('f-otel').value,
     odeme_banka: document.getElementById('f-odeme-banka').value,
-    fatura_no: document.getElementById('f-fatura-no').value.trim(),
-  };
-  const url = editId ? '/api/muhasebe/acente/guncelle' : '/api/muhasebe/acente/ekle';
-  if (editId) data.id = editId;
-  const r = await api(url, data);
-  if (r.ok) { toast(editId ? 'Güncellendi ✓' : 'Kayıt eklendi ✓'); closeModal(); load(); }
+  });
+  if (r.ok) { toast(`Tahsilat kaydedildi — ${fmt(r.tutar)} ✓`); closeModal(); loadAlacakPanel(); load(); }
   else toast(r.error, 'error');
 }
 async function duzenle(id) {
   const r = allData.find(x => x.id === id); if (!r) return;
   editId = id;
   document.getElementById('modal-baslik').textContent = 'Düzenle';
-  const sel = document.getElementById('f-acente');
-  sel.innerHTML = acenteler.map(a => `<option value="${a.kod}" ${a.kod==r.acente_kod?'selected':''}>${a.kod} — ${a.ad}</option>`).join('');
-  document.getElementById('f-tarih').value = r.tarih || '';
-  document.getElementById('f-gelen').value = r.gelen_odeme || 0;
-  document.getElementById('f-otel').value = r.otel || 'LEO';
-  document.getElementById('f-fatura-no').value = r.fatura_no || '';
   document.getElementById('modal').classList.add('open');
 }
 async function sil(id) {

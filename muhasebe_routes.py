@@ -1367,6 +1367,58 @@ def api_acente_sil():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
 
+# ── KK Komisyon ──────────────────────────────────────────────────────────────
+
+@muh.route('/api/muhasebe/kk_komisyon')
+def api_kk_komisyon():
+    yil = request.args.get('yil', date.today().year, type=int)
+    conn = mdb.get_conn()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT * FROM kk_komisyon WHERE strftime('%Y',tarih)=? ORDER BY tarih ASC",
+        (str(yil),)
+    ).fetchall()]
+    conn.close()
+    return jsonify(rows)
+
+@muh.route('/api/muhasebe/kk_komisyon/ekle', methods=['POST'])
+def api_kk_komisyon_ekle():
+    try:
+        d = request.get_json()
+        t = d['tarih']
+        yil = int(t[:4]); ay = int(t[5:7])
+        tutar = float(d['tutar'])
+        alacak = d.get('alacak_hesap', '102-1')
+        otel = d.get('otel', 'GENEL')
+        conn = mdb.get_conn()
+        conn.execute(
+            "INSERT INTO kk_komisyon(tarih,foy_no,aciklama,tutar,alacak_hesap,otel) VALUES(?,?,?,?,?,?)",
+            (t, d.get('foy_no'), d.get('aciklama',''), tutar, alacak, otel)
+        )
+        kid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        # Yevmiye: 760 borç / alacak hesap alacak
+        conn.execute("""
+            INSERT INTO yevmiye(tarih,yil,ay,belge_no,islem_tipi,borc_hesap,alacak_hesap,tutar,aciklama,otel,kaynak_tablo,kaynak_id)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (t, yil, ay, '', 'KK Komisyon Gideri', '760', alacak,
+              tutar, d.get('aciklama','KK Komisyonu'), otel, 'kk_komisyon', kid))
+        conn.commit(); conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 400
+
+@muh.route('/api/muhasebe/kk_komisyon/sil', methods=['POST'])
+def api_kk_komisyon_sil():
+    try:
+        d = request.get_json()
+        conn = mdb.get_conn()
+        conn.execute("DELETE FROM yevmiye WHERE kaynak_tablo='kk_komisyon' AND kaynak_id=?", (d['id'],))
+        conn.execute("DELETE FROM kk_komisyon WHERE id=?", (d['id'],))
+        conn.commit(); conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 400
+
+
 # ── Güncelle Route'ları ───────────────────────────────────────────────────────
 
 @muh.route('/api/muhasebe/stok/guncelle', methods=['POST'])

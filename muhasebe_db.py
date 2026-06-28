@@ -131,6 +131,16 @@ def init_db():
         not_        TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS kk_komisyon (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        tarih        TEXT NOT NULL,
+        foy_no       INTEGER,
+        aciklama     TEXT,
+        tutar        REAL NOT NULL,
+        alacak_hesap TEXT DEFAULT '102-1',
+        otel         TEXT DEFAULT 'GENEL'
+    );
+
     CREATE TABLE IF NOT EXISTS demirbaş (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         tarih       TEXT NOT NULL,
@@ -321,6 +331,9 @@ def init_db():
     ]
     for a in acenteler:
         c.execute("INSERT OR IGNORE INTO acenteler(kod,ad,komisyon_orani) VALUES(?,?,?)", a)
+
+    # Migration: 760 KK komisyon hesabı
+    c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES('760','Banka Komisyon Giderleri','Gider','Gider')")
 
     # Migration: stok tablosuna hesap_kodu kolonu
     stok_cols = [r[1] for r in c.execute("PRAGMA table_info(stok)").fetchall()]

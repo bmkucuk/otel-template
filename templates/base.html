@@ -207,11 +207,7 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
     </a>
     {% if session.get('role') in ['admin', 'partner'] %}
     <div style="margin:12px 18px 4px;font-size:10px;color:var(--text2);font-weight:700;letter-spacing:.8px;text-transform:uppercase">Muhasebe</div>
-    {% if session.get('role') in ['admin', 'partner'] %}
-    <a href="/muhasebe/yevmiye" class="{% if active=='muh-yevmiye' %}active{% endif %}">
-      <span class="icon">📒</span> Yevmiye
-    </a>
-    {% endif %}
+    {# Yevmiye menüden kaldırıldı - URL ile erişilebilir: /muhasebe/yevmiye #}
     <a href="/muhasebe/kasa-banka" class="{% if active=='muh-kasa' %}active{% endif %}">
       <span class="icon">🏦</span> Kasa & Banka
     </a>

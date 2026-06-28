@@ -208,7 +208,6 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
     <a href="/geri-yukle" class="btn-sm" style="margin-bottom:6px;color:var(--accent4)">📤 Geri Yükle</a>
     {% endif %}
     {% if session.get('role') == 'admin' %}
-    <a href="/yardim" class="btn-sm {% if active=='yardim' %}active{% endif %}" style="margin-bottom:6px">📖 Kullanım Kılavuzu</a>
     <a href="/islem-gecmisi" class="btn-sm {% if active=='islem-gecmisi' %}active{% endif %}">🕵️ İşlem Geçmişi</a>
     {% endif %}
     {% if session.get('role') in ['admin', 'partner'] %}
@@ -236,6 +235,10 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
         style="padding:5px 12px;font-size:12px;background:var(--card2);color:var(--text2);border:1px solid var(--border)">
         🖨️ Yazdır
       </button>
+      <a href="/yardim" class="btn btn-print-hide"
+        style="padding:5px 12px;font-size:12px;background:var(--card2);color:var(--text2);border:1px solid var(--border);text-decoration:none">
+        📖 Kılavuz
+      </a>
     </div>
   </div>
   <div id="content">

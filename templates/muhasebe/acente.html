@@ -242,47 +242,65 @@ async function loadAlacakPanel() {
   const panel = document.getElementById('alacak-panel');
   if (!d.acenteler || d.acenteler.length === 0) { panel.style.display = 'none'; return; }
   panel.style.display = '';
-  document.getElementById('alacak-toplam-badge').textContent = `Toplam Alacak: ${fmt(d.toplam_alacak)}`;
+  document.getElementById('alacak-toplam-badge').textContent = d.toplam_alacak > 0 ? `Bekleyen Alacak: ${fmt(d.toplam_alacak)}` : `Tüm Faturalar Tahsil Edildi ✓`;
 
   // Acente kartları
   document.getElementById('alacak-cards').innerHTML = d.acenteler.map(a => {
-    const geciken = a.faturalar.filter(f => f.durum === 'gecikti').length;
-    const renk = geciken > 0 ? 'red' : 'yellow';
+    const bekleyen = a.faturalar.filter(f => !f.tahsil_edildi);
+    const geciken  = bekleyen.filter(f => f.durum === 'gecikti').length;
+    const renk = geciken > 0 ? 'red' : bekleyen.length > 0 ? 'yellow' : 'green';
     return `<div class="stat-card" style="cursor:pointer" onclick="document.getElementById('acente-sel').value='${a.acente_kod}';load()">
       <div class="label">${a.acente_kod}</div>
-      <div class="value ${renk}">${fmt(a.toplam)}</div>
-      <div class="sub">${a.faturalar.length} fatura${geciken > 0 ? ` · <span style="color:var(--red)">${geciken} gecikmiş</span>` : ''}</div>
+      <div class="value ${renk}">${fmt(a.toplam_bekleyen||0)}</div>
+      <div class="sub">${bekleyen.length} bekleyen${geciken > 0 ? ` · <span style="color:var(--red)">${geciken} gecikmiş</span>` : ''}</div>
     </div>`;
   }).join('');
 
   // Tüm bekleyen faturaların detay tablosu
   // Faturalar zaten backend'den fatura bazında geliyor, acente_kod ekliyoruz
   const tumFaturalar = d.acenteler.flatMap(a => a.faturalar.map(f => ({...f, acente_kod: a.acente_kod})));
-  tumFaturalar.sort((a,b) => b.gun_fark - a.gun_fark);
+  // Önce ödenmemişler (gecikme sırasına göre), sonra ödenmiş olanlar
+  tumFaturalarCache = tumFaturalar; // Düzenle modalı için cache
+  tumFaturalar.sort((a,b) => {
+    if (a.tahsil_edildi !== b.tahsil_edildi) return a.tahsil_edildi ? 1 : -1;
+    return b.gun_fark - a.gun_fark;
+  });
 
   document.getElementById('alacak-tbody').innerHTML = tumFaturalar.map(f => {
-    const renkClass = f.durum === 'gecikti' ? 'red' : f.durum === 'uyari' ? 'yellow' : 'green';
-    const etiket = f.durum === 'gecikti'
-      ? `<span style="font-size:10px;background:rgba(239,68,68,.15);color:var(--red);padding:2px 8px;border-radius:10px">🔴 ${f.gun_fark} gün</span>`
-      : f.durum === 'uyari'
-      ? `<span style="font-size:10px;background:rgba(234,179,8,.15);color:var(--yellow);padding:2px 8px;border-radius:10px">🟡 ${f.gun_fark} gün</span>`
-      : `<span style="font-size:10px;background:rgba(74,222,128,.12);color:var(--green);padding:2px 8px;border-radius:10px">🟢 ${f.gun_fark} gün</span>`;
-    // Föyleri link olarak göster
     const foyLinks = (f.foyler||[]).map(foy =>
       `<a href="/rezervasyonlar?q=${foy.foy_no}" style="color:var(--accent);font-size:12px">Föy#${foy.foy_no}</a>`
     ).join(' &nbsp;·&nbsp; ') || f.aciklama || '—';
-    return `<tr>
+
+    let etiket, renkClass, tutarRenk;
+    if (f.tahsil_edildi) {
+      etiket = `<span style="font-size:10px;background:rgba(74,222,128,.12);color:var(--green);padding:2px 8px;border-radius:10px">✅ Ödendi${f.tahsilat_tarihi ? ' · ' + f.tahsilat_tarihi : ''}</span>`;
+      renkClass = ''; tutarRenk = 'green';
+    } else if (f.durum === 'gecikti') {
+      etiket = `<span style="font-size:10px;background:rgba(239,68,68,.15);color:var(--red);padding:2px 8px;border-radius:10px">🔴 ${f.gun_fark} gün gecikmiş</span>`;
+      renkClass = 'red'; tutarRenk = 'red';
+    } else if (f.durum === 'uyari') {
+      etiket = `<span style="font-size:10px;background:rgba(234,179,8,.15);color:var(--yellow);padding:2px 8px;border-radius:10px">🟡 ${f.gun_fark} gün bekleniyor</span>`;
+      renkClass = ''; tutarRenk = 'yellow';
+    } else {
+      etiket = `<span style="font-size:10px;background:rgba(74,222,128,.12);color:var(--green);padding:2px 8px;border-radius:10px">🟢 ${f.gun_fark} gün</span>`;
+      renkClass = ''; tutarRenk = 'yellow';
+    }
+
+    const tahsilatBtn = f.tahsil_edildi ? '' :
+      `<button class="btn btn-primary" style="padding:3px 8px;font-size:11px;margin-right:4px"
+        onclick="openTahsilatModal('${f.foy_no}','${f.acente_kod}','${(f.aciklama||'').replace(/'/g,'')}',${f.tutar},'${f.fatura_no||''}')">
+        💰 Tahsilat Al
+      </button>`;
+
+    return `<tr style="${f.tahsil_edildi ? 'opacity:0.7' : ''}">
       <td style="font-size:12px;font-weight:600;color:var(--text)">${f.fatura_no||'—'}</td>
-      <td>${foyLinks}</td>
+      <td style="font-size:12px">${foyLinks}</td>
       <td style="font-size:11px;font-weight:700;color:var(--accent2)">${f.acente_kod}</td>
-      <td>${f.tarih||'—'}</td>
-      <td class="${renkClass}" style="text-align:right;font-weight:600">${fmt(f.tutar)}</td>
+      <td style="font-size:12px">${f.tarih||'—'}${f.tahsilat_tarihi && !f.tahsil_edildi ? '' : f.tahsilat_tarihi ? `<br><span style="font-size:10px;color:var(--text2)">Ödendi: ${f.tahsilat_tarihi}</span>` : ''}</td>
+      <td class="${tutarRenk}" style="text-align:right;font-weight:600">${fmt(f.tutar)}</td>
       <td style="text-align:center">${etiket}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-primary" style="padding:3px 8px;font-size:11px;margin-right:4px"
-          onclick="openTahsilatModal('${f.foy_no}','${f.acente_kod}','${(f.aciklama||'').replace(/'/g,'')}',${f.tutar},'${f.fatura_no||''}')">
-          💰 Tahsilat Al
-        </button>
+        ${tahsilatBtn}
         <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000"
           onclick="openFaturaDuzenleModal('${f.foy_no}')">
           Düzenle
@@ -293,7 +311,7 @@ async function loadAlacakPanel() {
         </button>
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px">Bekleyen alacak yok ✓</td></tr>';
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px">Fatura kaydı yok</td></tr>';
 }
 
 /* ── Tahsilat Modal ── */
@@ -598,9 +616,28 @@ async function alacakFaturaIptal(foyNo) {
 
 /* ── Fatura Düzenle ── */
 const BANKA_KODU_TERS = { '102-1': 'IS', '102-2': 'ZRH', '102-3': 'DNZ' };
+// Alacak panelinden veya kesilen listesinden gelen tüm faturaları tut
+let tumFaturalarCache = [];
+
 function openFaturaDuzenleModal(foyNo) {
-  const k = kesilenListesi.find(x => x.foy_no === foyNo);
-  if (!k) return;
+  // Önce kesilenListesi'nde, sonra tumFaturalarCache'de ara
+  let k = kesilenListesi.find(x => x.foy_no === foyNo);
+  if (!k) {
+    // tumFaturalarCache'den foy_no ile bul
+    const fat = tumFaturalarCache.find(f =>
+      f.foy_no === foyNo || (f.foyler||[]).some(x => x.foy_no === foyNo)
+    );
+    if (fat) {
+      k = {
+        foy_no   : foyNo,
+        misafir  : (fat.foyler||[]).find(x=>x.foy_no===foyNo)?.misafir || '',
+        fatura_no: fat.fatura_no,
+        tarih    : fat.tarih,
+        banka_kodu: null,
+      };
+    }
+  }
+  if (!k) { toast('Fatura bilgisi bulunamadı', 'error'); return; }
   document.getElementById('fd-foy').textContent = k.foy_no;
   document.getElementById('fd-misafir').textContent = k.misafir || '';
   document.getElementById('fd-fatura-no').value = k.fatura_no || '';

@@ -1550,36 +1550,43 @@ def api_acente_tahsilat_al():
 
 @muh.route('/api/muhasebe/acente-alacak-ozet')
 def api_acente_alacak_ozet():
-    """Tüm acentelerin ödenmemiş fatura özeti — FATURA bazında gruplandırılmış."""
+    """Tüm fatura özeti — ödendi/ödenmedi ayrımıyla, fatura bazında gruplandırılmış."""
     import re as _re
     conn = mdb.get_conn()
     bugun = date.today()
-    rows = conn.execute("""
+
+    # Tüm fatura kayıtları
+    fat_rows = conn.execute("""
         SELECT id, tarih, aciklama, tutar, alacak_hesap
         FROM yevmiye
         WHERE aciklama LIKE '%[ACENTE-FATURA]%'
         ORDER BY tarih ASC
     """).fetchall()
 
-    # Fatura bazında grupla: fatura_no -> fatura bilgisi
+    # Tüm tahsilat kayıtları — foy_no → tahsilat tarihi
+    tah_rows = conn.execute("""
+        SELECT tarih, aciklama FROM yevmiye
+        WHERE aciklama LIKE '%[ACENTE-TAHSILAT]%'
+    """).fetchall()
+    tahsilat_map = {}  # foy_no -> tahsilat_tarihi
+    for t in tah_rows:
+        m = _re.search(r'[Ff][Öö][Yy]#(\d+)', t['aciklama'] or '', _re.IGNORECASE)
+        if m:
+            tahsilat_map[m.group(1)] = t['tarih']
+
     faturalar = {}  # fatura_key -> fatura dict
 
-    for r in rows:
+    for r in fat_rows:
         foy_m = _re.search(r'[Ff][Öö][Yy]#(\d+)\s+(.*?)\s+\[ACENTE-FATURA\]', r['aciklama'] or '', _re.IGNORECASE)
         if not foy_m:
             continue
-        foy_no = foy_m.group(1)
+        foy_no  = foy_m.group(1)
         misafir = foy_m.group(2)
-        fn_m = _re.search(r'\[FATURA:(.*?)\]', r['aciklama'] or '', _re.IGNORECASE)
+        fn_m    = _re.search(r'\[FATURA:(.*?)\]', r['aciklama'] or '', _re.IGNORECASE)
         fatura_no = fn_m.group(1) if fn_m else f'FOY-{foy_no}'
 
-        # Bu föy için tahsilat var mı?
-        tahsil = conn.execute(
-            "SELECT 1 FROM yevmiye WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-TAHSILAT]%'",
-            (f'%#{foy_no} %',)
-        ).fetchone()
+        tahsilat_tarihi = tahsilat_map.get(foy_no)
 
-        # Hangi acente?
         acente_kod = None
         for k, h in ACENTE_HESAP.items():
             if h == r['alacak_hesap']:
@@ -1588,58 +1595,77 @@ def api_acente_alacak_ozet():
         if not acente_kod:
             continue
 
-        # Fatura key: acente_kod + fatura_no kombinasyonu
         fatura_key = f"{acente_kod}|{fatura_no}"
-        gun_fark = (bugun - date.fromisoformat(r['tarih'])).days
+        gun_fark   = (bugun - date.fromisoformat(r['tarih'])).days
 
         if fatura_key not in faturalar:
             faturalar[fatura_key] = {
-                'fatura_no': fatura_no,
-                'acente_kod': acente_kod,
-                'tarih': r['tarih'],
+                'fatura_no'   : fatura_no,
+                'acente_kod'  : acente_kod,
+                'tarih'       : r['tarih'],
                 'alacak_hesap': r['alacak_hesap'],
                 'toplam_tutar': 0,
-                'foyler': [],        # bu faturadaki föy no listesi
-                'gun_fark': gun_fark,
-                'durum': 'gecikti' if gun_fark > 15 else 'uyari' if gun_fark > 7 else 'normal',
-                'tahsil_edildi': True,  # tüm föyler tahsil edilince True
+                'foyler'      : [],
+                'gun_fark'    : gun_fark,
+                'tahsil_edildi': True,   # tüm föyler ödendiyse True
+                'tahsilat_tarihi': None, # en son tahsilat tarihi
             }
 
         fat = faturalar[fatura_key]
         fat['toplam_tutar'] += r['tutar']
-        fat['foyler'].append({'foy_no': foy_no, 'misafir': misafir, 'tutar': r['tutar']})
-        if not tahsil:
-            fat['tahsil_edildi'] = False  # en az biri ödenmemişse False
+        fat['foyler'].append({
+            'foy_no' : foy_no,
+            'misafir': misafir,
+            'tutar'  : r['tutar'],
+            'tahsil_edildi'  : bool(tahsilat_tarihi),
+            'tahsilat_tarihi': tahsilat_tarihi,
+        })
+        if not tahsilat_tarihi:
+            fat['tahsil_edildi'] = False
+        elif tahsilat_tarihi and (not fat['tahsilat_tarihi'] or tahsilat_tarihi > fat['tahsilat_tarihi']):
+            fat['tahsilat_tarihi'] = tahsilat_tarihi
 
     conn.close()
 
-    # Ödenmemiş faturaları acente bazında grupla
+    # TÜM faturalar — ödendi/ödenmedi birlikte gönder, frontend filtreler
     ozet = {}
     for fat in faturalar.values():
-        if fat['tahsil_edildi']:
-            continue  # tümü tahsil edilmiş, atla
         kod = fat['acente_kod']
         if kod not in ozet:
-            ozet[kod] = {'acente_kod': kod, 'toplam': 0, 'faturalar': []}
-        ozet[kod]['toplam'] += fat['toplam_tutar']
-        # Açıklama: föy no listesi
+            ozet[kod] = {'acente_kod': kod, 'toplam_bekleyen': 0, 'faturalar': []}
+
         aciklama = ', '.join([f"Föy#{f['foy_no']}" for f in fat['foyler']])
+
+        # Durum hesabı
+        if fat['tahsil_edildi']:
+            tahsilat_gun = (bugun - date.fromisoformat(fat['tahsilat_tarihi'])).days if fat['tahsilat_tarihi'] else 0
+            durum = 'odendi'
+        else:
+            if fat['gun_fark'] > 15:
+                durum = 'gecikti'
+            elif fat['gun_fark'] > 7:
+                durum = 'uyari'
+            else:
+                durum = 'normal'
+            ozet[kod]['toplam_bekleyen'] += fat['toplam_tutar']
+
         ozet[kod]['faturalar'].append({
-            'fatura_no': fat['fatura_no'],
-            'acente_kod': fat['acente_kod'],
-            'tarih': fat['tarih'],
-            'tutar': fat['toplam_tutar'],
-            'aciklama': aciklama,
-            'foyler': fat['foyler'],
-            # tahsilat için ilk föy no'su kullan (tek föylü faturada aynı)
-            'foy_no': fat['foyler'][0]['foy_no'] if fat['foyler'] else '',
-            'gun_fark': fat['gun_fark'],
-            'durum': fat['durum'],
+            'fatura_no'      : fat['fatura_no'],
+            'acente_kod'     : fat['acente_kod'],
+            'tarih'          : fat['tarih'],
+            'tahsilat_tarihi': fat['tahsilat_tarihi'],
+            'tutar'          : fat['toplam_tutar'],
+            'aciklama'       : aciklama,
+            'foyler'         : fat['foyler'],
+            'foy_no'         : fat['foyler'][0]['foy_no'] if fat['foyler'] else '',
+            'gun_fark'       : fat['gun_fark'],
+            'durum'          : durum,
+            'tahsil_edildi'  : fat['tahsil_edildi'],
         })
 
     return jsonify({
-        'acenteler': list(ozet.values()),
-        'toplam_alacak': sum(v['toplam'] for v in ozet.values()),
+        'acenteler'    : list(ozet.values()),
+        'toplam_alacak': sum(v['toplam_bekleyen'] for v in ozet.values()),
     })
 
 

@@ -510,6 +510,13 @@ function renderDetayTablosu() {
     </tr>`;
   }).join('') || '';
   guncelleSecimOzeti();
+  // Header checkbox'ı bekleyen föy sayısına göre senkronla
+  const hepsiCb = document.getElementById('detay-hepsi');
+  if (hepsiCb) {
+    const bekleyenler = detayFoyler.filter(f => !f.fatura_edildi);
+    hepsiCb.indeterminate = secilenFoylar.size > 0 && secilenFoylar.size < bekleyenler.length;
+    hepsiCb.checked = bekleyenler.length > 0 && secilenFoylar.size === bekleyenler.length;
+  }
 }
 
 /* ── Fatura Kes ── */
@@ -541,7 +548,6 @@ function toggleHepsi(cb) {
   if (cb.checked) {
     const tumMod = !document.getElementById('acente-sel').value;
     if (tumMod) {
-      // Tüm acenteler modunda: ilk acenteyi baz al, sadece onu seç
       let ilkAcente = null;
       detayFoyler.forEach(f => {
         if (f.fatura_edildi) return;
@@ -550,10 +556,15 @@ function toggleHepsi(cb) {
       });
       if (ilkAcente) toast(`Sadece ${ilkAcente} acentesine ait föyler seçildi. Farklı acente föyleri için ayrı fatura kesilmeli.`, 'info');
     } else {
+      // Acente seçiliyken: sayfadaki tüm bekleyen (faturalanmamış) föyleri seç
       detayFoyler.forEach(f => { if (!f.fatura_edildi) secilenFoylar.add(f.foy_no); });
     }
   }
   renderDetayTablosu();
+  // Header checkbox durumunu güncelle
+  const bekleyenler = detayFoyler.filter(f => !f.fatura_edildi);
+  cb.indeterminate = secilenFoylar.size > 0 && secilenFoylar.size < bekleyenler.length;
+  cb.checked = bekleyenler.length > 0 && secilenFoylar.size === bekleyenler.length;
 }
 function guncelleSecimOzeti() {
   const n = secilenFoylar.size;

@@ -15,9 +15,9 @@
   <div class="table-wrap" id="alacak-tablo-wrap">
     <table>
       <thead><tr>
-        <th style="width:70px">Föy</th><th>Misafir</th>
+        <th style="width:120px">Fatura No</th>
+        <th>Açıklama (Föyler)</th>
         <th style="width:90px">Acente</th>
-        <th style="width:100px">Fatura No</th>
         <th style="width:95px">Fatura Tarihi</th>
         <th style="width:90px;text-align:right">Tutar</th>
         <th style="width:90px;text-align:center">Bekleme</th>
@@ -256,6 +256,7 @@ async function loadAlacakPanel() {
   }).join('');
 
   // Tüm bekleyen faturaların detay tablosu
+  // Faturalar zaten backend'den fatura bazında geliyor, acente_kod ekliyoruz
   const tumFaturalar = d.acenteler.flatMap(a => a.faturalar.map(f => ({...f, acente_kod: a.acente_kod})));
   tumFaturalar.sort((a,b) => b.gun_fark - a.gun_fark);
 
@@ -266,17 +267,20 @@ async function loadAlacakPanel() {
       : f.durum === 'uyari'
       ? `<span style="font-size:10px;background:rgba(234,179,8,.15);color:var(--yellow);padding:2px 8px;border-radius:10px">🟡 ${f.gun_fark} gün</span>`
       : `<span style="font-size:10px;background:rgba(74,222,128,.12);color:var(--green);padding:2px 8px;border-radius:10px">🟢 ${f.gun_fark} gün</span>`;
+    // Föyleri link olarak göster
+    const foyLinks = (f.foyler||[]).map(foy =>
+      `<a href="/rezervasyonlar?q=${foy.foy_no}" style="color:var(--accent);font-size:12px">Föy#${foy.foy_no}</a>`
+    ).join(' &nbsp;·&nbsp; ') || f.aciklama || '—';
     return `<tr>
-      <td><a href="/rezervasyonlar?q=${f.foy_no}" style="color:var(--accent)">${f.foy_no}</a></td>
-      <td>${f.misafir||'—'}</td>
+      <td style="font-size:12px;font-weight:600;color:var(--text)">${f.fatura_no||'—'}</td>
+      <td>${foyLinks}</td>
       <td style="font-size:11px;font-weight:700;color:var(--accent2)">${f.acente_kod}</td>
-      <td style="font-size:12px">${f.fatura_no||'—'}</td>
       <td>${f.tarih||'—'}</td>
       <td class="${renkClass}" style="text-align:right;font-weight:600">${fmt(f.tutar)}</td>
       <td style="text-align:center">${etiket}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-primary" style="padding:3px 8px;font-size:11px;margin-right:4px"
-          onclick="openTahsilatModal('${f.foy_no}','${f.acente_kod}','${(f.misafir||'').replace(/'/g,'')}',${f.tutar},'${f.fatura_no||''}')">
+          onclick="openTahsilatModal('${f.foy_no}','${f.acente_kod}','${(f.aciklama||'').replace(/'/g,'')}',${f.tutar},'${f.fatura_no||''}')">
           💰 Tahsilat Al
         </button>
         <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000"
@@ -289,7 +293,7 @@ async function loadAlacakPanel() {
         </button>
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:16px">Bekleyen alacak yok ✓</td></tr>';
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px">Bekleyen alacak yok ✓</td></tr>';
 }
 
 /* ── Tahsilat Modal ── */

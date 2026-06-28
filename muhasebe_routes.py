@@ -1535,52 +1535,84 @@ def api_kk_komisyon_sil():
 
 @muh.route('/api/muhasebe/acente-tahsilat-al', methods=['POST'])
 def api_acente_tahsilat_al():
-    """Kesilmiş fatura için ödeme tahsilatı — bankaya giriş yapar, acente borcunu kapatır."""
+    """Fatura bazında tahsilat — o faturadaki TÜM föylerin toplam tutarını tek yevmiye satırı olarak yazar."""
     import re as _re
     try:
         d = request.get_json()
-        kod = d.get('acente_kod')
-        foy_no = str(d.get('foy_no', ''))
-        tarih = d.get('tarih') or date.today().isoformat()
-        banka = d.get('odeme_banka', 'IS')
-        otel = d.get('otel', 'LEO')
-        hesap = ACENTE_HESAP.get(kod)
-        if not hesap or not foy_no:
-            return jsonify({'ok': False, 'error': 'Acente veya föy eksik'}), 400
+        kod        = d.get('acente_kod')
+        fatura_no  = str(d.get('fatura_no') or d.get('foy_no') or '').strip()
+        tarih      = d.get('tarih') or date.today().isoformat()
+        banka      = d.get('odeme_banka', 'IS')
+        otel       = d.get('otel', 'LEO')
+        hesap      = ACENTE_HESAP.get(kod)
+        if not hesap:
+            return jsonify({'ok': False, 'error': 'Acente eksik'}), 400
         banka_hesap = '102-2' if banka == 'ZRH' else '102-3' if banka == 'DNZ' else '102-1'
 
         conn = mdb.get_conn()
-        # Zaten tahsil edildi mi? (büyük/küçük harf ve boşluk farkına duyarsız)
-        zaten = conn.execute("""
-            SELECT 1 FROM yevmiye
-            WHERE aciklama LIKE '%ACENTE-TAHSILAT%'
-            AND aciklama LIKE ?
-        """, (f'%#{foy_no}%',)).fetchone()
-        if zaten:
+
+        # Fatura no ile bu faturadaki tüm föy kayıtlarını bul
+        if fatura_no and len(fatura_no) > 3:
+            # Fatura no ile ara
+            fat_rows = conn.execute("""
+                SELECT tutar, aciklama FROM yevmiye
+                WHERE aciklama LIKE '%[ACENTE-FATURA]%'
+                AND aciklama LIKE ?
+            """, (f'%[FATURA:{fatura_no}]%',)).fetchall()
+        else:
+            # Föy no ile ara (geriye dönük uyumluluk)
+            fat_rows = conn.execute("""
+                SELECT tutar, aciklama FROM yevmiye
+                WHERE aciklama LIKE '%[ACENTE-FATURA]%'
+                AND aciklama LIKE ?
+            """, (f'%#{fatura_no}%',)).fetchall()
+
+        if not fat_rows:
             conn.close()
-            return jsonify({'ok': False, 'error': 'Bu föy için tahsilat zaten yapılmış'}), 400
+            return jsonify({'ok': False, 'error': 'Bu fatura için kayıt bulunamadı'}), 404
 
-        # Fatura tutarını bul
-        fat = conn.execute("""
-            SELECT tutar, aciklama FROM yevmiye
-            WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-FATURA]%'
-        """, (f'Föy#{foy_no} %',)).fetchone()
-        if not fat:
+        # Her föyün tahsilat durumunu kontrol et
+        foy_nolar = []
+        toplam_tutar = 0
+        for row in fat_rows:
+            m = _re.search(r'[Ff][Öö][Yy]#(\d+)', row['aciklama'] or '', _re.IGNORECASE)
+            if not m: continue
+            fn = m.group(1)
+            # Bu föy daha önce tahsil edildi mi?
+            zaten = conn.execute("""
+                SELECT 1 FROM yevmiye
+                WHERE aciklama LIKE '%ACENTE-TAHSILAT%' AND aciklama LIKE ?
+            """, (f'%#{fn}%',)).fetchone()
+            if not zaten:
+                foy_nolar.append(fn)
+                toplam_tutar += row['tutar']
+
+        if not foy_nolar:
             conn.close()
-            return jsonify({'ok': False, 'error': 'Bu föy için kesilmiş fatura bulunamadı'}), 404
+            return jsonify({'ok': False, 'error': 'Bu faturanın tüm föyleri zaten tahsil edilmiş'}), 400
 
-        tutar = fat['tutar']
-        misafir = _re.search(r'Föy#\d+\s+(.*?)\s+\[ACENTE-FATURA\]', fat['aciklama'] or '')
-        misafir = misafir.group(1) if misafir else ''
-        fn = _re.search(r'\[FATURA:(.*?)\]', fat['aciklama'] or '')
-        fatura_no = fn.group(1) if fn else ''
+        # Acente adını al
+        acente_adi = {'BKG':'Booking','EXP':'Expedia','JLY':'JollyTur',
+                      'TTS':'TatilSepeti','ETS':'ETSTUR'}.get(kod, kod)
 
-        # Tahsilat: banka borç / acente alacak
-        mdb._yevmiye_ekle(conn, tarih, 'Acente Tahsilat', banka_hesap, hesap, tutar,
-                          f'Föy#{foy_no} {misafir} [ACENTE-TAHSILAT]' +
-                          (f' [FATURA:{fatura_no}]' if fatura_no else ''), otel)
+        # TEK yevmiye satırı: toplam tutar, açıklamada acente + fatura no + föy listesi
+        foy_str = ' '.join([f'Föy#{f}' for f in foy_nolar])
+        aciklama = f'{acente_adi} {fatura_no} TAHSİLATI — {foy_str} [ACENTE-TAHSILAT] [FATURA:{fatura_no}]'
+
+        mdb._yevmiye_ekle(conn, tarih, 'Acente Tahsilat', banka_hesap, hesap,
+                          round(toplam_tutar, 2), aciklama, otel)
+
+        # Her föy için ayrıca etiket kaydı (tahsilat tespiti için)
+        for fn in foy_nolar:
+            conn.execute("""
+                INSERT INTO yevmiye(tarih,yil,ay,islem_tipi,borc_hesap,alacak_hesap,tutar,aciklama,otel)
+                VALUES(?,?,?,?,?,?,?,?,?)
+            """, (tarih, int(tarih[:4]), int(tarih[5:7]),
+                   'Acente Tahsilat Etiket', hesap, hesap, 0,
+                   f'Föy#{fn} [ACENTE-TAHSILAT] [FATURA:{fatura_no}]', otel))
+
         conn.commit(); conn.close()
-        return jsonify({'ok': True, 'tutar': tutar, 'misafir': misafir})
+        return jsonify({'ok': True, 'tutar': round(toplam_tutar, 2), 'foy_sayisi': len(foy_nolar)})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
 

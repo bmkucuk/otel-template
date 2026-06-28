@@ -316,10 +316,10 @@ async function loadAlacakPanel() {
 
 /* ── Tahsilat Modal ── */
 function openTahsilatModal(foyNo, acenteKod, misafir, tutar, faturaNo) {
-  tahsilatModal = { foy_no: foyNo, acente_kod: acenteKod };
+  tahsilatModal = { foy_no: foyNo, acente_kod: acenteKod, fatura_no: faturaNo };
   document.getElementById('tm-foy').textContent = foyNo;
   document.getElementById('tm-misafir').textContent = misafir;
-  document.getElementById('tm-tutar-label').textContent = `Fatura Tutarı: ${fmt(tutar)}${faturaNo ? '  |  Fatura No: ' + faturaNo : ''}`;
+  document.getElementById('tm-tutar-label').textContent = `Fatura No: ${faturaNo||'—'}  |  Toplam: ${fmt(tutar)}`;
   document.getElementById('tm-tarih').value = new Date().toISOString().split('T')[0];
   document.getElementById('tm-banka').value = 'IS';
   document.getElementById('tahsilat-modal').classList.add('open');
@@ -328,6 +328,7 @@ function closeTahsilatModal() { document.getElementById('tahsilat-modal').classL
 
 async function confirmTahsilat() {
   const data = {
+    fatura_no: tahsilatModal.fatura_no,
     foy_no: tahsilatModal.foy_no,
     acente_kod: tahsilatModal.acente_kod,
     tarih: document.getElementById('tm-tarih').value,
@@ -335,7 +336,7 @@ async function confirmTahsilat() {
   };
   const r = await api('/api/muhasebe/acente-tahsilat-al', data);
   if (r.ok) {
-    toast(`Tahsilat kaydedildi — ${fmt(r.tutar)} ✓`);
+    toast(`Tahsilat kaydedildi — ${fmt(r.tutar)} (${r.foy_sayisi||1} föy) ✓`);
     closeTahsilatModal();
     loadAlacakPanel();
     load();

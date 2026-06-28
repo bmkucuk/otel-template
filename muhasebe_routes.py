@@ -523,6 +523,18 @@ def api_maas_ekle():
 
 # ── API — Stok ────────────────────────────────────────────────────────────────
 
+KATEGORI_HESAP_KOD = {
+    'Elektrik': '740', 'Su': '740', 'Doğalgaz': '740',
+    'Elektrik/Su/Doğalgaz': '740',
+    'Market/Gıda': '741', 'Market': '741', 'Gıda': '741', 'İçecek': '741',
+    'Market/Gıda/Stok': '741', 'Temizlik': '741', 'Kırtasiye': '741',
+    'Bakım/Onarım': '742', 'Tamir': '742', 'Bakım': '742',
+    'Sigorta': '743',
+    'Muhasebe/Danışmanlık': '744', 'Muhasebe': '744', 'Danışmanlık': '744',
+    'Kira': '745',
+    'Telefon': '780', 'İnternet': '780', 'Diğer': '780', 'Diğer Giderler': '780',
+}
+
 @muh.route('/api/muhasebe/stok')
 def api_stok():
     yil = request.args.get('yil', date.today().year, type=int)
@@ -531,8 +543,16 @@ def api_stok():
     conn = mdb.get_conn()
     q = "SELECT * FROM stok WHERE strftime('%Y',tarih)=?"
     params = [str(yil)]
-    if kat: q += " AND kategori=?"; params.append(kat)
-    if hesap_kodu: q += " AND hesap_kodu=?"; params.append(hesap_kodu)
+    if kat:
+        q += " AND kategori=?"; params.append(kat)
+    if hesap_kodu:
+        kat_adlari = [k for k, v in KATEGORI_HESAP_KOD.items() if v == hesap_kodu]
+        placeholders = ','.join(['?'] * len(kat_adlari))
+        if kat_adlari:
+            q += f" AND (hesap_kodu=? OR (hesap_kodu IS NULL OR hesap_kodu='') AND kategori IN ({placeholders}))"
+        else:
+            q += " AND hesap_kodu=?"
+        params.extend([hesap_kodu] + kat_adlari)
     q += " ORDER BY tarih ASC"
     rows = [dict(r) for r in conn.execute(q, params).fetchall()]
     conn.close()

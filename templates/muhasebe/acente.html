@@ -43,7 +43,7 @@
   <button id="detay-hepsi-btn" onclick="toggleHepsiBtn()"
     style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text2);display:none">☐ Tümünü Seç</button>
   <div style="flex:1"></div>
-  <button class="btn btn-primary" onclick="openModal()">＋ Fatura Tahsilatı Ekle</button>
+  <button class="btn btn-primary" id="fatura-tahsilat-ekle-btn" onclick="openModal()" style="display:none">＋ Fatura Tahsilatı Ekle</button>
 </div>
 
 <!-- FÖY BAZLI BORÇ DÖKÜMÜ -->
@@ -246,6 +246,9 @@ async function loadAlacakPanel() {
   if (!d.acenteler || d.acenteler.length === 0) { panel.style.display = 'none'; return; }
   panel.style.display = '';
   document.getElementById('alacak-toplam-badge').textContent = d.toplam_alacak > 0 ? `Bekleyen Alacak: ${fmt(d.toplam_alacak)}` : `Tüm Faturalar Tahsil Edildi ✓`;
+  // Bekleyen fatura varsa "Fatura Tahsilatı Ekle" butonunu göster
+  const tahsilatEkleBtn = document.getElementById('fatura-tahsilat-ekle-btn');
+  if (tahsilatEkleBtn) tahsilatEkleBtn.style.display = d.toplam_alacak > 0 ? '' : 'none';
 
   // Acente kartları
   document.getElementById('alacak-cards').innerHTML = d.acenteler.map(a => {

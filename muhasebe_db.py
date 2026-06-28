@@ -340,6 +340,26 @@ def init_db():
     if 'hesap_kodu' not in stok_cols:
         c.execute("ALTER TABLE stok ADD COLUMN hesap_kodu TEXT DEFAULT ''")
 
+    # Migration: mevcut stok kayıtlarının hesap_kodu'nu kategoriden türet
+    kat_map = {
+        'Elektrik':'740','Su':'740','Doğalgaz':'740','Elektrik/Su/Doğalgaz':'740',
+        'Market/Gıda':'741','Market':'741','Gıda':'741','İçecek':'741',
+        'Market/Gıda/Stok':'741','Temizlik':'741','Kırtasiye':'741',
+        'Bakım/Onarım':'742','Tamir':'742','Bakım':'742',
+        'Sigorta':'743',
+        'Muhasebe/Danışmanlık':'744','Muhasebe':'744','Danışmanlık':'744',
+        'Kira':'745',
+        'Telefon':'780','İnternet':'780','Diğer':'780','Diğer Giderler':'780',
+    }
+    stok_rows = c.execute("SELECT id, kategori FROM stok WHERE hesap_kodu IS NULL OR hesap_kodu=''").fetchall()
+    for row in stok_rows:
+        sid, kat = row[0], row[1] or ''
+        hk = kat_map.get(kat, '153')
+        c.execute("UPDATE stok SET hesap_kodu=? WHERE id=?", (hk, sid))
+        # Yevmiyedeki borc_hesap='153' olan eski kayıtları da düzelt
+        if hk != '153':
+            c.execute("UPDATE yevmiye SET borc_hesap=? WHERE kaynak_tablo='stok' AND kaynak_id=? AND borc_hesap='153'", (hk, sid))
+
     conn.commit()
     conn.close()
 
@@ -503,10 +523,23 @@ def ekle_stok(tarih, aciklama, tutar, kategori="", belge_no="",
     # Yevmiye: Stok Gideri borç / Ödeme hesabı alacak
     if tutar > 0:
         stok_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        # Hesap kodu: parametre verilmişse onu kullan, yoksa kategoriden türet
+        kat_hesap_map = {
+            'Elektrik':'740','Su':'740','Doğalgaz':'740','Elektrik/Su/Doğalgaz':'740',
+            'Market/Gıda':'741','Market':'741','Gıda':'741','İçecek':'741',
+            'Market/Gıda/Stok':'741','Temizlik':'741','Kırtasiye':'741',
+            'Bakım/Onarım':'742','Tamir':'742','Bakım':'742',
+            'Sigorta':'743',
+            'Muhasebe/Danışmanlık':'744','Muhasebe':'744','Danışmanlık':'744',
+            'Kira':'745',
+            'Telefon':'780','İnternet':'780','Diğer':'780','Diğer Giderler':'780',
+        }
+        borc_hk = hesap_kodu or kat_hesap_map.get(kategori, '153')
+        conn.execute("UPDATE stok SET hesap_kodu=? WHERE id=?", (borc_hk, stok_id))
         conn.execute("""
             INSERT INTO yevmiye(tarih,yil,ay,belge_no,islem_tipi,borc_hesap,alacak_hesap,tutar,aciklama,otel,kaynak_tablo,kaynak_id)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (t, yil, ay, belge_no, 'Stok Alımı', '153', odeme_hesap or '100',
+        """, (t, yil, ay, belge_no, 'Stok Alımı', borc_hk, odeme_hesap or '100',
                 tutar, f'{kategori}: {aciklama}', otel, 'stok', stok_id))
     conn.commit(); conn.close()
 

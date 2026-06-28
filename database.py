@@ -9,6 +9,10 @@ _data_dir = "/data" if os.path.isdir("/data") else "."
 DB_PATH = os.environ.get("DB_PATH", os.path.join(_data_dir, "otel.db"))
 
 
+def uc(s):
+    if not s: return s
+    return str(s).upper()
+
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -151,15 +155,22 @@ def init_db():
         except Exception:
             pass  # Kolon zaten var
 
-    # Kullanıcılar kurulum sihirbazı tarafından oluşturulur
-    # Eğer hiç kullanıcı yoksa geçici bir admin ekle (kurulum sonrası değiştirilmeli)
+    # İlk kullanıcılar (yalnızca tablo boşsa eklenir)
     if conn.execute("SELECT COUNT(*) FROM kullanicilar").fetchone()[0] == 0:
         import hashlib
-        h = hashlib.sha256('admin123'.encode()).hexdigest()
-        conn.execute(
-            "INSERT INTO kullanicilar(username, ad, hash, role) VALUES (?,?,?,?)",
-            ('admin', 'Admin', h, 'admin')
-        )
+        ilk_kullanicilar = [
+            ('murre34',    'Murat',  'Mk192837+-',  'admin'),
+            ('LeventK',    'Levent', 'Lk415263+-',  'partner'),
+            ('FıratK',     'Fırat',  '415263',      'partner'),
+            ('BurcinT',    'Burçin', 'Bt415263+-',  'partner'),
+            ('resepsiyon', 'Resepsiyon', 'res708090/', 'resepsiyon'),
+        ]
+        for username, ad, pw, role in ilk_kullanicilar:
+            h = hashlib.sha256(pw.encode()).hexdigest()
+            conn.execute(
+                "INSERT INTO kullanicilar(username, ad, hash, role) VALUES (?,?,?,?)",
+                (username, ad, h, role)
+            )
 
     conn.commit()
     conn.close()
@@ -191,6 +202,10 @@ def log_yaz(kullanici, rol, zaman, islem_tipi, modul, yol, ozet, durum):
         "VALUES (?,?,?,?,?,?,?,?)",
         (kullanici, rol, zaman, islem_tipi, modul, yol, ozet, durum)
     )
+
+    # Migration: açıklama alanlarını büyük harfe çevir
+    conn.execute("UPDATE rezervasyonlar SET aciklama=UPPER(aciklama) WHERE aciklama != '' AND aciklama != UPPER(aciklama)")
+    conn.execute("UPDATE adisyonlar SET aciklama=UPPER(aciklama) WHERE aciklama != '' AND aciklama != UPPER(aciklama)")
     conn.commit()
     conn.close()
 
@@ -297,7 +312,7 @@ def save_rezervasyon(data):
         giris, cikis, toplam_gun, toplam_fiyat,
         kapora, data.get('kapora_tarihi'),
         rez_tahsilat, data.get('rez_odeme_sekli',''), rez_bakiye,
-        data.get('aciklama',''),
+        uc(uc(data.get('aciklama',''))),
         data.get('tc_kimlik',''), data.get('arac_plaka',''),
         data.get('telefon',''), data.get('beraberindekiler','')
     ))
@@ -336,7 +351,7 @@ def update_rezervasyon(foy_no, data):
         data['musteri'], int(data.get('yetiskin',1)), int(data.get('cocuk',0)),
         data.get('ek_yatak','Yok'), data.get('kahvalti','Kahvaltılı'), gun_fiyat, giris, cikis,
         toplam_gun, toplam_fiyat, kapora, data.get('kapora_tarihi'),
-        data.get('aciklama',''),
+        uc(uc(data.get('aciklama',''))),
         data.get('tc_kimlik',''), data.get('arac_plaka',''),
         data.get('telefon',''), data.get('beraberindekiler',''),
         rez_bakiye, int(foy_no)
@@ -438,7 +453,7 @@ def save_adisyon(data):
         int(data['adisyon_no']), foy_no,
         rez['oda_no'] if rez else None,
         data.get('tarih'), float(data['tutar']),
-        data.get('odeme','Oda Hesabına'), data.get('aciklama',''),
+        data.get('odeme','Oda Hesabına'), uc(data.get('aciklama','')),
         rez['otel'] if rez else ''
     ))
     # Rezervasyondaki adisyon toplamını güncelle
@@ -508,11 +523,19 @@ def get_dashboard(today_str):
     aktifler = [dict(r) for r in conn.execute(
         "SELECT * FROM rezervasyonlar WHERE giris<=? AND cikis>? AND (durum IS NULL OR durum != 'Kapora Yandı') ORDER BY oda_no",
         (today_str, today_str)).fetchall()]
-    kahvalti = conn.execute(
+    kahvalti_toplam = conn.execute(
         "SELECT SUM(yetiskin+cocuk) FROM rezervasyonlar WHERE giris<=? AND cikis>=? AND (durum IS NULL OR durum != 'Kapora Yandı') AND (kahvalti IS NULL OR kahvalti != 'Kahvaltısız')",
         (today_str, today_str)).fetchone()[0] or 0
+    kahvalti_super = conn.execute(
+        "SELECT SUM(yetiskin+cocuk) FROM rezervasyonlar WHERE giris<=? AND cikis>=? AND (durum IS NULL OR durum != 'Kapora Yandı') AND kahvalti='Süper Kahvaltı'",
+        (today_str, today_str)).fetchone()[0] or 0
+    kahvalti_normal = kahvalti_toplam - kahvalti_super
     conn.close()
-    return girisler, cikislar, aktifler, int(kahvalti)
+    return girisler, cikislar, aktifler, {
+        'toplam': int(kahvalti_toplam),
+        'normal': int(kahvalti_normal),
+        'super': int(kahvalti_super),
+    }
 
 
 # ── Excel import ──────────────────────────────────────────────────────────────

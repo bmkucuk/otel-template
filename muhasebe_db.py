@@ -9,6 +9,11 @@ import os
 _data_dir = '/data' if os.path.isdir('/data') else '.'
 DB_PATH = os.path.join(_data_dir, 'muhasebe.db')
 
+def uc(s):
+    """Açıklama metinlerini büyük harfe çevirir."""
+    if not s: return s
+    return str(s).upper()
+
 def get_conn():
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
@@ -331,6 +336,12 @@ def init_db():
     # Migration: 760 KK komisyon hesabı
     c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES('760','Banka Komisyon Giderleri','Gider','Gider')")
 
+    # Migration: tüm açıklama alanlarını büyük harfe çevir
+    c.execute("UPDATE stok SET aciklama=UPPER(aciklama) WHERE aciklama != UPPER(aciklama)")
+    c.execute("UPDATE yevmiye SET aciklama=UPPER(aciklama) WHERE aciklama != UPPER(aciklama)")
+    c.execute("UPDATE [demirbaş] SET aciklama=UPPER(aciklama) WHERE aciklama != UPPER(aciklama)")
+    c.execute("UPDATE kk_komisyon SET aciklama=UPPER(aciklama) WHERE aciklama IS NOT NULL AND aciklama != UPPER(aciklama)")
+
     # Migration: stok tablosuna hesap_kodu kolonu
     stok_cols = [r[1] for r in c.execute("PRAGMA table_info(stok)").fetchall()]
     if 'hesap_kodu' not in stok_cols:
@@ -537,6 +548,7 @@ def ekle_stok(tarih, aciklama, tutar, kategori="", belge_no="",
     conn = get_conn()
     t = tarih if isinstance(tarih, str) else tarih.isoformat()
     yil = int(t[:4]); ay = int(t[5:7])
+    aciklama = uc(aciklama)
     conn.execute("""
         INSERT INTO stok(tarih,belge_no,aciklama,kategori,hesap_kodu,tutar,
                          odeme_hesap,fatura_var,otel,not_)
@@ -572,6 +584,7 @@ def ekle_demirbaş(tarih, aciklama, miktar, birim_fiyat, odeme_hesap="",
     t = tarih if isinstance(tarih, str) else tarih.isoformat()
     yil = int(t[:4]); ay = int(t[5:7])
     toplam = miktar * birim_fiyat
+    aciklama = uc(aciklama)
     conn.execute("""
         INSERT INTO demirbaş(tarih,aciklama,miktar,birim_fiyat,toplam,
                              odeme_hesap,fatura_no,otel,not_)

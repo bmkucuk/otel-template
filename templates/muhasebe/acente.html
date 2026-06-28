@@ -476,7 +476,7 @@ function renderDetayTablosu() {
       </tr>`;
     }
     return `<tr>
-      <td><input type="checkbox" class="detay-chk" data-foy="${f.foy_no}" ${secilenFoylar.has(f.foy_no)?'checked':''} onchange="toggleFoy('${f.foy_no}',this.checked)"></td>
+      <td><input type="checkbox" class="detay-chk" data-foy="${f.foy_no}" data-acente="${f.acente_kod||''}" ${secilenFoylar.has(f.foy_no)?'checked':''} onchange="toggleFoy('${f.foy_no}','${f.acente_kod||''}',this)"></td>
       <td>${f.tarih||'—'}</td>
       <td><a href="/rezervasyonlar?q=${f.foy_no}" style="color:var(--accent)">${f.foy_no}</a></td>
       <td>${f.misafir||'—'}</td>${acHucre(f)}
@@ -490,13 +490,46 @@ function renderDetayTablosu() {
 }
 
 /* ── Fatura Kes ── */
-function toggleFoy(foyNo, checked) {
-  if (checked) secilenFoylar.add(foyNo); else secilenFoylar.delete(foyNo);
+function toggleFoy(foyNo, acenteKod, cb) {
+  const checked = cb.checked;
+  if (checked) {
+    // Tüm acenteler modunda: seçili föylerin acentesiyle karşılaştır
+    const tumMod = !document.getElementById('acente-sel').value;
+    if (tumMod && acenteKod) {
+      const mevcutAcenteler = [...secilenFoylar].map(f => {
+        const row = detayFoyler.find(x => x.foy_no === f);
+        return row ? row.acente_kod : null;
+      }).filter(Boolean);
+      const farklı = mevcutAcenteler.find(a => a !== acenteKod);
+      if (farklı) {
+        cb.checked = false;
+        toast(`Bu föy ${acenteKod} acentesine ait. Seçili föyler ${farklı} acentesine ait. Farklı acenteler aynı faturada olamaz!`, 'error');
+        return;
+      }
+    }
+    secilenFoylar.add(foyNo);
+  } else {
+    secilenFoylar.delete(foyNo);
+  }
   guncelleSecimOzeti();
 }
 function toggleHepsi(cb) {
   secilenFoylar.clear();
-  if (cb.checked) detayFoyler.forEach(f => { if (!f.fatura_edildi) secilenFoylar.add(f.foy_no); });
+  if (cb.checked) {
+    const tumMod = !document.getElementById('acente-sel').value;
+    if (tumMod) {
+      // Tüm acenteler modunda: ilk acenteyi baz al, sadece onu seç
+      let ilkAcente = null;
+      detayFoyler.forEach(f => {
+        if (f.fatura_edildi) return;
+        if (!ilkAcente) ilkAcente = f.acente_kod;
+        if (f.acente_kod === ilkAcente) secilenFoylar.add(f.foy_no);
+      });
+      if (ilkAcente) toast(`Sadece ${ilkAcente} acentesine ait föyler seçildi. Farklı acente föyleri için ayrı fatura kesilmeli.`, 'info');
+    } else {
+      detayFoyler.forEach(f => { if (!f.fatura_edildi) secilenFoylar.add(f.foy_no); });
+    }
+  }
   renderDetayTablosu();
 }
 function guncelleSecimOzeti() {
@@ -522,9 +555,18 @@ function openFaturaModal() {
 function closeFaturaModal() { document.getElementById('fatura-modal').classList.remove('open'); }
 
 async function confirmFaturaKes() {
-  const acenteSecili = document.getElementById('acente-sel').value;
+  let acenteSecili = document.getElementById('acente-sel').value;
   const faturaNo = document.getElementById('fm-fatura-no').value.trim();
   if (!faturaNo) { toast('Fatura No zorunludur', 'error'); return; }
+  // Tüm acenteler modunda: seçilen föylerin acente kodunu bul
+  // Tüm seçili föylerin aynı acenteye ait olması gerekir
+  if (!acenteSecili) {
+    const secilenler = detayFoyler.filter(f => secilenFoylar.has(f.foy_no));
+    const acenteler = [...new Set(secilenler.map(f => f.acente_kod).filter(Boolean))];
+    if (acenteler.length === 0) { toast('Acente bilgisi bulunamadı', 'error'); return; }
+    if (acenteler.length > 1) { toast('Farklı acentelere ait föyler aynı faturada birleştirilemez. Lütfen tek acente seçin.', 'error'); return; }
+    acenteSecili = acenteler[0];
+  }
   const r = await api('/api/muhasebe/acente-fatura-kes', {
     acente_kod: acenteSecili,
     foy_nolar: Array.from(secilenFoylar),

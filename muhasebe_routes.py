@@ -219,7 +219,7 @@ def api_yevmiye():
 def api_yevmiye_ekle():
     try:
         d = request.get_json()
-        mdb.ekle_yevmiye(**d)
+        d['aciklama'] = uc(d.get('aciklama','')); mdb.ekle_yevmiye(**d)
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
@@ -337,6 +337,11 @@ def api_bankalar():
 # ── API — Kasa/Banka ─────────────────────────────────────────────────────────
 
 # Banka kodu → yevmiye hesap kodu eşleştirmesi
+def uc(s):
+    """Açıklama metinlerini büyük harfe çevirir."""
+    if not s: return s
+    return str(s).upper()
+
 ACENTE_HESAP = {'BKG': '320-1', 'EXP': '320-2', 'JLY': '320-3', 'TTS': '320-4', 'ETS': '320-5'}
 
 BANKA_HESAP = {
@@ -561,7 +566,7 @@ def api_stok_ekle():
     try:
         d = request.get_json()
         odeme_kod = BANKA_AD_KODU.get(d.get('odeme_hesap',''), d.get('odeme_hesap',''))
-        mdb.ekle_stok(d['tarih'], d['aciklama'], float(d['tutar']),
+        mdb.ekle_stok(d['tarih'], uc(d['aciklama']), float(d['tutar']),
                      d.get('kategori', 'Diğer'), d.get('belge_no', ''),
                      odeme_kod, bool(d.get('fatura_var', False)),
                      d.get('otel', 'GENEL'), d.get('not_', ''),
@@ -623,7 +628,7 @@ def api_demirbas_ekle():
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             """, (t, yil, ay, d.get('fatura_no',''), 'Demirbaş Alımı',
                     '255', odeme_kod or '100', toplam,
-                    d['aciklama'], d.get('otel','GENEL'), 'demirbaş', dem_id))
+                    uc(d['aciklama']), d.get('otel','GENEL'), 'demirbaş', dem_id))
         conn.commit(); conn.close()
         return jsonify({'ok': True})
     except Exception as e:
@@ -1070,7 +1075,7 @@ def api_ortak_ekle():
             INSERT INTO ortak_cari
             (tarih,ortak,belge_no,aciklama,gider_kategori,tutar,odeme_sekli,iade,otel)
             VALUES (?,?,?,?,?,?,?,?,?)
-        """, (d['tarih'], d['ortak'], d.get('belge_no', ''), d['aciklama'],
+        """, (d['tarih'], d['ortak'], d.get('belge_no', ''), uc(d['aciklama']),
               d.get('gider_kategori', ''), tutar,
               d.get('odeme_sekli', ''), iade, d.get('otel', 'GENEL')))
         ortak_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -1448,7 +1453,7 @@ def api_kk_komisyon_ekle():
         conn = mdb.get_conn()
         conn.execute(
             "INSERT INTO kk_komisyon(tarih,foy_no,aciklama,tutar,alacak_hesap,otel) VALUES(?,?,?,?,?,?)",
-            (t, d.get('foy_no'), d.get('aciklama',''), tutar, alacak, otel)
+            (t, d.get('foy_no'), uc(d.get('aciklama','')), tutar, alacak, otel)
         )
         kid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         # Yevmiye: 760 borç / alacak hesap alacak
@@ -1469,7 +1474,7 @@ def api_kk_komisyon_guncelle():
         conn = mdb.get_conn()
         conn.execute(
             "UPDATE kk_komisyon SET tarih=?,foy_no=?,aciklama=?,tutar=?,alacak_hesap=? WHERE id=?",
-            (d['tarih'], d.get('foy_no'), d.get('aciklama',''),
+            (d['tarih'], d.get('foy_no'), uc(d.get('aciklama','')),
              float(d['tutar']), d.get('alacak_hesap','102-1'), d['id'])
         )
         conn.commit(); conn.close()
@@ -1607,7 +1612,7 @@ def api_stok_guncelle():
         conn = mdb.get_conn()
         conn.execute("""UPDATE stok SET tarih=?,belge_no=?,aciklama=?,kategori=?,hesap_kodu=?,tutar=?,
                      odeme_hesap=?,fatura_var=?,otel=?,not_=? WHERE id=?""",
-            (d['tarih'], d.get('belge_no',''), d['aciklama'], d.get('kategori',''),
+            (d['tarih'], d.get('belge_no',''), uc(d['aciklama']), d.get('kategori',''),
              d.get('hesap_kodu',''), float(d['tutar']), d.get('odeme_hesap',''),
              int(d.get('fatura_var',False)), d.get('otel','GENEL'), d.get('not_',''), d['id']))
         # Yevmiye güncelle
@@ -1706,7 +1711,7 @@ def api_demirbas_guncelle():
         conn = mdb.get_conn()
         conn.execute("""UPDATE [demirbaş] SET tarih=?,aciklama=?,miktar=?,birim_fiyat=?,
                      toplam=?,odeme_hesap=?,fatura_no=?,otel=?,not_=? WHERE id=?""",
-            (d['tarih'], d['aciklama'], float(d.get('miktar',1)), float(d['birim_fiyat']),
+            (d['tarih'], uc(d['aciklama']), float(d.get('miktar',1)), float(d['birim_fiyat']),
              toplam, d.get('odeme_hesap',''), d.get('fatura_no',''),
              d.get('otel','GENEL'), d.get('not_',''), d['id']))
         conn.execute("""UPDATE yevmiye SET tarih=?,tutar=?,aciklama=?,alacak_hesap=?

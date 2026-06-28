@@ -30,9 +30,6 @@
 
 <div style="border-top:1px solid var(--border);margin-bottom:20px"></div>
 
-<!-- ÖZET KARTLAR -->
-<div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
-
 <!-- ANA ARAÇ ÇUBUĞU -->
 <div class="toolbar">
   <label style="color:var(--text2);font-size:12px">Yıl:</label>
@@ -40,17 +37,19 @@
   <select class="filter" id="acente-sel" onchange="load()"><option value="">Tüm Acenteler</option></select>
   <input type="text" id="arama" placeholder="🔍 Föy no, misafir, fatura no ara..." oninput="aramaDegisti()"
     style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:12px;min-width:240px">
-  <button id="detay-hepsi-btn" onclick="toggleHepsiBtn()"
-    style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text2);display:none">☐ Tümünü Seç</button>
   <div style="flex:1"></div>
   <button class="btn btn-primary" onclick="openModal()">＋ Fatura Tahsilatı Ekle</button>
 </div>
+
+<div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
 
 <!-- FÖY BAZLI BORÇ DÖKÜMÜ -->
 <div class="table-wrap" id="detay-wrap" style="display:none;margin-bottom:24px">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
     <div class="section-title" style="margin:0;border:0;font-size:13px">📋 Föy Bazlı Döküm</div>
     <div style="flex:1"></div>
+    <button id="detay-hepsi-btn" onclick="toggleHepsiBtn()"
+      style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text2)">☐ Tümünü Seç</button>
     <span id="secim-ozet" style="font-size:12px;color:var(--text2)"></span>
     <button class="btn btn-primary" id="fatura-kes-btn" style="font-size:12px;padding:6px 14px;" onclick="openFaturaModal()">🧾 Seçilenleri Faturalandır</button>
   </div>
@@ -417,9 +416,7 @@ async function load() {
     const det = await api(`/api/muhasebe/acente-detay?kod=${acenteSecili}&yil=${yil}`);
     detayFoylerRaw = det.foyler || [];
     kesilenListesiRaw = det.kesilen_faturalar || [];
-    const showDetay = detayFoylerRaw.length > 0;
-    document.getElementById('detay-wrap').style.display = showDetay ? '' : 'none';
-    document.getElementById('detay-hepsi-btn').style.display = showDetay ? '' : 'none';
+    document.getElementById('detay-wrap').style.display = detayFoylerRaw.length ? '' : 'none';
     document.getElementById('kesilen-wrap').style.display = kesilenListesiRaw.length ? '' : 'none';
   } else {
     const det = await api(`/api/muhasebe/acente-detay?kod=&yil=${yil}`);

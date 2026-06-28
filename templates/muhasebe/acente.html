@@ -48,13 +48,14 @@
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
     <div class="section-title" style="margin:0;border:0;font-size:13px">📋 Föy Bazlı Döküm</div>
     <div style="flex:1"></div>
+    <button id="detay-hepsi-btn" onclick="toggleHepsiBtn()"
+      style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text2)">☐ Tümünü Seç</button>
     <span id="secim-ozet" style="font-size:12px;color:var(--text2)"></span>
     <button class="btn btn-primary" id="fatura-kes-btn" style="font-size:12px;padding:6px 14px;" onclick="openFaturaModal()">🧾 Seçilenleri Faturalandır</button>
   </div>
   <table>
     <thead><tr>
-      <th style="width:50px"><button id="detay-hepsi-btn" onclick="toggleHepsiBtn()" title="Tümünü Seç / Kaldır"
-        style="background:var(--card2);border:1px solid var(--border);border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:var(--text2)">☐ Tüm</button></th>
+      <th style="width:34px"></th>
       <th style="width:95px;cursor:pointer" onclick="sirala('detay','tarih')">Tarih <span id="sort-detay-tarih"></span></th>
       <th style="width:70px;cursor:pointer" onclick="sirala('detay','foy_no')">Föy <span id="sort-detay-foy_no"></span></th>
       <th>Misafir</th>

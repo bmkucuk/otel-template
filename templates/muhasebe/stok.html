@@ -660,14 +660,14 @@ async function kkDuzenle(id) {
   const r = kkData.find(x => x.id === id); if (!r) return;
   kkEditId = id;
   document.getElementById('kk-modal-baslik').textContent = 'KK Komisyonu Düzenle';
-  // Föy seçimi düzenleme modunda da açık kalır
-  // Mevcut föy no'yu seçili getir
-  const foySelEdit = document.getElementById('kf-foy');
-  if (r.foy_no) {
-    for (let opt of foySelEdit.options) {
-      if (opt.value == r.foy_no) { opt.selected = true; break; }
-    }
-  }
+  // Rezervasyonları her seferinde taze yükle
+  const rezler = await api('/api/rezervasyonlar');
+  kkRezervasyonlar = rezler;
+  const sel = document.getElementById('kf-foy');
+  sel.innerHTML = '<option value="">— Föy seçin —</option>' +
+    kkRezervasyonlar.map(rez =>
+      `<option value="${rez.foy_no}" data-musteri="${rez.musteri||''}" ${rez.foy_no==r.foy_no?'selected':''}>${rez.foy_no} — ${rez.musteri||''}</option>`
+    ).join('');
   document.getElementById('kf-tarih').value = r.tarih || '';
   document.getElementById('kf-aciklama').value = r.aciklama || '';
   document.getElementById('kf-tutar').value = r.tutar || 0;

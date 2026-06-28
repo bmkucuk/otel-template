@@ -546,26 +546,30 @@ function toggleFoy(foyNo, acenteKod, cb) {
 function toggleHepsi(cb) {
   const tumMod = !document.getElementById('acente-sel').value;
   const bekleyenler = detayFoyler.filter(f => !f.fatura_edildi);
+  console.log('[toggleHepsi] checked='+cb.checked+' tumMod='+tumMod+' detayFoyler='+detayFoyler.length+' bekleyenler='+bekleyenler.length);
   secilenFoylar.clear();
 
   if (cb.checked) {
     if (tumMod) {
-      // Tüm acenteler modu: sadece ilk acentenin föyleri
       let ilkAcente = null;
       bekleyenler.forEach(f => {
         if (!ilkAcente) ilkAcente = f.acente_kod;
         if (f.acente_kod === ilkAcente) secilenFoylar.add(String(f.foy_no));
       });
+      console.log('[toggleHepsi] tumMod seçilen:', [...secilenFoylar]);
       if (ilkAcente) toast(`Sadece ${ilkAcente} acentesine ait föyler seçildi.`, 'info');
     } else {
-      // Acente seçili: tüm bekleyenleri seç
       bekleyenler.forEach(f => secilenFoylar.add(String(f.foy_no)));
+      console.log('[toggleHepsi] acente modu seçilen:', [...secilenFoylar]);
     }
   }
 
-  // Önce seçimi tabloya yansıt (render çağırmadan, sadece checkbox'ları güncelle)
-  document.querySelectorAll('.detay-chk').forEach(chk => {
-    chk.checked = secilenFoylar.has(chk.dataset.foy);
+  const chks = document.querySelectorAll('.detay-chk');
+  console.log('[toggleHepsi] DOM checkbox sayısı:', chks.length);
+  chks.forEach(chk => {
+    const match = secilenFoylar.has(chk.dataset.foy);
+    console.log('  chk data-foy='+chk.dataset.foy+' match='+match);
+    chk.checked = match;
   });
   guncelleSecimOzeti();
 }

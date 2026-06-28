@@ -269,7 +269,8 @@ const KAYNAK_SAYFA = {
 
 function baglantiliSayfa(kaynakTablo, aciklama) {
   if (kaynakTablo && KAYNAK_SAYFA[kaynakTablo]) return KAYNAK_SAYFA[kaynakTablo];
-  if ((aciklama || '').includes('[ACENTE-FATURA]')) return 'Acenteler (ilgili föyün "İptal Et" linkiyle faturayı geri alın)';
+  if ((aciklama || '').includes('[ACENTE-TAHSILAT]')) return 'Acenteler → Alacak Takip Paneli (ilgili faturanın "Sil" butonuyla tahsilatı ve faturayı birlikte iptal edin)';
+  if ((aciklama || '').includes('[ACENTE-FATURA]')) return 'Acenteler → Alacak Takip Paneli (ilgili faturanın "Sil" butonu ile iptal edin)';
   if ((aciklama || '').includes('[ACENTE-OTO]')) return 'Rez. Formu (ilgili föyü açıp acenteyi/tutarı düzenleyin — otomatik güncellenir)';
   if (/Föy#\d+/.test(aciklama || '')) return 'Rez. Formu (ilgili föyü açıp tahsilatı oradan kaldırın)';
   if ((aciklama || '').includes('[OTEL-AKTARIM]')) return 'Dashboard gelir aktarımı (ilgili ayı yeniden aktararak güncelleyin)';

@@ -653,6 +653,7 @@ async function loadKK() {
     <td class="red" style="text-align:right;white-space:nowrap">${fmt(r.tutar)}</td>
     <td>${hesapAdi(r.alacak_hesap)}</td>
     <td style="white-space:nowrap">
+      <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="kkDuzenle(${r.id})">Düzenle</button>
       <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="kkSil(${r.id})">Sil</button>
     </td>
   </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:24px">Kayıt yok</td></tr>';
@@ -667,6 +668,8 @@ async function openKKModal() {
   document.getElementById('kf-tutar').value = '0';
   document.getElementById('kf-aciklama').value = '';
   document.getElementById('kf-alacak').value = '102-1';
+  // Düzenleme modundan çıkınca föy seçimini tekrar göster
+  document.getElementById('kf-foy').parentElement.style.display = '';
   // Rezervasyonları yükle
   if (kkRezervasyonlar.length === 0) {
     const rezler = await api('/api/rezervasyonlar');
@@ -689,23 +692,51 @@ function kkFoySecildi() {
 }
 
 async function saveKK() {
-  const foyNo = document.getElementById('kf-foy').value;
-  if (!foyNo) { toast('Föy seçiniz', 'error'); return; }
-  const data = {
-    foy_no: parseInt(foyNo),
-    aciklama: document.getElementById('kf-aciklama').value,
-    tarih: document.getElementById('kf-tarih').value,
-    tutar: parseFloat(document.getElementById('kf-tutar').value)||0,
-    alacak_hesap: document.getElementById('kf-alacak').value,
-  };
   if (!validateForm([
     {id:'kf-tarih',label:'Tarih'},
     {id:'kf-aciklama',label:'Açıklama'},
     {id:'kf-tutar',label:'Tutar'},
   ])) return;
-  const r = await api('/api/muhasebe/kk_komisyon/ekle', data);
-  if (r.ok) { toast('KK Komisyonu kaydedildi ✓'); closeKKModal(); loadKK(); }
-  else toast(r.error, 'error');
+  if (kkEditId) {
+    // Güncelle: yevmiye/guncelle endpoint'i kullan
+    const r = await api('/api/muhasebe/yevmiye/guncelle', {
+      id: kkEditId,
+      tarih: document.getElementById('kf-tarih').value,
+      tutar: parseFloat(document.getElementById('kf-tutar').value)||0,
+      aciklama: document.getElementById('kf-aciklama').value,
+      borc: '760',
+      alacak: document.getElementById('kf-alacak').value,
+      islem_tipi: 'KK Komisyon Gideri',
+    });
+    if (r.ok) { toast('Güncellendi ✓'); closeKKModal(); loadKK(); }
+    else toast(r.error, 'error');
+  } else {
+    const foyNo = document.getElementById('kf-foy').value;
+    if (!foyNo) { toast('Föy seçiniz', 'error'); return; }
+    const data = {
+      foy_no: parseInt(foyNo),
+      aciklama: document.getElementById('kf-aciklama').value,
+      tarih: document.getElementById('kf-tarih').value,
+      tutar: parseFloat(document.getElementById('kf-tutar').value)||0,
+      alacak_hesap: document.getElementById('kf-alacak').value,
+    };
+    const r = await api('/api/muhasebe/kk_komisyon/ekle', data);
+    if (r.ok) { toast('KK Komisyonu kaydedildi ✓'); closeKKModal(); loadKK(); }
+    else toast(r.error, 'error');
+  }
+}
+
+async function kkDuzenle(id) {
+  const r = kkData.find(x => x.id === id); if (!r) return;
+  kkEditId = id;
+  document.getElementById('kk-modal-baslik').textContent = 'KK Komisyonu Düzenle';
+  // Föy seçimi düzenleme modunda gizle (föy değiştirilemisin)
+  document.getElementById('kf-foy').parentElement.style.display = 'none';
+  document.getElementById('kf-tarih').value = r.tarih || '';
+  document.getElementById('kf-aciklama').value = r.aciklama || '';
+  document.getElementById('kf-tutar').value = r.tutar || 0;
+  document.getElementById('kf-alacak').value = r.alacak_hesap || '102-1';
+  document.getElementById('modal-kk').classList.add('open');
 }
 
 async function kkSil(id) {

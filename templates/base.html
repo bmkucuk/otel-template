@@ -221,7 +221,7 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
     </a>
     {% endif %}
     <a href="/muhasebe/stok" class="{% if active=='muh-stok' %}active{% endif %}">
-      <span class="icon">📦</span> Genel Giderler
+      <span class="icon">📦</span> Giderler
     </a>
     {% if session.get('role') in ['admin', 'partner'] %}
     <a href="/muhasebe/vergi" class="{% if active=='muh-vergi' %}active{% endif %}">

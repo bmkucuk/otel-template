@@ -425,7 +425,14 @@ def get_next_foy_no():
     conn = get_conn()
     row = conn.execute("SELECT MAX(foy_no) as m FROM rezervasyonlar").fetchone()
     conn.close()
-    return (row['m'] or 0) + 1
+    mevcut_max = row['m'] or 0
+    # config.json'dan başlangıç nosu
+    try:
+        import config_loader as _cl
+        cfg_baslangic = _cl.load_config().get('sistem', {}).get('foy_baslangic', 1)
+    except Exception:
+        cfg_baslangic = 1
+    return max(mevcut_max + 1, cfg_baslangic)
 
 
 # ── Adisyon CRUD ──────────────────────────────────────────────────────────────
@@ -443,7 +450,13 @@ def get_next_adisyon_no():
     conn = get_conn()
     row = conn.execute("SELECT MAX(adisyon_no) as m FROM adisyonlar").fetchone()
     conn.close()
-    return (row['m'] or 0) + 1
+    mevcut_max = row['m'] or 0
+    try:
+        import config_loader as _cl
+        cfg_baslangic = _cl.load_config().get('sistem', {}).get('adisyon_baslangic', 1)
+    except Exception:
+        cfg_baslangic = 1
+    return max(mevcut_max + 1, cfg_baslangic)
 
 def save_adisyon(data):
     conn = get_conn()

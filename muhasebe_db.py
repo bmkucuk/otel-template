@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Veritabanı katmanı — SQLite"""
 import sqlite3
-import config_loader as _cfg
 from pathlib import Path
 from datetime import date, datetime
 
@@ -235,9 +234,12 @@ def init_db():
         ("360",    "Ödenecek Vergi",             "Pasif",     "Vergi"),
         ("340",    "Alınan Avanslar (Kaparo)",              "Pasif",     "Kaparo"),
         ("649",    "Diğer Olağan Gelir ve Karlar",  "Gelir",     "Diğer"),
-        ("600",    "Konaklama Geliri",          "Gelir",     "Gelir"),
-        ("610",    "Adisyon Geliri",             "Gelir",     "Gelir"),
-
+        ("500-LK", "LK Cari (Levent Koçoğlu)",  "Ozkaynak",  "Ortak"),
+        ("500-BT", "BT Cari (Burçin Taşdelen)",  "Ozkaynak",  "Ortak"),
+        ("500-FK", "FK Cari (Fırat Koçoğlu)",   "Ozkaynak",  "Ortak"),
+        ("600",    "Konaklama Geliri - Leo",     "Gelir",     "Gelir"),
+        ("601",    "Konaklama Geliri - CV",      "Gelir",     "Gelir"),
+        ("610",    "Adisyon Geliri",        "Gelir",     "Gelir"),
         ("720",    "Personel Maaşları",          "Gider",     "Gider"),
         ("730",    "Acente Komisyonları",        "Gider",     "Gider"),
         ("740",    "Elektrik/Su/Doğalgaz",       "Gider",     "Gider"),
@@ -257,37 +259,21 @@ def init_db():
         ("IS",    "İş Bankası",     ""),
         ("ZRH",   "Ziraat Bankası", ""),
         ("DNZ",   "Denizbank",     ""),
-
+        ("FK-NKT","Fırat Nakit",    ""),
+        ("FK-KK", "Fırat KK",       ""),
+        ("LK-NKT","Levent Nakit",   ""),
+        ("LK-KK", "Levent KK",      ""),
+        ("BT-NKT","Burçin Nakit",   ""),
+        ("BT-KK", "Burçin KK",      ""),
     ]
     for b in bankalar:
         c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)", b)
 
-    # Ortak cari hesaplarını ve kişisel banka hesaplarını config'den oluştur
-    try:
-        ortaklar = _cfg.load_config().get('ortaklar', [])
-        for o in ortaklar:
-            kod   = o.get('kod', '')
-            ad    = o.get('ad', '')
-            kisalt = o.get('kisalt', kod)
-            if not kod: continue
-            # Ortak cari hesabı
-            c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES(?,?,?,?)",
-                (f"500-{kod}", f"{kisalt} Cari ({ad})", "Ozkaynak", "Ortak"))
-            # Kişisel banka hesapları
-            c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)",
-                (f"{kod}-NKT", f"{ad.split()[0]} Nakit", ""))
-            c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)",
-                (f"{kod}-KK", f"{ad.split()[0]} KK", ""))
-    except Exception as e:
-        print(f"Ortak hesap oluşturma hatası: {e}")
-
-    # Migration: BT hesap adı Barış Taşdelen'den Burçin Taşdelen'e düzeltildi (sadece eski sistemlerde)
+    # Migration: BT hesap adı Barış Taşdelen'den Burçin Taşdelen'e düzeltildi
+    c.execute("UPDATE hesaplar SET ad='BT Cari (Burçin Taşdelen)' WHERE kod='500-BT'")
     # Migration: Booking.com -> Booking adı düzeltildi
     c.execute("UPDATE hesaplar SET ad='Booking Cari' WHERE kod='320-1'")
     c.execute("UPDATE acenteler SET ad='Booking' WHERE kod='BKG'")
-
-    # Migration: 153 hesap adını Genel Giderler yap
-    c.execute("UPDATE hesaplar SET ad='Genel Giderler' WHERE kod='153'")
     # Migration: eski ayrı Burçin kişisel hesabı varsa resmi BT ortak hesabına birleştir
     c.execute("SELECT 1 FROM hesaplar WHERE kod='500-BC'")
     if c.fetchone():
@@ -320,17 +306,27 @@ def init_db():
         if col not in maas_cols:
             c.execute(ddl)
 
-    acenteler = [
-        ("BKG",     "Booking",  15.0),
-        ("EXP",     "Expedia",      15.0),
-        ("JLY",     "JollyTur",     15.0),
-        ("TTS",     "TatilSepeti",  15.0),
-        ("ETS",     "ETSTUR",       15.0),
-        ("Telefon", "Telefon",       0.0),
-        ("Kapidan", "Kapidan",       0.0),
-    ]
-    for a in acenteler:
-        c.execute("INSERT OR IGNORE INTO acenteler(kod,ad,komisyon_orani) VALUES(?,?,?)", a)
+    # Migration: Expedia komisyon oranı %15 -> %18
+    c.execute("UPDATE acenteler SET komisyon_orani=18.0 WHERE kod='EXP'")
+
+    # Migration: 153 hesap adını Genel Giderler yap
+    c.execute("UPDATE hesaplar SET ad='Genel Giderler' WHERE kod='153'")
+
+    # Migration: EUR ve USD Kasa hesapları
+    c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES('KASA-EUR','Euro Kasa','')")
+    c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES('KASA-USD','Dolar Kasa','')")
+    # Yevmiye hesap planına döviz kasa hesapları
+    c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES('100-EUR','Euro Kasa','Aktif','Nakit')")
+    c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES('100-USD','Dolar Kasa','Aktif','Nakit')")
+
+    # Migration: yevmiye tablosuna döviz kolonları
+    yev_cols = [r[1] for r in c.execute("PRAGMA table_info(yevmiye)").fetchall()]
+    if 'doviz_cinsi' not in yev_cols:
+        c.execute("ALTER TABLE yevmiye ADD COLUMN doviz_cinsi TEXT DEFAULT ''")
+    if 'doviz_tutar' not in yev_cols:
+        c.execute("ALTER TABLE yevmiye ADD COLUMN doviz_tutar REAL DEFAULT 0")
+    if 'kur' not in yev_cols:
+        c.execute("ALTER TABLE yevmiye ADD COLUMN kur REAL DEFAULT 0")
 
     # Migration: 760 KK komisyon hesabı
     c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES('760','Banka Komisyon Giderleri','Gider','Gider')")
@@ -339,6 +335,21 @@ def init_db():
     stok_cols = [r[1] for r in c.execute("PRAGMA table_info(stok)").fetchall()]
     if 'hesap_kodu' not in stok_cols:
         c.execute("ALTER TABLE stok ADD COLUMN hesap_kodu TEXT DEFAULT ''")
+
+    # Migration: Kasa&Banka'dan girilen KK komisyon yevmiyelerini 760'a taşı
+    # Açıklamada "KK KOM" veya "KOMİSYON" + borç hesabı 780/153 olanları 760'a al
+    c.execute("""
+        UPDATE yevmiye SET borc_hesap='760'
+        WHERE borc_hesap IN ('780','153')
+        AND (
+            UPPER(aciklama) LIKE '%KK KOM%'
+            OR UPPER(aciklama) LIKE '%KOMİSYON%'
+            OR UPPER(aciklama) LIKE '%KOMISYON%'
+            OR UPPER(aciklama) LIKE '%POS %'
+            OR UPPER(aciklama) LIKE '%POS U%'
+        )
+        AND kaynak_tablo IS NULL
+    """)
 
     # Migration: mevcut stok kayıtlarının hesap_kodu'nu kategoriden türet
     kat_map = {
@@ -359,6 +370,18 @@ def init_db():
         # Yevmiyedeki borc_hesap='153' olan eski kayıtları da düzelt
         if hk != '153':
             c.execute("UPDATE yevmiye SET borc_hesap=? WHERE kaynak_tablo='stok' AND kaynak_id=? AND borc_hesap='153'", (hk, sid))
+
+    acenteler = [
+        ("BKG",     "Booking",  15.0),
+        ("EXP",     "Expedia",      15.0),
+        ("JLY",     "JollyTur",     15.0),
+        ("TTS",     "TatilSepeti",  15.0),
+        ("ETS",     "ETSTUR",       15.0),
+        ("Telefon", "Telefon",       0.0),
+        ("Kapidan", "Kapidan",       0.0),
+    ]
+    for a in acenteler:
+        c.execute("INSERT OR IGNORE INTO acenteler(kod,ad,komisyon_orani) VALUES(?,?,?)", a)
 
     conn.commit()
     conn.close()

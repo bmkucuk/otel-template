@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Muhasebe modülü — Flask route'ları"""
 from datetime import date
-import config_loader as cfg
 from flask import Blueprint, render_template, request, jsonify, session, redirect
 import muhasebe_db as mdb
 import database as db
@@ -124,9 +123,8 @@ def api_gosterge():
         if tip:    q += " AND islem_tipi=?";   p.append(tip)
         return conn.execute(q, p).fetchone()[0] or 0
 
-    _kisa = cfg.otel_bilgi().get('kisa_ad','OTEL')
-    leo_kon  = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel=?", (yil,_kisa)).fetchone()[0] or 0
-    cv_kon   = 0
+    leo_kon  = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel='LEO'", (yil,)).fetchone()[0] or 0
+    cv_kon   = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel='CV'", (yil,)).fetchone()[0] or 0
     restoran = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi='Adisyon Geliri'", (yil,)).fetchone()[0] or 0
     # Tüm nakit girişleri (tahsilat + kapora)
     nakit    = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND borc_hesap='100'", (yil,)).fetchone()[0] or 0
@@ -226,45 +224,6 @@ def api_yevmiye_ekle():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
 
-@muh.route('/api/muhasebe/yevmiye/guncelle', methods=['POST'])
-@admin_required
-def api_yevmiye_guncelle():
-    try:
-        d = request.get_json()
-        yev_id   = int(d['id'])
-        tarih    = d['tarih']
-        tutar    = float(d['tutar'])
-        aciklama = d.get('aciklama', '')
-        islem    = d.get('islem_tipi', '')
-        borc     = d.get('borc', '')
-        alacak   = d.get('alacak', '')
-        yil      = int(tarih[:4]); ay = int(tarih[5:7])
-        conn = mdb.get_conn()
-        sets = "tarih=?, tutar=?, aciklama=?, islem_tipi=?, yil=?, ay=?"
-        vals = [tarih, tutar, aciklama, islem, yil, ay]
-        if borc:
-            sets += ", borc_hesap=?"; vals.append(borc)
-        if alacak:
-            sets += ", alacak_hesap=?"; vals.append(alacak)
-        vals.append(yev_id)
-        SISTEM_TIPLERI = {
-            'Konaklama Geliri','Adisyon Geliri','Tahsilat - Nakit','Tahsilat - KK',
-            'Tahsilat - Havale','Personel Maaşı','Personel Maaşı (Avans Mahsubu)',
-            'Personel Avans','Stok Alımı','Demirbaş Alımı','Acente Ödemesi',
-            'Acente Komisyonu','Vergi Ödemesi','Ortak Çekimi','Ortak Yatırımı',
-            'Kasa - Banka Virman'
-        }
-        # kaynak_tablo dolu VEYA sistem islem tipiyse düzenlenemez
-        mevcut = conn.execute("SELECT kaynak_tablo, islem_tipi FROM yevmiye WHERE id=?", (yev_id,)).fetchone()
-        if not mevcut or mevcut[0] or (mevcut[1] in SISTEM_TIPLERI):
-            conn.close()
-            return jsonify({'ok': False, 'error': 'Bu kayıt düzenlenemez (sisteme bağlı kayıt)'}), 400
-        conn.execute(f"UPDATE yevmiye SET {sets} WHERE id=?", vals)
-        conn.commit(); conn.close()
-        return jsonify({'ok': True})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 400
-
 @muh.route('/api/muhasebe/yevmiye/sil', methods=['POST'])
 @admin_required
 def api_yevmiye_sil():
@@ -327,6 +286,45 @@ def api_yevmiye_sil():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
 
+@muh.route('/api/muhasebe/yevmiye/guncelle', methods=['POST'])
+@admin_required
+def api_yevmiye_guncelle():
+    try:
+        d = request.get_json()
+        yev_id   = int(d['id'])
+        tarih    = d['tarih']
+        tutar    = float(d['tutar'])
+        aciklama = d.get('aciklama', '')
+        islem    = d.get('islem_tipi', '')
+        borc     = d.get('borc', '')
+        alacak   = d.get('alacak', '')
+        yil      = int(tarih[:4]); ay = int(tarih[5:7])
+        conn = mdb.get_conn()
+        sets = "tarih=?, tutar=?, aciklama=?, islem_tipi=?, yil=?, ay=?"
+        vals = [tarih, tutar, aciklama, islem, yil, ay]
+        if borc:
+            sets += ", borc_hesap=?"; vals.append(borc)
+        if alacak:
+            sets += ", alacak_hesap=?"; vals.append(alacak)
+        vals.append(yev_id)
+        SISTEM_TIPLERI = {
+            'Konaklama Geliri','Adisyon Geliri','Tahsilat - Nakit','Tahsilat - KK',
+            'Tahsilat - Havale','Personel Maaşı','Personel Maaşı (Avans Mahsubu)',
+            'Personel Avans','Stok Alımı','Demirbaş Alımı','Acente Ödemesi',
+            'Acente Komisyonu','Vergi Ödemesi','Ortak Çekimi','Ortak Yatırımı',
+            'Kasa - Banka Virman'
+        }
+        # kaynak_tablo dolu VEYA sistem islem tipiyse düzenlenemez
+        mevcut = conn.execute("SELECT kaynak_tablo, islem_tipi FROM yevmiye WHERE id=?", (yev_id,)).fetchone()
+        if not mevcut or mevcut[0] or (mevcut[1] in SISTEM_TIPLERI):
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Bu kayıt düzenlenemez (sisteme bağlı kayıt)'}), 400
+        conn.execute(f"UPDATE yevmiye SET {sets} WHERE id=?", vals)
+        conn.commit(); conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 400
+
 @muh.route('/api/muhasebe/hesaplar')
 def api_hesaplar():
     return jsonify(mdb.get_hesap_adlari())
@@ -359,15 +357,15 @@ def api_kasa():
     bakiyeler = []
     for b in bankalar:
         h_kodu = BANKA_HESAP.get(b['kod'], b['kod'])
-        # Aktif hesaplar: borç = giriş (para geldi), alacak = çıkış (para gitti)
         giris = conn.execute(
             "SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND borc_hesap=?",
             (yil, h_kodu)).fetchone()[0]
         cikis = conn.execute(
             "SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND alacak_hesap=?",
             (yil, h_kodu)).fetchone()[0]
+        bakiye = giris - cikis
         entry = {'kod': b['kod'], 'ad': b['ad'], 'hesap_kodu': h_kodu,
-                 'giris': giris, 'cikis': cikis, 'bakiye': giris - cikis}
+                 'giris': giris, 'cikis': cikis, 'bakiye': bakiye}
         # Döviz kasaları için ayrıca döviz bakiyesi
         if b['kod'] in ('KASA-EUR', 'KASA-USD'):
             doviz = 'EUR' if b['kod'] == 'KASA-EUR' else 'USD'
@@ -585,31 +583,19 @@ def api_demirbas():
     conn.close()
     return jsonify(rows)
 
-# Banka adı → hesap kodu (temel)
+# Banka adı → hesap kodu
 BANKA_AD_KODU = {
     'Kasa TL': '100', 'İş Bankası': '102-1',
     'Ziraat Bankası': '102-2', 'Denizbank': '102-3', 'Deniz Bank': '102-3',
+    'Fırat Nakit': '500-FK', 'Fırat KK': '500-FK',
+    'Levent Nakit': '500-LK', 'Levent KK': '500-LK',
+    'Burçin Nakit': '500-BT', 'Burçin KK': '500-BT',
 }
 BANKA_HESAP_KODU = {'100': '100', '102-1': '102-1', '102-2': '102-2', '102-3': '102-3',
-                    'KASA': '100', 'IS': '102-1', 'ZRH': '102-2', 'DNZ': '102-3'}
-
-# Config'den ortak banka mappinglerini ekle
-def _ortak_banka_mapping_guncelle():
-    try:
-        ortaklar = cfg.load_config().get('ortaklar', [])
-        for o in ortaklar:
-            kod = o.get('kod', '')
-            ad  = o.get('ad', '').split()[0]
-            if not kod: continue
-            hesap = f'500-{kod}'
-            BANKA_AD_KODU[f'{ad} Nakit'] = hesap
-            BANKA_AD_KODU[f'{ad} KK']    = hesap
-            BANKA_HESAP_KODU[f'{kod}-NKT'] = hesap
-            BANKA_HESAP_KODU[f'{kod}-KK']  = hesap
-    except Exception:
-        pass
-
-_ortak_banka_mapping_guncelle()
+                    'KASA': '100', 'IS': '102-1', 'ZRH': '102-2', 'DNZ': '102-3',
+                    'FK-NKT': '500-FK', 'FK-KK': '500-FK',
+                    'LK-NKT': '500-LK', 'LK-KK': '500-LK',
+                    'BT-NKT': '500-BT', 'BT-KK': '500-BT'}
 
 
 @muh.route('/api/muhasebe/demirbas/ekle', methods=['POST'])
@@ -737,8 +723,27 @@ def api_acente_detay():
     kod = request.args.get('kod', '')
     yil = request.args.get('yil', date.today().year, type=int)
     hesap = ACENTE_HESAP.get(kod)
+
+    # Tüm acenteler modu: her acentenin detayını birleştir
     if not hesap:
-        return jsonify({'foyler': [], 'fatura_disi_bakiye': 0})
+        tum_foyler = []
+        tum_kesilen = []
+        for a_kod, a_hesap in ACENTE_HESAP.items():
+            det = _acente_detay_hesapla(a_hesap, a_kod, yil)
+            for f in det['foyler']:
+                f['acente_kod'] = a_kod
+            tum_foyler.extend(det['foyler'])
+            tum_kesilen.extend(det['kesilen_faturalar'])
+        tum_foyler.sort(key=lambda x: x['tarih'])
+        return jsonify({'foyler': tum_foyler, 'fatura_disi_bakiye': 0,
+                        'kesilen_faturalar': tum_kesilen})
+
+    det = _acente_detay_hesapla(hesap, kod, yil)
+    return jsonify(det)
+
+
+def _acente_detay_hesapla(hesap, kod, yil):
+    import re as _re
     conn = mdb.get_conn()
     rows = conn.execute("""
         SELECT tarih, islem_tipi, borc_hesap, alacak_hesap, tutar, aciklama
@@ -748,11 +753,10 @@ def api_acente_detay():
     """, (hesap, hesap, yil)).fetchall()
     conn.close()
 
-    import re as _re
     foyler = {}
     faturalanan = set()
     kesilen_faturalar = []
-    fatura_disi_bakiye = 0.0  # genel (föy'e bağlı olmayan) fatura tahsilatları
+    fatura_disi_bakiye = 0.0
     BANKA_AD = {'102-1': 'İş Bankası', '102-2': 'Ziraat Bankası', '102-3': 'Denizbank'}
     for r in rows:
         m = _re.search(r'Föy#(\d+)\s+(.*?)\s+\[ACENTE-OTO\]', r['aciklama'] or '')
@@ -788,8 +792,8 @@ def api_acente_detay():
         f['fatura_edildi'] = f['foy_no'] in faturalanan
         sonuc.append(f)
     sonuc.sort(key=lambda x: x['tarih'])
-    return jsonify({'foyler': sonuc, 'fatura_disi_bakiye': round(fatura_disi_bakiye, 2),
-                    'kesilen_faturalar': kesilen_faturalar})
+    return {'foyler': sonuc, 'fatura_disi_bakiye': round(fatura_disi_bakiye, 2),
+            'kesilen_faturalar': kesilen_faturalar}
 
 @muh.route('/api/muhasebe/acente-fatura-kes', methods=['POST'])
 def api_acente_fatura_kes():
@@ -803,7 +807,7 @@ def api_acente_fatura_kes():
         foy_nolar = [str(x) for x in d.get('foy_nolar', [])]
         tarih = d.get('tarih') or date.today().isoformat()
         banka = d.get('odeme_banka', 'IS')
-        otel = d.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
+        otel = d.get('otel', 'LEO')
         fatura_no = (d.get('fatura_no') or '').strip()
         hesap = ACENTE_HESAP.get(kod)
         if not hesap or not foy_nolar:
@@ -975,7 +979,7 @@ def api_acente_ekle():
             (tarih,acente_kod,foy_no,rez_no,misafir,rez_tutari,komisyon_oran,komisyon_tl,gelen_odeme,otel,fatura_no)
             VALUES (?,?,?,?,?,?,?,?,?,?,?)
         """, (d['tarih'], d['acente_kod'], None, '', 'Fatura Tahsilatı', 0, 0, 0,
-              gelen, d.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL')), fatura_no))
+              gelen, d.get('otel', 'LEO'), fatura_no))
         acente_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         if gelen > 0:
             banka = d.get('odeme_banka', 'IS')
@@ -1163,20 +1167,19 @@ def api_mizan():
     satirlar.append({'tip':'bos'})
 
     satirlar.append({'tip':'baslik','kod':'━━','ad':'GELİRLER','borc':0,'alacak':0})
-    _otel_adi = cfg.otel_bilgi().get('ad', 'Otel')
-    satir('600', f'Konaklama Geliri - {_otel_adi}', 0, leo_kon, 'Gelir')
+    satir('600', 'Konaklama Geliri - Leo', 0, leo_kon, 'Gelir')
+    satir('601', 'Konaklama Geliri - CV',  0, cv_kon,  'Gelir')
     satir('610', 'Adisyon Geliri',         0, adis_gel,'Gelir')
     satirlar.append({'tip':'bos'})
 
     satirlar.append({'tip':'baslik','kod':'━━','ad':'GİDERLER','borc':0,'alacak':0})
-    if maas:     satir('720','Personel Maaş',     maas,     0, 'Gider')
-    if komisyon: satir('730','Acente Komisyonu',  komisyon, 0, 'Gider')
-    if vergi:    satir('770','Vergi',             vergi,    0, 'Gider')
-    if dem:      satir('255','Demirbaş',          dem,      0, 'Gider')
-    if ortak:    satir('500','Ortak Cari',        ortak,    0, 'Gider')
+    if maas:     satir('720','Personel Maaş', maas,  0, 'Gider')
+    if komisyon: satir('730','Acente Komisyonu', komisyon, 0, 'Gider')
+    if vergi:    satir('770','Vergi',         vergi, 0, 'Gider')
+    if dem:      satir('255','Demirbaş',      dem,   0, 'Gider')
 
-    # Yevmiyeden kaydedilmiş diğer tüm gider hesapları (hardcoded olmayanlar)
-    islenecekler = {'720','730','770','740','255','500'}
+    # Yevmiyeden kaydedilmiş diğer tüm gider hesapları (740-780 arası ve 255 hariç zaten işlenenler)
+    islenecekler = {'720','730','770','255','500'}  # 740 yevmiyede 153 olarak yazılır
     muh_conn2 = mdb.get_conn()
     gider_hesaplar = muh_conn2.execute("""
         SELECT h.kod, h.ad,
@@ -1194,13 +1197,23 @@ def api_mizan():
         if row[0] not in islenecekler:
             satir(row[0], row[1], row[2], row[3], 'Gider')
             islenecekler.add(row[0])
+
     satirlar.append({'tip':'bos'})
 
     satirlar.append({'tip':'baslik','kod':'━━','ad':'ÖZKAYNAKLAR','borc':0,'alacak':0})
     satirlar.append({'tip':'bos'})
 
     gelir_toplam = leo_kon + cv_kon + adis_gel
-    gider_toplam = maas + vergi + stok + dem + ortak + komisyon
+    # Gider toplamı: yevmiyedeki TÜM gider hesap borçları
+    muh_conn3 = mdb.get_conn()
+    gider_toplam_yev = muh_conn3.execute("""
+        SELECT COALESCE(SUM(y.tutar),0)
+        FROM yevmiye y JOIN hesaplar h ON y.borc_hesap=h.kod
+        WHERE h.tip='Gider' AND y.yil=?
+    """, (yil,)).fetchone()[0] or 0
+    muh_conn3.close()
+    # personel_maas ve vergi tablosu kaynaklı giderler de dahil (bunlar yevmiyede olmayabilir)
+    gider_toplam = max(gider_toplam_yev, maas + vergi + stok + dem + ortak + komisyon)
     net = gelir_toplam - gider_toplam
 
     satirlar.append({'tip':'net','kod':'NET','ad':'NET KÂR / ZARAR',
@@ -1233,7 +1246,7 @@ def api_gelir_aktar():
             if not giris: continue
             if giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
+            otel = r.get('otel', 'LEO')
             key = (ay, otel)
             ozet[key]['konaklama'] += float(r.get('toplam_fiyat') or 0)
             ozet[key]['kapora']    += float(r.get('kapora') or 0)
@@ -1254,7 +1267,7 @@ def api_gelir_aktar():
             tarih = a.get('tarih')
             if not tarih or tarih[:4] != str(yil): continue
             ay = int(tarih[5:7])
-            otel = a.get('otel') or cfg.otel_bilgi().get('kisa_ad','OTEL')
+            otel = a.get('otel') or 'LEO'
             ozet[(ay, otel)]['restoran'] += float(a.get('tutar') or 0)
             ozet[(ay, otel)]['acik'] += float(a.get('tutar') or 0) - float(a.get('tutar') or 0)
 
@@ -1263,7 +1276,7 @@ def api_gelir_aktar():
             giris = r.get('giris')
             if not giris or giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
+            otel = r.get('otel', 'LEO')
             ozet[(ay, otel)]['acik'] += float(r.get('rez_bakiye') or 0) + float(r.get('adis_bakiye') or 0)
 
         # Rezervasyonları ay/otel bazında grupla (gerçek tarihler için)
@@ -1273,7 +1286,7 @@ def api_gelir_aktar():
             giris = r.get('giris')
             if not giris or giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', cfg.otel_bilgi().get('kisa_ad','OTEL'))
+            otel = r.get('otel', 'LEO')
             rez_gruplar[(ay, otel)].append(dict(r))
 
         mdb.temizle_gelir_ozet(yil)
@@ -1366,6 +1379,27 @@ def api_acente_sil():
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
+
+# ── Gider Sekmeleri: yevmiyeden borc_hesap koduna göre ───────────────────────
+
+@muh.route('/api/muhasebe/gider_sekme')
+def api_gider_sekme():
+    """7xx hesap koduna göre yevmiye kayıtlarını döndürür (tüm kaynaklar)."""
+    yil        = request.args.get('yil', date.today().year, type=int)
+    hesap_kodu = request.args.get('hesap_kodu', '')
+    if not hesap_kodu:
+        return jsonify([])
+    conn = mdb.get_conn()
+    rows = conn.execute("""
+        SELECT y.id, y.tarih, y.aciklama, y.tutar, y.borc_hesap,
+               y.alacak_hesap, y.kaynak_tablo, y.kaynak_id, y.islem_tipi
+        FROM yevmiye y
+        WHERE y.yil=? AND y.borc_hesap=?
+        ORDER BY y.tarih ASC
+    """, (yil, hesap_kodu)).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
 
 # ── KK Komisyon ──────────────────────────────────────────────────────────────
 

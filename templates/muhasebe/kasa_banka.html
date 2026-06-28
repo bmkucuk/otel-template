@@ -243,7 +243,7 @@ function rowHtml(r) {
     : '';
   return `<tr>
     <td>${fmtDate(r.tarih)}</td>
-    <td>${r.aciklama||'—'}${dovizHtml}</td>
+    <td>${(r.aciklama||'—').replace(/\s*\[ACENTE-FATURA\][^\]]*(?:\[[^\]]*\])*/g,'').replace(/\s*\[ACENTE-TAHSILAT\]/g,'').replace(/\s*\[ACENTE-OTO\]/g,'').replace(/\s*\[FATURA:[^\]]*\]/g,'').replace(/\s*\[OTEL-AKTARIM\]/g,'').trim()||'—'}${dovizHtml}</td>
     <td style="font-size:11px;color:var(--text2)">${r.islem_tipi||'—'}</td>
     <td class="green" style="text-align:right">${r.giris > 0 ? fmt(r.giris) : '—'}</td>
     <td class="red" style="text-align:right">${r.cikis > 0 ? fmt(r.cikis) : '—'}</td>

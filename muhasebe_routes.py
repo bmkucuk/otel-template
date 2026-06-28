@@ -772,14 +772,24 @@ def _acente_detay_hesapla(hesap, kod, yil):
         mf = _re.search(r'Föy#(\d+)\s+(.*?)\s+\[ACENTE-FATURA\]', r['aciklama'] or '')
         if mf:
             faturalanan.add(mf.group(1))
-            banka_kodu = r['borc_hesap'] if r['borc_hesap'] != hesap else r['alacak_hesap']
             fn = _re.search(r'\[FATURA:(.*?)\]', r['aciklama'] or '')
             kesilen_faturalar.append({
                 'tarih': r['tarih'], 'foy_no': mf.group(1), 'misafir': mf.group(2),
-                'tutar': r['tutar'], 'banka': BANKA_AD.get(banka_kodu, banka_kodu),
-                'banka_kodu': banka_kodu,
-                'fatura_no': fn.group(1) if fn else ''
+                'tutar': r['tutar'], 'fatura_no': fn.group(1) if fn else '',
+                'tahsil_edildi': False  # sonra tahsilat kaydına bakılacak
             })
+            continue
+        mt = _re.search(r'Föy#(\d+)\s+(.*?)\s+\[ACENTE-TAHSILAT\]', r['aciklama'] or '')
+        if mt:
+            # Tahsilat kaydını kesilen_faturalar listesindeki ilgili föye işaretle
+            for kf in kesilen_faturalar:
+                if kf['foy_no'] == mt.group(1):
+                    kf['tahsil_edildi'] = True
+                    kf['tahsilat_tarihi'] = r['tarih']
+                    banka_kodu = r['borc_hesap'] if r['borc_hesap'] != hesap else r['alacak_hesap']
+                    kf['banka'] = BANKA_AD.get(banka_kodu, banka_kodu)
+                    kf['banka_kodu'] = banka_kodu
+                    break
             continue
         # föy'e bağlı olmayan (genel fatura tahsilatı) hareket
         tutar = r['tutar'] if r['borc_hesap'] == hesap else -r['tutar']
@@ -832,7 +842,6 @@ def api_acente_fatura_kes():
             net = 0.0
             misafir = ''
             for r in rows:
-                m = _re.search(r'\[ACENTE-OTO\]', r['aciklama'] or '')
                 mm = _re.search(r'Föy#\d+\s+(.*?)\s+\[ACENTE-OTO\]', r['aciklama'] or '')
                 if mm:
                     misafir = mm.group(1)
@@ -840,8 +849,10 @@ def api_acente_fatura_kes():
             net = round(net, 2)
             if net <= 0:
                 continue
-            mdb._yevmiye_ekle(conn, tarih, 'Acente Fatura Tahsilatı', banka_hesap, hesap, net,
-                              f'Föy#{foy_no} {misafir} [ACENTE-FATURA] fatura tahsilatı' +
+            # Sadece fatura kaydı — banka yok, acente borçlanıyor (320 BORÇ / 600 ALACAK zaten ACENTE-OTO'da var)
+            # [ACENTE-FATURA] etiketi + fatura tarihi + fatura no kaydediliyor
+            mdb._yevmiye_ekle(conn, tarih, 'Acente Fatura Kesildi', hesap, hesap, net,
+                              f'Föy#{foy_no} {misafir} [ACENTE-FATURA] fatura kesildi' +
                               (f' [FATURA:{fatura_no}]' if fatura_no else ''), otel)
             toplam += net
             detaylar.append({'foy_no': foy_no, 'misafir': misafir, 'net': net})
@@ -1401,6 +1412,7 @@ def api_gider_sekme():
     return jsonify([dict(r) for r in rows])
 
 
+
 # ── KK Komisyon ──────────────────────────────────────────────────────────────
 
 @muh.route('/api/muhasebe/kk_komisyon')
@@ -1451,6 +1463,114 @@ def api_kk_komisyon_sil():
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 400
+
+
+# ── Acente Tahsilat Al (fatura kesildi, para bankaya geldi) ──────────────────
+
+@muh.route('/api/muhasebe/acente-tahsilat-al', methods=['POST'])
+def api_acente_tahsilat_al():
+    """Kesilmiş fatura için ödeme tahsilatı — bankaya giriş yapar, acente borcunu kapatır."""
+    import re as _re
+    try:
+        d = request.get_json()
+        kod = d.get('acente_kod')
+        foy_no = str(d.get('foy_no', ''))
+        tarih = d.get('tarih') or date.today().isoformat()
+        banka = d.get('odeme_banka', 'IS')
+        otel = d.get('otel', 'LEO')
+        hesap = ACENTE_HESAP.get(kod)
+        if not hesap or not foy_no:
+            return jsonify({'ok': False, 'error': 'Acente veya föy eksik'}), 400
+        banka_hesap = '102-2' if banka == 'ZRH' else '102-3' if banka == 'DNZ' else '102-1'
+
+        conn = mdb.get_conn()
+        # Zaten tahsil edildi mi?
+        zaten = conn.execute("""
+            SELECT 1 FROM yevmiye WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-TAHSILAT]%'
+        """, (f'Föy#{foy_no} %',)).fetchone()
+        if zaten:
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Bu föy için tahsilat zaten yapılmış'}), 400
+
+        # Fatura tutarını bul
+        fat = conn.execute("""
+            SELECT tutar, aciklama FROM yevmiye
+            WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-FATURA]%'
+        """, (f'Föy#{foy_no} %',)).fetchone()
+        if not fat:
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Bu föy için kesilmiş fatura bulunamadı'}), 404
+
+        tutar = fat['tutar']
+        misafir = _re.search(r'Föy#\d+\s+(.*?)\s+\[ACENTE-FATURA\]', fat['aciklama'] or '')
+        misafir = misafir.group(1) if misafir else ''
+        fn = _re.search(r'\[FATURA:(.*?)\]', fat['aciklama'] or '')
+        fatura_no = fn.group(1) if fn else ''
+
+        # Tahsilat: banka borç / acente alacak
+        mdb._yevmiye_ekle(conn, tarih, 'Acente Tahsilat', banka_hesap, hesap, tutar,
+                          f'Föy#{foy_no} {misafir} [ACENTE-TAHSILAT]' +
+                          (f' [FATURA:{fatura_no}]' if fatura_no else ''), otel)
+        conn.commit(); conn.close()
+        return jsonify({'ok': True, 'tutar': tutar, 'misafir': misafir})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 400
+
+@muh.route('/api/muhasebe/acente-alacak-ozet')
+def api_acente_alacak_ozet():
+    """Tüm acentelerin ödenmemiş fatura özeti — alacak takip paneli için."""
+    import re as _re
+    conn = mdb.get_conn()
+    bugun = date.today()
+    rows = conn.execute("""
+        SELECT id, tarih, aciklama, tutar, alacak_hesap
+        FROM yevmiye
+        WHERE aciklama LIKE '%[ACENTE-FATURA]%'
+        ORDER BY tarih ASC
+    """).fetchall()
+
+    ozet = {}  # acente_kod -> {toplam, faturalar}
+    for r in rows:
+        foy_m = _re.search(r'Föy#(\d+)\s+(.*?)\s+\[ACENTE-FATURA\]', r['aciklama'] or '')
+        if not foy_m:
+            continue
+        foy_no = foy_m.group(1)
+        misafir = foy_m.group(2)
+        fn_m = _re.search(r'\[FATURA:(.*?)\]', r['aciklama'] or '')
+        fatura_no = fn_m.group(1) if fn_m else ''
+
+        # Tahsil edildi mi?
+        tahsil = conn.execute("""
+            SELECT 1 FROM yevmiye WHERE aciklama LIKE ? AND aciklama LIKE '%[ACENTE-TAHSILAT]%'
+        """, (f'Föy#{foy_no} %',)).fetchone()
+        if tahsil:
+            continue  # ödendi, geç
+
+        # Hangi acente?
+        acente_kod = None
+        for k, h in ACENTE_HESAP.items():
+            if h == r['alacak_hesap']:
+                acente_kod = k
+                break
+        if not acente_kod:
+            continue
+
+        gun_fark = (bugun - date.fromisoformat(r['tarih'])).days
+        if acente_kod not in ozet:
+            ozet[acente_kod] = {'acente_kod': acente_kod, 'toplam': 0, 'faturalar': []}
+        ozet[acente_kod]['toplam'] += r['tutar']
+        ozet[acente_kod]['faturalar'].append({
+            'foy_no': foy_no, 'misafir': misafir, 'tutar': r['tutar'],
+            'tarih': r['tarih'], 'fatura_no': fatura_no,
+            'gun_fark': gun_fark,
+            'durum': 'gecikti' if gun_fark > 15 else 'uyari' if gun_fark > 7 else 'normal'
+        })
+
+    conn.close()
+    return jsonify({
+        'acenteler': list(ozet.values()),
+        'toplam_alacak': sum(v['toplam'] for v in ozet.values()),
+    })
 
 
 # ── Güncelle Route'ları ───────────────────────────────────────────────────────

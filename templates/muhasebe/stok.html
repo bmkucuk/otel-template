@@ -213,7 +213,7 @@
 <div id="tab-vergi" style="display:none">
 <div class="toolbar">
   <label style="color:var(--text2);font-size:12px">Yıl:</label>
-  <select class="filter" id="v-yil-sel" onchange="load()"></select>
+  <select class="filter" id="v-yil-sel" onchange="loadVergi()"></select>
   <div style="flex:1"></div>
   <button class="btn btn-primary" onclick="openVergiModal()">＋ Vergi Ekle</button>
 </div>
@@ -765,20 +765,23 @@ async function kkSil(id) {
 
 
 // ── VERGİ SEKMESİ ──
-let v_v_editId = null;
+let v_editId = null;
 let v_allData = [];
-const v_thisYear = new Date().getFullYear();
-const v_yilSel = document.getElementById('v-yil-sel');
-for (let y = v_thisYear-2; y <= v_thisYear+1; y++) {
-  const o = document.createElement('option');
-  o.value = y; o.textContent = y;
-  if (y === v_thisYear) o.selected = true;
-  v_yilSel.appendChild(o);
+function initVergi() {
+  if (v_yilSel) return;
+  const v_thisYear = new Date().getFullYear();
+  v_yilSel = document.getElementById('v-yil-sel');
+  for (let y = v_thisYear-2; y <= v_thisYear+1; y++) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if (y === v_thisYear) o.selected = true;
+    v_yilSel.appendChild(o);
+  }
+  document.getElementById('vf-yil').value = v_thisYear;
+  document.getElementById('vf-ay').value = new Date().getMonth() + 1;
 }
-document.getElementById('vf-yil').value = thisYear;
-document.getElementById('vf-ay').value = new Date().getMonth() + 1;
-
 async function loadVergi() {
+  initVergi();
   const yil = v_yilSel.value;
   const data = await api(`/api/muhasebe/vergi?yil=${yil}`);
   const bekleyen = data.filter(r => r.durum !== 'Ödendi');

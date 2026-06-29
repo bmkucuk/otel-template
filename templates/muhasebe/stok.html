@@ -335,6 +335,10 @@ function switchTab(tabId, btn) {
   } else if (tabId === 'kk') {
     document.getElementById('tab-kk').style.display = '';
     loadKK();
+  } else if (tabId === 'vergi') {
+    document.getElementById('tab-vergi').style.display = '';
+    initVergi();
+    if (!window._vergiLoaded) { loadVergi(); window._vergiLoaded = true; }
   } else if (HESAP_TABS[tabId]) {
     activeHesapKod = HESAP_TABS[tabId].kod;
     activeHesapAd  = HESAP_TABS[tabId].ad;

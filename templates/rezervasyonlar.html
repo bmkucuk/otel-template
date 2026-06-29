@@ -20,6 +20,23 @@
 .rez-btn-gold{background:rgba(255,194,77,.16);color:var(--accent);border:1px solid rgba(255,194,77,.4)}
 .rez-btn-danger{background:rgba(255,111,125,.12);color:var(--accent3);border:1px solid rgba(255,111,125,.34)}
 .rez-btn-warn{background:#8B4513;color:#fff;border:none}
+
+/* ── Küçük ekran: tablo sıkıştırma ───────────────────────── */
+@media (max-width:1400px){
+  .rez-search{width:200px}
+  table{font-size:11.5px}
+  table th, table td{padding:6px 6px}
+  .rez-avatar{width:26px;height:26px;font-size:9px}
+  .rez-durum-pill{padding:2px 7px;font-size:10px}
+  .rez-oda-pill{font-size:9.5px;padding:1px 5px}
+  .rez-btn{padding:3px 7px;font-size:10.5px}
+  .rez-tahsil-pill{padding:3px 7px;font-size:10.5px}
+}
+@media (max-width:1200px){
+  table{font-size:11px}
+  table th, table td{padding:5px 4px}
+  .rez-search{width:160px}
+}
 </style>
 
 <div class="rez-summary" id="rez-summary">— kayıt</div>
@@ -30,7 +47,7 @@
     <input id="search" placeholder="Misafir, föy no, oda ara…" oninput="load()">
   </div>
   <select class="filter" id="otel-filter" onchange="load()" style="border-radius:10px">
-    <option value="">Tüm Oteller</option><option>{{ lisans_bilgi().otel.get("kisa_ad","OTEL") }}</option>
+    <option value="">Tüm Oteller</option><option>LEO</option><option>CV</option>
   </select>
   <div class="rez-chip" id="chip-aktif" onclick="toggleChip('aktif')"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent2)"></span>Aktif</div>
   <div class="rez-chip" id="chip-tamam" onclick="toggleChip('tamam')"><span style="width:7px;height:7px;border-radius:50%;background:var(--pos)"></span>Tamamlandı</div>
@@ -41,17 +58,17 @@
   <button class="btn btn-primary" onclick="openModal()">＋ Yeni Rezervasyon</button>
 </div>
 
-<div class="table-wrap" style="max-height:calc(100vh - 240px);overflow-y:auto">
+<div class="table-wrap" style="max-height:calc(100vh - 240px);overflow-y:auto;overflow-x:auto">
   <table>
     <thead>
       <tr>
         <th>Föy</th><th>Misafir</th><th>Kişi</th><th>Kanal</th><th>Konaklama</th>
-        <th style="text-align:right">Gün Fiyat</th>
+        <th style="text-align:right">Gün/Fiy.</th>
         <th style="text-align:right">Toplam</th>
         <th style="text-align:right">Kapora</th>
         <th style="text-align:right">Bakiye</th>
         <th style="text-align:center">Durum</th>
-        <th style="text-align:center">Kahvaltı</th>
+        <th style="text-align:center">Khvt.</th>
         <th style="text-align:right">İşlem</th>
       </tr>
     </thead>
@@ -86,17 +103,26 @@
         <label>Oda No</label>
         <select id="f-oda" onchange="onOdaChange()">
           <option value="">Seçin...</option>
-          {% set otel = lisans_bilgi().otel %}
-          {% for i in range(otel.get('oda_baslangic',1), otel.get('oda_bitis',20)+1) %}
-          <option value="{{ i }}">{{ i }}</option>
-          {% endfor %}
+          <optgroup label="── Cunda Villa (1-10) ──">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+          </optgroup>
+          <optgroup label="── Otel Leo (11-29) ──">
+            <option value="11">11</option><option value="12">12</option><option value="13">13</option>
+            <option value="14">14</option><option value="15">15</option><option value="16">16</option>
+            <option value="17">17</option><option value="18">18</option><option value="19">19</option>
+            <option value="20">20</option><option value="21">21</option><option value="22">22</option>
+            <option value="23">23</option><option value="24">24</option><option value="25">25</option>
+            <option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option>
+          </optgroup>
         </select>
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label>Otel</label>
-        <input type="text" id="f-otel" readonly value="{{ lisans_bilgi().otel.get('kisa_ad','OTEL') }}" style="background:var(--bg2,#1a1f29);opacity:.8;cursor:not-allowed;font-weight:700">
+        <input type="text" id="f-otel" readonly value="LEO" style="background:var(--bg2,#1a1f29);opacity:.8;cursor:not-allowed;font-weight:700">
       </div>
       <div class="form-group">
         <label>Kanal (Acente)</label>
@@ -126,7 +152,7 @@
       </div>
       <div class="form-group">
         <label>Kahvaltı</label>
-        <select id="f-kahvalti"><option>Kahvaltılı</option><option>Kahvaltısız</option></select>
+        <select id="f-kahvalti"><option>Kahvaltılı</option><option>Kahvaltısız</option><option>Süper Kahvaltı</option></select>
       </div>
     </div>
     <div class="form-row">
@@ -258,8 +284,8 @@ async function load() {
     const isHL = _urlQ && String(r.foy_no) === String(_urlQ);
     const rowId = isHL ? 'id="hl-row"' : '';
     const rowBg = isHL ? 'background:rgba(255,194,77,.12);box-shadow:inset 3px 0 0 var(--accent)' : '';
-    const HC = 'var(--accent)';
-    const HBG = 'rgba(255,194,77,.1)';
+    const HC = r.otel==='LEO' ? 'var(--leo)' : 'var(--cv)';
+    const HBG = r.otel==='LEO' ? 'rgba(84,182,255,.15)' : 'rgba(61,220,132,.15)';
     const gercekDurum = r.durum === 'Kapora Yandı' ? 'Kapora Yandı' : r.rez_bakiye <= 0 ? 'Tamamlandı' : 'Aktif';
     const durumBg = gercekDurum==='Aktif' ? 'rgba(84,182,255,.15)' : gercekDurum==='Tamamlandı' ? 'rgba(47,221,155,.15)' : 'rgba(255,210,63,.15)';
     const durumC  = gercekDurum==='Aktif' ? 'var(--leo)' : gercekDurum==='Tamamlandı' ? 'var(--pos)' : 'var(--accent4)';
@@ -312,7 +338,7 @@ async function load() {
       <td style="text-align:right;font-family:'Geist Mono',monospace;color:var(--text2)">${r.kapora>0?fmt(r.kapora):'—'}</td>
       <td style="text-align:right;font-family:'Geist Mono',monospace;font-weight:600;color:${r.rez_bakiye>0?'var(--accent3)':'var(--pos)'}">${r.rez_bakiye>0?fmt(r.rez_bakiye):'Temiz'}</td>
       <td style="text-align:center"><span class="rez-durum-pill" style="background:${durumBg};color:${durumC}">${gercekDurum}</span></td>
-      <td style="text-align:center">${r.kahvalti==='Kahvaltısız' ? '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(255,111,125,.15);color:var(--accent3);font-weight:600">Kahvaltısız</span>' : '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(47,221,155,.15);color:var(--pos);font-weight:600">Kahvaltılı</span>'}</td>
+      <td style="text-align:center">${r.kahvalti==='Kahvaltısız' ? '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(255,111,125,.15);color:var(--accent3);font-weight:600">Yok</span>' : r.kahvalti==='Süper Kahvaltı' ? '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(255,194,77,.2);color:var(--accent);font-weight:600">Süper</span>' : '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(47,221,155,.15);color:var(--pos);font-weight:600">Var</span>'}</td>
       <td style="text-align:right;white-space:nowrap">${islemHtml}</td>
     </tr>`;
   }).join('');
@@ -320,7 +346,8 @@ async function load() {
 
 function onOdaChange() {
   const oda = parseInt(document.getElementById('f-oda').value);
-  document.getElementById('f-otel').value = '{{ lisans_bilgi().otel.get("kisa_ad","OTEL") }}';
+  if (oda > 10) document.getElementById('f-otel').value = 'LEO';
+  else if (oda > 0) document.getElementById('f-otel').value = 'CV';
 }
 
 function openEdit(foy_no) {
@@ -335,7 +362,7 @@ async function openModal(r = null) {
   const d = await api('/api/next-foy');
   document.getElementById('f-foy').value = d.foy_no;
   document.getElementById('f-oda').value = '';
-  document.getElementById('f-otel').value = '{{ lisans_bilgi().otel.get("kisa_ad","OTEL") }}';
+  document.getElementById('f-otel').value = 'LEO';
   document.getElementById('f-kanal').value = '';
   document.getElementById('f-musteri').value = '';
   document.getElementById('f-yetiskin').value = 2;
@@ -485,3 +512,4 @@ function secimKaldirRez(){
 }
 </script>
 {% endblock %}
+

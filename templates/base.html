@@ -33,7 +33,7 @@
 body{background:var(--bg);color:var(--text);font-family:Geist,'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px}
 
 /* ── Sidebar ── */
-#sidebar{width:200px;min-width:200px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px}
+#sidebar{width:200px;min-width:200px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px;overflow:hidden}
 .brand{padding:4px 6px 22px;text-align:left;display:flex;align-items:center;gap:11px}
 .brand .icon{font-size:28px;width:38px;height:38px;border-radius:10px;background:linear-gradient(150deg,#ffc24d,#eb9c28);display:flex;align-items:center;justify-content:center;flex:none}
 .brand .name{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
@@ -183,9 +183,6 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
       <span class="icon">📦</span> Giderler
     </a>
     {% if session.get('role') in ['admin', 'partner'] %}
-    <a href="/muhasebe/vergi" class="{% if active=='muh-vergi' %}active{% endif %}">
-      <span class="icon">🧾</span> Vergi
-    </a>
     {% endif %}
     <a href="/muhasebe/acente" class="{% if active=='muh-acente' %}active{% endif %}">
       <span class="icon">🤝</span> Acenteler
@@ -361,6 +358,7 @@ setInterval(loadAktifKullanicilarBadge, 30000);
 {% block scripts %}{% endblock %}
 </body>
 </html>
+
 
 
 

@@ -11,7 +11,7 @@
   <button class="btn btn-default" onclick="window.print()">🖨️ Yazdır</button>
 </div>
 
-<div class="table-wrap">
+<div class="table-wrap" style="max-height:calc(100vh - 280px);overflow-y:auto">
   <table>
     <thead><tr><th style="width:80px">KOD</th><th>HESAP ADI</th><th style="width:150px;text-align:right">BORÇ</th><th style="width:150px;text-align:right">ALACAK</th><th style="width:150px;text-align:right">BAKİYE</th></tr></thead>
     <tbody id="tbody"><tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr></tbody>
@@ -36,7 +36,7 @@
     </div>
 
     <!-- Tablo -->
-    <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+    <div class="table-wrap" style="max-height:calc(100vh - 280px);overflow-y:auto">
       <table>
         <thead><tr>
           <th style="width:100px">Tarih</th>

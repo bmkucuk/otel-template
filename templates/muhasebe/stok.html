@@ -15,7 +15,6 @@
   <button class="tab-btn" onclick="switchTab('kk',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">💳 KK Komisyonu</button>
   <button class="tab-btn" onclick="switchTab('t744',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">📋 Muhasebe/Danışmanlık</button>
   <button class="tab-btn" onclick="switchTab('t745',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🏠 Kira</button>
-  <button class="tab-btn" onclick="switchTab('vergi',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🧾 Vergi</button>
   <button class="tab-btn" onclick="switchTab('t780',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">📌 Diğer Giderler</button>
   <button class="tab-btn" onclick="switchTab('vergi',this)" style="padding:8px 14px;font-size:13px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-bottom:-2px">🧾 Vergi</button>
 </div>
@@ -30,7 +29,7 @@
     <div style="flex:1"></div>
   </div>
   <div class="cards-row" id="genel-kartlar" style="margin-bottom:16px"></div>
-  <div class="table-wrap" style="max-height:calc(100vh - 300px);overflow-y:auto">
+  <div class="table-wrap">
     <table>
       <thead><tr>
         <th style="width:100px">Tarih</th><th>Açıklama</th>
@@ -54,7 +53,7 @@
     <button class="btn btn-primary" onclick="openDemModal()">＋ Demirbaş Ekle</button>
   </div>
   <div class="cards-row" id="dem-kartlar" style="margin-bottom:16px"></div>
-  <div class="table-wrap" style="max-height:calc(100vh - 300px);overflow-y:auto">
+  <div class="table-wrap">
     <table>
       <thead><tr>
         <th>Tarih</th><th>Açıklama</th><th>Miktar</th><th>Birim Fiyat</th>
@@ -75,7 +74,7 @@
     <button class="btn btn-primary" onclick="openHesapModal()">＋ Kayıt Ekle</button>
   </div>
   <div class="cards-row" id="hes-kartlar" style="margin-bottom:16px"></div>
-  <div class="table-wrap" style="max-height:calc(100vh - 300px);overflow-y:auto">
+  <div class="table-wrap">
     <table>
       <thead><tr>
         <th style="width:100px">Tarih</th><th>Açıklama</th>
@@ -99,7 +98,7 @@
     <button class="btn btn-primary" onclick="openKKModal()">＋ KK Komisyonu Ekle</button>
   </div>
   <div class="cards-row" id="kk-kartlar" style="margin-bottom:16px"></div>
-  <div class="table-wrap" style="max-height:calc(100vh - 300px);overflow-y:auto">
+  <div class="table-wrap">
     <table>
       <thead><tr>
         <th style="width:60px">Föy No</th><th>Açıklama</th>
@@ -214,29 +213,29 @@
 <div id="tab-vergi" style="display:none">
 <div class="toolbar">
   <label style="color:var(--text2);font-size:12px">Yıl:</label>
-  <select class="filter" id="yil-sel" onchange="load()"></select>
+  <select class="filter" id="v-yil-sel" onchange="load()"></select>
   <div style="flex:1"></div>
   <button class="btn btn-primary" onclick="openVergiModal()">＋ Vergi Ekle</button>
 </div>
 
-<div class="cards-row" id="kartlar" style="margin-bottom:16px"></div>
+<div class="cards-row" id="v-kartlar" style="margin-bottom:16px"></div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
   <div>
     <div class="section-title">⏳ Ödenecek Vergiler</div>
-    <div class="table-wrap" style="max-height:calc(100vh - 300px);overflow-y:auto">
+    <div class="table-wrap">
       <table>
         <thead><tr><th>Dönem</th><th>Vergi Türü</th><th>Matrah</th><th>Tutar</th><th>Onayla</th></tr></thead>
-        <tbody id="bekleyen-tbody"></tbody>
+        <tbody id="v-bekleyen-tbody"></tbody>
       </table>
     </div>
   </div>
   <div>
     <div class="section-title">✅ Ödenen Vergiler</div>
-    <div class="table-wrap" style="max-height:calc(100vh - 300px);overflow-y:auto">
+    <div class="table-wrap">
       <table>
         <thead><tr><th>Tarih</th><th>Dönem</th><th>Vergi Türü</th><th>Tutar</th><th>Ödeme</th></tr></thead>
-        <tbody id="odenen-tbody"></tbody>
+        <tbody id="v-odenen-tbody"></tbody>
       </table>
     </div>
   </div>
@@ -245,11 +244,11 @@
 <!-- Modal -->
 <div class="modal-overlay" id="modal-vergi">
   <div class="modal">
-    <h2 id="modal-baslik">Vergi Kaydı Ekle</h2>
+    <h2 id="v-modal-baslik">Vergi Kaydı Ekle</h2>
     <div class="form-row">
-      <div class="form-group"><label>Dönem Yılı</label><input type="number" id="f-yil" min="2020" max="2030"></div>
+      <div class="form-group"><label>Dönem Yılı</label><input type="number" id="vf-yil" min="2020" max="2030"></div>
       <div class="form-group"><label>Dönem Ayı</label>
-        <select id="f-ay">
+        <select id="vf-ay">
           <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
           <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
           <option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option>
@@ -258,21 +257,21 @@
       </div>
     </div>
     <div class="form-row single"><div class="form-group"><label>Vergi Türü</label>
-      <select id="f-tur">
+      <select id="vf-tur">
         <option>KDV Beyannamesi</option><option>Muhtasar Beyanname</option>
         <option>Kurumlar Vergisi</option><option>Gelir Vergisi</option>
         <option>Damga Vergisi</option><option>Diğer</option>
       </select>
     </div></div>
     <div class="form-row">
-      <div class="form-group"><label>Matrah (₺)</label><input type="number" id="f-matrah" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
-      <div class="form-group"><label>Vergi Tutarı (₺)</label><input type="number" id="f-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+      <div class="form-group"><label>Matrah (₺)</label><input type="number" id="vf-matrah" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
+      <div class="form-group"><label>Vergi Tutarı (₺)</label><input type="number" id="vf-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Durum</label><select id="f-durum"><option>Bekliyor</option><option>Ödendi</option></select></div>
-      <div class="form-group"><label>Ödeme Bankası</label><select id="f-banka"></select></div>
+      <div class="form-group"><label>Durum</label><select id="vf-durum"><option>Bekliyor</option><option>Ödendi</option></select></div>
+      <div class="form-group"><label>Ödeme Bankası</label><select id="vf-banka"></select></div>
     </div>
-    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="f-aciklama"></div></div>
+    <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="vf-aciklama"></div></div>
     <div class="modal-footer">
       <button class="btn btn-default" onclick="closeVergiModal()">İptal</button>
       <button class="btn btn-primary" onclick="save()">💾 Kaydet</button>
@@ -336,9 +335,6 @@ function switchTab(tabId, btn) {
   } else if (tabId === 'kk') {
     document.getElementById('tab-kk').style.display = '';
     loadKK();
-  } else if (tabId === 'vergi') {
-    document.getElementById('tab-vergi').style.display = '';
-    if (!window._vergiLoaded) { loadVergi(); window._vergiLoaded = true; }
   } else if (HESAP_TABS[tabId]) {
     activeHesapKod = HESAP_TABS[tabId].kod;
     activeHesapAd  = HESAP_TABS[tabId].ad;
@@ -769,21 +765,21 @@ async function kkSil(id) {
 
 
 // ── VERGİ SEKMESİ ──
-let vEditId = null;
-let vAllData = [];
-const thisYear = new Date().getFullYear();
-const yilSel = document.getElementById('yil-sel');
-for (let y = thisYear-2; y <= thisYear+1; y++) {
+let v_v_editId = null;
+let v_allData = [];
+const v_thisYear = new Date().getFullYear();
+const v_yilSel = document.getElementById('v-yil-sel');
+for (let y = v_thisYear-2; y <= v_thisYear+1; y++) {
   const o = document.createElement('option');
   o.value = y; o.textContent = y;
-  if (y === thisYear) o.selected = true;
-  yilSel.appendChild(o);
+  if (y === v_thisYear) o.selected = true;
+  v_yilSel.appendChild(o);
 }
-document.getElementById('f-yil').value = thisYear;
-document.getElementById('f-ay').value = new Date().getMonth() + 1;
+document.getElementById('vf-yil').value = thisYear;
+document.getElementById('vf-ay').value = new Date().getMonth() + 1;
 
 async function loadVergi() {
-  const yil = yilSel.value;
+  const yil = v_yilSel.value;
   const data = await api(`/api/muhasebe/vergi?yil=${yil}`);
   const bekleyen = data.filter(r => r.durum !== 'Ödendi');
   const odenen = data.filter(r => r.durum === 'Ödendi');
@@ -791,14 +787,14 @@ async function loadVergi() {
   const toplamBekleyen = bekleyen.reduce((s, r) => s + (r.tutar||0), 0);
   const toplamOdenen = odenen.reduce((s, r) => s + (r.tutar||0), 0);
 
-  document.getElementById('kartlar').innerHTML = `
+  document.getElementById('v-kartlar').innerHTML = `
     <div class="stat-card"><div class="label">⏳ Ödenecek</div><div class="value red">${fmt(toplamBekleyen)}</div></div>
     <div class="stat-card"><div class="label">✅ Ödenen</div><div class="value green">${fmt(toplamOdenen)}</div></div>
     <div class="stat-card"><div class="label">Toplam</div><div class="value yellow">${fmt(toplamBekleyen+toplamOdenen)}</div></div>
   `;
 
-  vAllData = data;
-  document.getElementById('bekleyen-tbody').innerHTML = bekleyen.map(r => `<tr>
+  v_allData = data;
+  document.getElementById('v-bekleyen-tbody').innerHTML = bekleyen.map(r => `<tr>
     <td>${r.donem_ay_adi||''} ${r.donem_yil}</td>
     <td>${r.vergi_turu}</td>
     <td style="text-align:right">${fmt(r.matrah)}</td>
@@ -806,7 +802,7 @@ async function loadVergi() {
     <td style="white-space:nowrap"><button class="btn btn-primary" style="padding:3px 10px;font-size:11px" onclick="onayla(${r.id})">✓ Öde</button> <button class="btn" style="padding:3px 8px;font-size:11px;background:var(--accent4);color:#000" onclick="duzenle(${r.id})">Düzenle</button> <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="sil(${r.id})">Sil</button></td>
   </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px">Bekleyen vergi yok</td></tr>';
 
-  document.getElementById('odenen-tbody').innerHTML = odenen.map(r => `<tr>
+  document.getElementById('v-odenen-tbody').innerHTML = odenen.map(r => `<tr>
     <td>${r.tarih||'—'}</td>
     <td>${r.donem_ay_adi||''} ${r.donem_yil}</td>
     <td>${r.vergi_turu}</td>
@@ -824,10 +820,10 @@ async function onayla(id) {
 }
 
 async function openVergiModal() {
-  vEditId = null;
-  document.getElementById('modal-baslik').textContent = 'Vergi Kaydı Ekle';
+  v_editId = null;
+  document.getElementById('v-modal-baslik').textContent = 'Vergi Kaydı Ekle';
   const bankalar = await api('/api/muhasebe/bankalar');
-  document.getElementById('f-banka').innerHTML = `
+  document.getElementById('vf-banka').innerHTML = `
     <option value="100">Nakit (Kasa)</option>
     <option value="102-1">İş Bankası</option>
     <option value="102-2">Ziraat Bankası</option>
@@ -844,34 +840,34 @@ async function save() {
     {id:'f-tutar', label:'Vergi Tutarı'},
   ])) return;
   const data = {
-    donem_yil: parseInt(document.getElementById('f-yil').value),
-    donem_ay: parseInt(document.getElementById('f-ay').value),
-    vergi_turu: document.getElementById('f-tur').value,
-    matrah: parseFloat(document.getElementById('f-matrah').value)||0,
-    tutar: parseFloat(document.getElementById('f-tutar').value)||0,
-    durum: document.getElementById('f-durum').value,
-    odeme_banka: document.getElementById('f-banka').value,
-    aciklama: document.getElementById('f-aciklama').value,
+    donem_yil: parseInt(document.getElementById('vf-yil').value),
+    donem_ay: parseInt(document.getElementById('vf-ay').value),
+    vergi_turu: document.getElementById('vf-tur').value,
+    matrah: parseFloat(document.getElementById('vf-matrah').value)||0,
+    tutar: parseFloat(document.getElementById('vf-tutar').value)||0,
+    durum: document.getElementById('vf-durum').value,
+    odeme_banka: document.getElementById('vf-banka').value,
+    aciklama: document.getElementById('vf-aciklama').value,
   };
-  const url = vEditId ? '/api/muhasebe/vergi/guncelle' : '/api/muhasebe/vergi/ekle';
-  if (vEditId) data.id = editId;
+  const url = v_editId ? '/api/muhasebe/vergi/guncelle' : '/api/muhasebe/vergi/ekle';
+  if (v_editId) data.id = editId;
   const r = await api(url, data);
-  if (r.ok) { toast(vEditId ? 'Güncellendi ✓' : 'Vergi kaydedildi ✓'); closeVergiModal(); load(); }
+  if (r.ok) { toast(v_editId ? 'Güncellendi ✓' : 'Vergi kaydedildi ✓'); closeVergiModal(); load(); }
   else toast(r.error, 'error');
 }
 
 async function duzenle(id) {
-  const r = vAllData.find(x => x.id === id);
+  const r = v_allData.find(x => x.id === id);
   if (!r) return;
-  vEditId = id;
-  document.getElementById('modal-baslik').textContent = 'Vergi Düzenle';
-  document.getElementById('f-yil').value = r.donem_yil || new Date().getFullYear();
-  document.getElementById('f-ay').value = r.donem_ay || 1;
-  document.getElementById('f-tur').value = r.vergi_turu || '';
-  document.getElementById('f-matrah').value = r.matrah || 0;
-  document.getElementById('f-tutar').value = r.tutar || 0;
-  document.getElementById('f-durum').value = r.durum || 'Bekliyor';
-  document.getElementById('f-aciklama').value = r.aciklama || '';
+  v_editId = id;
+  document.getElementById('v-modal-baslik').textContent = 'Vergi Düzenle';
+  document.getElementById('vf-yil').value = r.donem_yil || new Date().getFullYear();
+  document.getElementById('vf-ay').value = r.donem_ay || 1;
+  document.getElementById('vf-tur').value = r.vergi_turu || '';
+  document.getElementById('vf-matrah').value = r.matrah || 0;
+  document.getElementById('vf-tutar').value = r.tutar || 0;
+  document.getElementById('vf-durum').value = r.durum || 'Bekliyor';
+  document.getElementById('vf-aciklama').value = r.aciklama || '';
   document.getElementById('modal-vergi').classList.add('open');
 }
 
@@ -887,4 +883,3 @@ document.getElementById('modal-vergi').addEventListener('click', e => { if (e.ta
 loadGenel();
 </script>
 {% endblock %}
-

@@ -11,7 +11,7 @@
     <div style="flex:1"></div>
     <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="openPersonelModal()">＋ Personel Ekle</button>
   </div>
-  <div class="table-wrap">
+  <div class="table-wrap" style="max-height:calc(100vh - 280px);overflow-y:auto">
     <table>
       <thead><tr><th>Ad Soyad</th><th>Görev</th><th style="text-align:right">Net Maaş</th><th>İşe Giriş</th><th>Telefon</th><th>TC Kimlik</th><th>IBAN</th><th>Durum</th><th></th></tr></thead>
       <tbody id="pers-tbody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span></td></tr></tbody>
@@ -40,7 +40,7 @@
     <button class="btn" style="font-size:12px;padding:6px 12px;background:var(--accent2);color:#000;margin-right:6px" onclick="openAvansModalDirect()">💰 Avans Ödemesi</button>
     <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="openMaasModal()">＋ Maaş Ödemesi</button>
   </div>
-  <div class="table-wrap">
+  <div class="table-wrap" style="max-height:calc(100vh - 280px);overflow-y:auto">
     <table>
       <thead><tr>
         <th>Tarih</th>

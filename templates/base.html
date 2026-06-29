@@ -52,7 +52,7 @@ nav a .icon{font-size:14px;width:16px;text-align:center}
 #topbar h1{font-size:19px;font-weight:700;color:var(--text);letter-spacing:-.3px}
 #topbar .meta{font-size:12.5px;color:var(--text2)}
 #content{flex:1;overflow-y:auto;padding:24px 28px}
-body.page-oda-durumu #content{overflow-y:auto;overflow-x:hidden;padding:0;display:flex;flex-direction:column}
+body.page-oda-durumu #content{display:block;overflow-y:auto;overflow-x:hidden;padding:0}
 
 /* ── Cards ── */
 .cards-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
@@ -361,4 +361,5 @@ setInterval(loadAktifKullanicilarBadge, 30000);
 {% block scripts %}{% endblock %}
 </body>
 </html>
+
 

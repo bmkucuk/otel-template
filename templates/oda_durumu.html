@@ -47,8 +47,8 @@
 .day-header.today{color:var(--accent);border-color:var(--accent);background:rgba(255,194,77,.14)}
 .day-header.today .dh-day{opacity:1;color:var(--accent)}
 
-/* Grid: yatay+dikey scroll, tüm kalan alanı kaplar */
-.grid-wrap{overflow-x:auto;overflow-y:auto;flex:1;min-height:0;padding:0 28px 24px}
+/* Grid: yatay+dikey scroll, calc ile kesin yükseklik */
+.grid-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 360px);padding:0 28px 24px}
 .oda-grid{display:grid;gap:3px;min-width:max-content}
 
 .oda-label{background:var(--card);padding:5px 8px;font-size:12.5px;font-weight:700;
@@ -423,6 +423,7 @@ async function lokalizeOda(otel, odaNo, girisStr, cikisStr){
 load();
 </script>
 {% endblock %}
+
 
 
 

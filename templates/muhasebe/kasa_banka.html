@@ -32,7 +32,7 @@
     <input class="search-input" id="kasa-q" placeholder="🔍 Açıklama, işlem tipi, tutar, tarih ara..." oninput="curPage.kasa=1;renderKasa()" style="width:280px">
     <button class="btn" id="kasa-sort-btn" onclick="toggleSort('kasa')" style="font-size:12px;padding:6px 12px;background:var(--card2);color:var(--text2)">Tarih ↓ (Yeni→Eski)</button>
   </div>
-  <div class="table-wrap">
+  <div class="table-wrap" style="max-height:calc(100vh - 280px);overflow-y:auto">
     <table>
       <thead><tr><th style="width:100px">Tarih</th><th>Açıklama</th><th>İşlem Tipi</th><th style="width:100px;text-align:right">Giriş</th><th style="width:100px;text-align:right">Çıkış</th><th style="width:110px;text-align:right">Bakiye</th><th style="width:40px"></th></tr></thead>
       <tbody id="kasa-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px"><span class="spinner"></span></td></tr></tbody>
@@ -51,7 +51,7 @@
     <input class="search-input" id="banka-q" placeholder="🔍 Açıklama, işlem tipi, tutar, tarih ara..." oninput="curPage.banka=1;renderBanka()" style="width:280px">
     <button class="btn" id="banka-sort-btn" onclick="toggleSort('banka')" style="font-size:12px;padding:6px 12px;background:var(--card2);color:var(--text2)">Tarih ↓ (Yeni→Eski)</button>
   </div>
-  <div class="table-wrap">
+  <div class="table-wrap" style="max-height:calc(100vh - 280px);overflow-y:auto">
     <table>
       <thead><tr><th style="width:100px">Tarih</th><th>Açıklama</th><th>İşlem Tipi</th><th style="width:100px;text-align:right">Giriş</th><th style="width:100px;text-align:right">Çıkış</th><th style="width:110px;text-align:right">Bakiye</th><th style="width:40px"></th></tr></thead>
       <tbody id="banka-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">Yukarıdan hesap seçin</td></tr></tbody>

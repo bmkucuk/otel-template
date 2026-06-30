@@ -4,66 +4,45 @@
 {% block page_title %}Genel Bakış{% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px">
+<div id="dash-page" style="display:flex;flex-direction:column;height:calc(100vh - 130px)">
 
-  <!-- Doluluk -->
-  <div class="panel">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px">
-      <div class="section-title" style="margin:0;padding:0;border:none">Doluluk · Bugün</div>
-      <div style="font-size:12px;color:var(--text2)" id="occ-sub">—</div>
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px;flex-shrink:0">
+
+  <!-- Doluluk (compact) -->
+  <div class="panel" style="padding:10px 12px">
+    <div style="font-size:10.5px;color:var(--text2);margin-bottom:3px">Doluluk · Bugün</div>
+    <div style="display:flex;align-items:baseline;gap:6px">
+      <span style="font-family:'Geist Mono',monospace;font-size:19px;font-weight:700;color:var(--accent)" id="occ-pct">—<span style="font-size:11px">%</span></span>
     </div>
-    <div style="display:flex;align-items:flex-end;gap:14px;margin-bottom:22px">
-      <div style="font-family:'Geist Mono',monospace;font-size:48px;font-weight:700;line-height:.9;color:var(--accent);letter-spacing:-2px" id="occ-pct">—<span style="font-size:26px">%</span></div>
-      <div style="display:flex;gap:18px;padding-bottom:4px">
-        <div><div style="font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:var(--text)" id="occ-dolu">—</div><div style="font-size:11px;color:var(--text2)">dolu</div></div>
-        <div><div style="font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:var(--text2)" id="occ-bos">—</div><div style="font-size:11px;color:var(--text2)">boş</div></div>
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:12.5px"><span style="color:var(--text);font-weight:500">Otel Leo</span><span style="font-family:'Geist Mono',monospace;color:var(--text2)" id="occ-leo-frac">— / 19</span></div>
-        <div style="height:9px;border-radius:5px;background:var(--card2);overflow:hidden"><div id="occ-leo-bar" style="height:100%;width:0%;border-radius:5px;background:var(--leo);transition:width .3s"></div></div>
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:12.5px"><span style="color:var(--text);font-weight:500">Cunda Villa</span><span style="font-family:'Geist Mono',monospace;color:var(--text2)" id="occ-cv-frac">— / 10</span></div>
-        <div style="height:9px;border-radius:5px;background:var(--card2);overflow:hidden"><div id="occ-cv-bar" style="height:100%;width:0%;border-radius:5px;background:var(--cv);transition:width .3s"></div></div>
-      </div>
-    </div>
+    <div style="font-size:9.5px;color:var(--text2);margin-top:1px"><span id="occ-dolu">—</span> dolu · <span id="occ-bos">—</span> boş</div>
   </div>
 
-  <!-- Finans -->
-  <div class="panel" style="display:flex;flex-direction:column">
-    <div class="section-title" style="margin:0 0 14px;padding:0;border:none">Toplam Alacak</div>
-    <div style="font-family:'Geist Mono',monospace;font-size:36px;font-weight:700;line-height:1;color:var(--accent3)" id="s-alacak">—</div>
-    <div style="font-size:12px;color:var(--text2);margin-top:8px" id="alacak-sub">bekleyen bakiye</div>
-    <div style="margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:11px">
-      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px"><span style="color:var(--text2)">Rezervasyon bakiyesi</span><span style="font-family:'Geist Mono',monospace;color:var(--text);font-weight:600" id="rez-bakiye-toplam">—</span></div>
-      <div style="height:1px;background:var(--border)"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px"><span style="color:var(--text2)">Adisyon bakiyesi</span><span style="font-family:'Geist Mono',monospace;color:var(--text);font-weight:600" id="adis-bakiye-toplam">—</span></div>
-    </div>
+  <!-- Finans (compact) -->
+  <div class="panel" style="padding:10px 12px">
+    <div style="font-size:10.5px;color:var(--text2);margin-bottom:3px">Toplam Alacak</div>
+    <div style="font-family:'Geist Mono',monospace;font-size:16px;font-weight:700;color:var(--accent3)" id="s-alacak">—</div>
+    <div style="font-size:9.5px;color:var(--text2);margin-top:1px" id="alacak-sub">bekleyen bakiye</div>
   </div>
+
+  <div class="stat-card" style="padding:10px 12px;flex:none;min-width:0"><span style="position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--accent)"></span><div class="label" style="font-size:10.5px">Bugün Giriş</div><div class="value" id="s-giris" style="font-size:19px">—</div><div class="sub" style="font-size:9.5px">bekleyen check-in</div></div>
+  <div class="stat-card" style="padding:10px 12px;flex:none;min-width:0"><span style="position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--accent2)"></span><div class="label" style="font-size:10.5px">Bugün Çıkış</div><div class="value" id="s-cikis" style="font-size:19px">—</div><div class="sub" style="font-size:9.5px">check-out</div></div>
+  <div class="stat-card" style="padding:10px 12px;flex:none;min-width:0"><span style="position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--accent4)"></span><div class="label" style="font-size:10.5px">☕ Kahvaltı</div><div class="value" id="s-kah" style="font-size:19px">—</div><div class="sub" id="s-kah-sub" style="font-size:9.5px">kişi · bugün</div></div>
+  <div class="stat-card" style="padding:10px 12px;flex:none;min-width:0"><span style="position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--pos)"></span><div class="label" style="font-size:10.5px">Boş Oda</div><div class="value" id="s-bos" style="font-size:19px">—</div><div class="sub" style="font-size:9.5px">müsait</div></div>
 </div>
 
-<div class="cards-row" id="stat-cards">
-  <div class="stat-card"><span style="position:absolute;top:17px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--accent)"></span><div class="label">Bugün Giriş</div><div class="value" id="s-giris">—</div><div class="sub">bekleyen check-in</div></div>
-  <div class="stat-card"><span style="position:absolute;top:17px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--accent2)"></span><div class="label">Bugün Çıkış</div><div class="value" id="s-cikis">—</div><div class="sub">check-out</div></div>
-  <div class="stat-card"><span style="position:absolute;top:17px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--accent4)"></span><div class="label">☕ Kahvaltı</div><div class="value" id="s-kah">—</div><div class="sub" id="s-kah-sub">kişi · bugün</div></div>
-  <div class="stat-card"><span style="position:absolute;top:17px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--pos)"></span><div class="label">Boş Oda</div><div class="value" id="s-bos">—</div><div class="sub">müsait · satışa açık</div></div>
-</div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-  <div class="table-wrap" style="max-height:220px;overflow-y:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent)"></span><span style="font-size:14px;font-weight:600">Bugün Giriş Yapacaklar</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;flex-shrink:0">
+  <div class="table-wrap" style="max-height:160px;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent)"></span><span style="font-size:13px;font-weight:600">Bugün Giriş Yapacaklar</span></div>
     </div>
     <table>
       <thead><tr><th>Oda</th><th>Föy No</th><th>Misafir</th><th>Gün</th><th>Kanal</th></tr></thead>
       <tbody id="giris-tbody"><tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr></tbody>
     </table>
   </div>
-  <div class="table-wrap" style="max-height:220px;overflow-y:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2)"></span><span style="font-size:14px;font-weight:600">Bugün Çıkış Yapacaklar</span></div>
+  <div class="table-wrap" style="max-height:160px;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent2)"></span><span style="font-size:13px;font-weight:600">Bugün Çıkış Yapacaklar</span></div>
     </div>
     <table>
       <thead><tr><th>Oda</th><th>Föy No</th><th>Misafir</th><th>Giriş</th><th>Bakiye</th></tr></thead>
@@ -72,16 +51,20 @@
   </div>
 </div>
 
-<div class="table-wrap" style="max-height:220px;overflow-y:auto">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+<div class="table-wrap" style="flex:1;min-height:0;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
     <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--pos)"></span><span style="font-size:14px;font-weight:600">Şu An Otelde</span></div>
     <div style="font-family:'Geist Mono',monospace;font-size:12px;color:var(--text2);background:var(--card2);padding:3px 9px;border-radius:20px" id="aktif-count">— misafir</div>
   </div>
-  <table>
-    <thead><tr><th>Oda</th><th>Föy No</th><th>Kanal</th><th>Misafir</th><th>Giriş</th><th>Çıkış</th><th>Gün</th><th>Rez.Bakiye</th><th>Adisyon</th><th>Adis.Bakiye</th></tr></thead>
-    <tbody id="aktif-tbody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span></td></tr></tbody>
-  </table>
+  <div style="flex:1;min-height:0;overflow-y:auto">
+    <table>
+      <thead><tr><th>Oda</th><th>Föy No</th><th>Kanal</th><th>Misafir</th><th>Giriş</th><th>Çıkış</th><th>Gün</th><th>Rez.Bakiye</th><th>Adisyon</th><th>Adis.Bakiye</th></tr></thead>
+      <tbody id="aktif-tbody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span></td></tr></tbody>
+    </table>
+  </div>
 </div>
+
+</div><!-- /dash-page -->
 {% endblock %}
 
 {% block scripts %}
@@ -167,6 +150,7 @@ async function load() {
 load();
 </script>
 {% endblock %}
+
 
 
 

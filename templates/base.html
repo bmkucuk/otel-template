@@ -9,14 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=Archivo+Black&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
 /* ===== BMK logo widget ===== */
-.bmk-logo{display:inline-block;line-height:0;cursor:pointer;flex:none;position:relative}
-.bmk-logo svg{display:block;overflow:visible}
-.bmk-logo .bmk-gear{transform-box:fill-box}
-#bmk-logo-overlay{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;background:#070b14;cursor:pointer}
-#bmk-logo-overlay.show{display:flex}
-#bmk-logo-overlay svg{width:320px;height:320px;animation:bmk-pop .35s cubic-bezier(.2,.8,.2,1)}
-@keyframes bmk-pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
-@keyframes bmk-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.bmk-logo{display:inline-block;line-height:0;flex:none}
+.bmk-logo svg{display:block}
 :root {
   --bg:       #0a1326;
   --sidebar:  #080f1f;
@@ -149,8 +143,8 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
 
 <div id="sidebar">
   <div class="brand">
-    <span class="bmk-logo" id="bmk-logo-trigger" role="img" aria-label="BMK — Innovative Coding">
-      <svg id="bmk-logo-svg" width="38" height="38" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <span class="bmk-logo" role="img" aria-label="BMK — Innovative Coding">
+      <svg width="38" height="38" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="bmkGrad" x1="24" y1="24" x2="176" y2="176" gradientUnits="userSpaceOnUse">
             <stop offset="0" stop-color="#3B82F6"/><stop offset="0.5" stop-color="#14B8A6"/><stop offset="1" stop-color="#8B5CF6"/>
@@ -183,48 +177,6 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
     </span>
     <span class="name">Rezervasyon Ve<br>Ön Muhasebe</span>
   </div>
-  <div id="bmk-logo-overlay"></div>
-  <script>
-  (function(){
-    var trigger = document.getElementById('bmk-logo-trigger');
-    var overlay = document.getElementById('bmk-logo-overlay');
-    var srcSvg = document.getElementById('bmk-logo-svg');
-
-    function openModal(){
-      var clone = srcSvg.cloneNode(true);
-      clone.removeAttribute('id');
-      clone.removeAttribute('width');
-      clone.removeAttribute('height');
-      var top = clone.querySelector('#bmkTop'); if(top){ top.id='bmkTopClone'; }
-      var bot = clone.querySelector('#bmkBot'); if(bot){ bot.id='bmkBotClone'; }
-      clone.querySelectorAll('textPath').forEach(function(tp,i){ tp.setAttribute('href', i===0?'#bmkTopClone':'#bmkBotClone'); });
-      var gear = clone.querySelector('.bmk-gear');
-      if (gear) {
-        var anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateTransform');
-        anim.setAttribute('attributeName', 'transform');
-        anim.setAttribute('type', 'rotate');
-        anim.setAttribute('from', '0 100 100');
-        anim.setAttribute('to', '360 100 100');
-        anim.setAttribute('dur', '6s');
-        anim.setAttribute('repeatCount', 'indefinite');
-        gear.appendChild(anim);
-      }
-      overlay.innerHTML = '';
-      overlay.appendChild(clone);
-      overlay.classList.add('show');
-    }
-    function closeModal(){
-      overlay.classList.remove('show');
-      overlay.innerHTML = '';
-    }
-
-    trigger.addEventListener('click', openModal);
-    overlay.addEventListener('click', closeModal);
-    document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape' && overlay.classList.contains('show')) closeModal();
-    });
-  })();
-  </script>
   <nav>
     <a href="/dashboard" class="{% if active=='dashboard' %}active{% endif %}">
       <span class="icon">🏠</span> Dashboard
@@ -440,6 +392,7 @@ setInterval(loadAktifKullanicilarBadge, 30000);
 {% block scripts %}{% endblock %}
 </body>
 </html>
+
 
 
 

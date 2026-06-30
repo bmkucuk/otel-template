@@ -11,7 +11,7 @@
 /* ===== BMK logo widget ===== */
 .bmk-logo{display:inline-block;line-height:0;cursor:pointer;flex:none;position:relative}
 .bmk-logo svg{display:block;overflow:visible}
-.bmk-logo .bmk-gear{transform-origin:100px 100px;transform-box:view-box}
+.bmk-logo .bmk-gear{transform-origin:50% 50%;transform-box:fill-box}
 #bmk-logo-overlay{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:flex-start;padding-left:90px;background:rgba(8,12,20,.6);pointer-events:none}
 #bmk-logo-overlay.show{display:flex}
 #bmk-logo-overlay svg{width:190px;height:190px;animation:bmk-pop .35s cubic-bezier(.2,.8,.2,1)}
@@ -424,6 +424,7 @@ setInterval(loadAktifKullanicilarBadge, 30000);
 {% block scripts %}{% endblock %}
 </body>
 </html>
+
 
 
 

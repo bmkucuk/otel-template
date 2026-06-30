@@ -63,7 +63,7 @@
   </div>
   <div class="table-wrap" style="max-height:220px;overflow-y:auto">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2)"></span><span style="font-size:14px;font-weight:600">Bugün Çıkış</span></div>
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2)"></span><span style="font-size:14px;font-weight:600">Bugün Çıkış Yapacaklar</span></div>
     </div>
     <table>
       <thead><tr><th>Oda</th><th>Föy No</th><th>Misafir</th><th>Giriş</th><th>Bakiye</th></tr></thead>
@@ -136,8 +136,9 @@ async function load() {
   const cikisBody = document.getElementById('cikis-tbody');
   cikisBody.innerHTML = d.cikislar.length ? d.cikislar.map(r => {
     const toplamBakiye = (r.rez_bakiye||0) + (r.adis_bakiye||0);
+    const tikla = toplamBakiye > 0;
     return `
-    <tr>
+    <tr${tikla?` style="cursor:pointer" onclick="window.location.href='/cari?foy='+${r.foy_no}"`:''}>
       <td>${r.oda_no}</td>
       <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.foy_no}</td>
       <td>${r.musteri}</td>
@@ -164,4 +165,5 @@ async function load() {
 load();
 </script>
 {% endblock %}
+
 

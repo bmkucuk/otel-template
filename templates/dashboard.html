@@ -134,14 +134,17 @@ async function load() {
     </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">Bugün giriş yok</td></tr>';
 
   const cikisBody = document.getElementById('cikis-tbody');
-  cikisBody.innerHTML = d.cikislar.length ? d.cikislar.map(r => `
+  cikisBody.innerHTML = d.cikislar.length ? d.cikislar.map(r => {
+    const toplamBakiye = (r.rez_bakiye||0) + (r.adis_bakiye||0);
+    return `
     <tr>
       <td>${r.oda_no}</td>
       <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.foy_no}</td>
       <td>${r.musteri}</td>
       <td>${fmtDate(r.giris)}</td>
-      <td class="${(r.rez_bakiye||0)>0?'red':'green'}">${fmt(r.rez_bakiye||0)}</td>
-    </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">Bugün çıkış yok</td></tr>';
+      <td class="${toplamBakiye>0?'red':'green'}">${fmt(toplamBakiye)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">Bugün çıkış yok</td></tr>';
 
   const aktifBody = document.getElementById('aktif-tbody');
   aktifBody.innerHTML = d.aktifler.length ? d.aktifler.map(r => `

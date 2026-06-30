@@ -199,7 +199,9 @@
 
 {% block scripts %}
 <script>
-let selFoy = null;
+const _urlParams = new URLSearchParams(window.location.search);
+const _urlFoy = _urlParams.get('foy');
+let selFoy = _urlFoy ? parseInt(_urlFoy) : null;
 let allData = [];
 let allAdisyon = [];
 let adisOdemeler = {};
@@ -213,6 +215,8 @@ async function load() {
   if (selFoy) {
     await loadDokum(selFoy);
     updateCards();
+    const rowEl = document.getElementById('row-' + selFoy);
+    if (rowEl) rowEl.scrollIntoView({behavior:'smooth', block:'center'});
   } else updateCards();
 }
 
@@ -616,3 +620,4 @@ document.getElementById('tah-edit-modal').addEventListener('click', e => {
 
 </script>
 {% endblock %}
+

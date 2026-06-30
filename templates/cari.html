@@ -213,10 +213,11 @@ async function load() {
   ozetData = d.ozet;
   filterCari();
   if (selFoy) {
+    document.getElementById('alt-panel').style.display = 'flex';
+    document.getElementById('btn-secim-kaldir').style.display = 'inline-block';
     await loadDokum(selFoy);
     updateCards();
-    const rowEl = document.getElementById('row-' + selFoy);
-    if (rowEl) rowEl.scrollIntoView({behavior:'smooth', block:'center'});
+    document.getElementById('alt-panel').scrollIntoView({behavior:'smooth', block:'start'});
   } else updateCards();
 }
 
@@ -620,4 +621,5 @@ document.getElementById('tah-edit-modal').addEventListener('click', e => {
 
 </script>
 {% endblock %}
+
 

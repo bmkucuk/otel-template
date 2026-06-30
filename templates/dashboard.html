@@ -58,7 +58,7 @@
   </div>
   <div style="flex:1;min-height:0;overflow-y:auto">
     <table>
-      <thead><tr><th>Oda</th><th>Föy No</th><th>Kanal</th><th>Misafir</th><th>Giriş</th><th>Çıkış</th><th>Gün</th><th>Rez.Bakiye</th><th>Adisyon</th><th>Adis.Bakiye</th></tr></thead>
+      <thead><tr><th>Oda</th><th>Föy No</th><th>Kanal</th><th>Misafir</th><th>Giriş</th><th>Çıkış</th><th>Gün</th><th>Rez.Bakiye</th><th>Adisyon</th><th>Toplam Bakiye</th></tr></thead>
       <tbody id="aktif-tbody"><tr class="loading-row"><td colspan="10"><span class="spinner"></span></td></tr></tbody>
     </table>
   </div>
@@ -127,7 +127,8 @@ async function load() {
 
   const aktifBody = document.getElementById('aktif-tbody');
   aktifBody.innerHTML = d.aktifler.length ? d.aktifler.map(r => {
-    const tikla = (r.rez_bakiye||0) > 0 || (r.adis_bakiye||0) > 0;
+    const toplamBakiye = (r.rez_bakiye||0) + (r.adis_bakiye||0);
+    const tikla = toplamBakiye > 0;
     return `
     <tr${tikla?` style="cursor:pointer" onclick="window.location.href='/cari?foy='+${r.foy_no}"`:''}>
       <td>${r.oda_no}</td>
@@ -139,13 +140,14 @@ async function load() {
       <td>${r.toplam_gun} gün</td>
       <td class="${(r.rez_bakiye||0)>0?'red':'green'}">${fmt(r.rez_bakiye||0)}</td>
       <td>${fmt(r.adisyon||0)}</td>
-      <td class="${(r.adis_bakiye||0)>0?'red':'green'}">${fmt(r.adis_bakiye||0)}</td>
+      <td class="${toplamBakiye>0?'red':'green'}">${fmt(toplamBakiye)}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text2);padding:20px">Şu an otelde misafir yok</td></tr>';
 }
 load();
 </script>
 {% endblock %}
+
 
 
 

@@ -126,8 +126,10 @@ async function load() {
   }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">Bugün çıkış yok</td></tr>';
 
   const aktifBody = document.getElementById('aktif-tbody');
-  aktifBody.innerHTML = d.aktifler.length ? d.aktifler.map(r => `
-    <tr>
+  aktifBody.innerHTML = d.aktifler.length ? d.aktifler.map(r => {
+    const tikla = (r.rez_bakiye||0) > 0 || (r.adis_bakiye||0) > 0;
+    return `
+    <tr${tikla?` style="cursor:pointer" onclick="window.location.href='/cari?foy='+${r.foy_no}"`:''}>
       <td>${r.oda_no}</td>
       <td>${r.foy_no}</td>
       <td>${r.kanal||'—'}</td>
@@ -138,11 +140,13 @@ async function load() {
       <td class="${(r.rez_bakiye||0)>0?'red':'green'}">${fmt(r.rez_bakiye||0)}</td>
       <td>${fmt(r.adisyon||0)}</td>
       <td class="${(r.adis_bakiye||0)>0?'red':'green'}">${fmt(r.adis_bakiye||0)}</td>
-    </tr>`).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text2);padding:20px">Şu an otelde misafir yok</td></tr>';
+    </tr>`;
+  }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text2);padding:20px">Şu an otelde misafir yok</td></tr>';
 }
 load();
 </script>
 {% endblock %}
+
 
 
 

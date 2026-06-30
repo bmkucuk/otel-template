@@ -11,11 +11,10 @@
 /* ===== BMK logo widget ===== */
 .bmk-logo{display:inline-block;line-height:0;cursor:pointer;flex:none;position:relative}
 .bmk-logo svg{display:block;overflow:visible}
-.bmk-logo .bmk-gear{transform-origin:50% 50%;transform-box:fill-box}
+.bmk-logo .bmk-gear{transform-box:fill-box}
 #bmk-logo-overlay{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:flex-start;padding-left:90px;background:rgba(8,12,20,.6);pointer-events:none}
 #bmk-logo-overlay.show{display:flex}
 #bmk-logo-overlay svg{width:190px;height:190px;animation:bmk-pop .35s cubic-bezier(.2,.8,.2,1)}
-#bmk-logo-overlay .bmk-gear{animation:bmk-spin 6s linear infinite}
 @keyframes bmk-pop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes bmk-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 :root {
@@ -199,6 +198,17 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
       var top = clone.querySelector('#bmkTop'); if(top){ top.id='bmkTopClone'; }
       var bot = clone.querySelector('#bmkBot'); if(bot){ bot.id='bmkBotClone'; }
       clone.querySelectorAll('textPath').forEach(function(tp,i){ tp.setAttribute('href', i===0?'#bmkTopClone':'#bmkBotClone'); });
+      var gear = clone.querySelector('.bmk-gear');
+      if (gear) {
+        var anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateTransform');
+        anim.setAttribute('attributeName', 'transform');
+        anim.setAttribute('type', 'rotate');
+        anim.setAttribute('from', '0 100 100');
+        anim.setAttribute('to', '360 100 100');
+        anim.setAttribute('dur', '6s');
+        anim.setAttribute('repeatCount', 'indefinite');
+        gear.appendChild(anim);
+      }
       overlay.innerHTML = '';
       overlay.appendChild(clone);
       overlay.classList.add('show');
@@ -424,6 +434,7 @@ setInterval(loadAktifKullanicilarBadge, 30000);
 {% block scripts %}{% endblock %}
 </body>
 </html>
+
 
 
 

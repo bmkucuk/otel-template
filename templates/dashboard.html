@@ -137,11 +137,13 @@ async function load() {
   cikisBody.innerHTML = d.cikislar.length ? d.cikislar.map(r => {
     const toplamBakiye = (r.rez_bakiye||0) + (r.adis_bakiye||0);
     const tikla = toplamBakiye > 0;
+    const ciktiMi = !!r.anahtar_teslim;
+    const rowStyle = ciktiMi ? 'opacity:0.45' : '';
     return `
-    <tr${tikla?` style="cursor:pointer" onclick="window.location.href='/cari?foy='+${r.foy_no}"`:''}>
+    <tr${tikla?` style="cursor:pointer;${rowStyle}" onclick="window.location.href='/cari?foy='+${r.foy_no}"`:(ciktiMi?` style="${rowStyle}"`:'')}>
       <td>${r.oda_no}</td>
       <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.foy_no}</td>
-      <td>${r.musteri}</td>
+      <td>${r.musteri}${ciktiMi?' <span class="green" style="font-size:10px;font-weight:600">✓ Çıkış Yaptı</span>':''}</td>
       <td>${fmtDate(r.giris)}</td>
       <td class="${toplamBakiye>0?'red':'green'}">${fmt(toplamBakiye)}</td>
     </tr>`;
@@ -165,6 +167,7 @@ async function load() {
 load();
 </script>
 {% endblock %}
+
 
 
 

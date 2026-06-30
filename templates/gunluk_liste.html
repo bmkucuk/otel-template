@@ -266,7 +266,7 @@ function buildRows(data, type) {
           </label>
           ${hkBadge}
         </td>
-        <td style="text-align:right">${bakiyeHtml}</td>
+        <td style="text-align:right${bakiye>0?';cursor:pointer':''}"${bakiye>0?` onclick="window.location.href='/cari?foy='+${r.foy_no}"`:''}>${bakiyeHtml}</td>
       </tr>`;
     }
   }).join('');
@@ -441,4 +441,5 @@ function modalBakiyeIptal() {
 </div>
 
 {% endblock %}
+
 

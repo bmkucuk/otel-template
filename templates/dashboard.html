@@ -59,7 +59,7 @@
   <div style="flex:1;min-height:0;overflow-y:auto">
     <table>
       <thead><tr><th>Oda</th><th>Föy No</th><th>Kanal</th><th>Misafir</th><th>Giriş</th><th>Çıkış</th><th>Gün</th><th>Rez.Bakiye</th><th>Adisyon</th><th>Adis.Bakiye</th></tr></thead>
-      <tbody id="aktif-tbody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span></td></tr></tbody>
+      <tbody id="aktif-tbody"><tr class="loading-row"><td colspan="10"><span class="spinner"></span></td></tr></tbody>
     </table>
   </div>
 </div>
@@ -90,20 +90,13 @@ async function load() {
   const toplamDolu = leoDolu + cvDolu, toplamOda = LEO_TOPLAM + CV_TOPLAM;
   const bos = toplamOda - toplamDolu;
   document.getElementById('s-bos').textContent = bos;
-  document.getElementById('occ-pct').innerHTML = Math.round(toplamDolu/toplamOda*100) + '<span style="font-size:26px">%</span>';
-  document.getElementById('occ-sub').textContent = toplamOda + " odanın " + toplamDolu + "'ı dolu";
+  document.getElementById('occ-pct').innerHTML = Math.round(toplamDolu/toplamOda*100) + '<span style="font-size:11px">%</span>';
   document.getElementById('occ-dolu').textContent = toplamDolu;
   document.getElementById('occ-bos').textContent = bos;
-  document.getElementById('occ-leo-frac').textContent = leoDolu + ' / ' + LEO_TOPLAM;
-  document.getElementById('occ-cv-frac').textContent  = cvDolu + ' / ' + CV_TOPLAM;
-  document.getElementById('occ-leo-bar').style.width = Math.round(leoDolu/LEO_TOPLAM*100) + '%';
-  document.getElementById('occ-cv-bar').style.width  = Math.round(cvDolu/CV_TOPLAM*100) + '%';
 
   const rezToplam  = d.aktifler.reduce((s,r) => s + (r.rez_bakiye||0), 0);
   const adisToplam = d.aktifler.reduce((s,r) => s + (r.adis_bakiye||0), 0);
-  document.getElementById('rez-bakiye-toplam').textContent  = fmt(rezToplam);
-  document.getElementById('adis-bakiye-toplam').textContent = fmt(adisToplam);
-  document.getElementById('alacak-sub').textContent = d.aktifler.length + ' rezervasyon · bekleyen bakiye';
+  document.getElementById('alacak-sub').textContent = d.aktifler.length + ' rez. · bekleyen';
   document.getElementById('aktif-count').textContent = d.aktifler.length + ' misafir';
 
   const girisBody = document.getElementById('giris-tbody');

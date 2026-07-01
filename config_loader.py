@@ -89,5 +89,14 @@ def otel_bilgi():
     cfg = load_config()
     return cfg.get('otel', {})
 
+def oda_araligi():
+    """config'teki oda_baslangic/oda_bitis'e göre oda numaraları listesini döner."""
+    o = otel_bilgi()
+    basla = int(o.get('oda_baslangic') or 1)
+    bit   = int(o.get('oda_bitis') or o.get('toplam_oda') or 20)
+    if bit < basla:
+        bit = basla
+    return list(range(basla, bit + 1))
+
 def tema_mod():
     return get('tema.mod', 'dark')

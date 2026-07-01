@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Otel Leo & Cunda Villa — Web Yönetim (SQLite sürümü)"""
+"""Otel Yönetim Şablonu — Web Yönetim (SQLite sürümü)"""
 import os
 import smtplib
 import tempfile
@@ -15,6 +15,7 @@ from functools import wraps
 import database as db
 from muhasebe_routes import muh
 import muhasebe_db as mdb
+import config_loader as cl
 from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
@@ -600,9 +601,8 @@ def api_oda_durumu():
     today = bugun().isoformat()
 
     rezervasyonlar = [r for r in db.get_rezervasyonlar() if r.get("durum") != "Kapora Yandı"]
-    cv_odalar  = list(range(1, 11))
-    leo_odalar = list(range(11, 30))
-    all_rooms  = [('CV', o) for o in cv_odalar] + [('LEO', o) for o in leo_odalar]
+    kisa_ad   = cl.get('otel.kisa_ad', 'OTEL')
+    all_rooms = [(kisa_ad, o) for o in cl.oda_araligi()]
 
     grid = []
     for otel_label, oda_no in all_rooms:
@@ -629,7 +629,10 @@ def api_oda_durumu():
                 cells.append({'dolu': False})
         grid.append({'otel': otel_label, 'oda_no': oda_no, 'cells': cells})
 
-    return jsonify({'dates': [d.isoformat() for d in dates], 'today': today, 'grid': grid})
+    return jsonify({
+        'dates': [d.isoformat() for d in dates], 'today': today, 'grid': grid,
+        'otel_adi': cl.get('otel.ad', 'Otel'), 'otel_kisa_ad': kisa_ad,
+    })
 
 @app.route('/api/oda-satislari')
 def api_oda_satislari():
@@ -683,19 +686,15 @@ def set_tema(mod):
 
 @app.route('/api/musaitlik')
 def api_musaitlik():
-    # Verilen giriş/çıkış aralığında ve (varsa) otelde boş odaları döner. Salt-okunur, mevcut hiçbir kayda dokunmaz.
+    # Verilen giriş/çıkış aralığında boş odaları döner. Salt-okunur, mevcut hiçbir kayda dokunmaz.
     giris = request.args.get('giris', '')
     cikis = request.args.get('cikis', '')
-    otel  = request.args.get('otel', 'Tümü')
     if not giris or not cikis or cikis <= giris:
         return jsonify({'odalar': [], 'error': 'Geçersiz tarih aralığı'})
 
     rezervasyonlar = [r for r in db.get_rezervasyonlar() if r.get('durum') != 'Kapora Yandı']
-    cv_odalar  = [('CV', o) for o in range(1, 11)]
-    leo_odalar = [('LEO', o) for o in range(11, 30)]
-    all_rooms  = cv_odalar + leo_odalar
-    if otel in ('LEO', 'CV'):
-        all_rooms = [r for r in all_rooms if r[0] == otel]
+    kisa_ad   = cl.get('otel.kisa_ad', 'OTEL')
+    all_rooms = [(kisa_ad, o) for o in cl.oda_araligi()]
 
     musait = []
     for otel_label, oda_no in all_rooms:

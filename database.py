@@ -111,9 +111,10 @@ def init_db():
     # Oda listesini doldur
     count = conn.execute("SELECT COUNT(*) FROM odalar").fetchone()[0]
     if count == 0:
-        leo = [(i, 'LEO') for i in range(11, 30)]
-        cv  = [(i, 'CV')  for i in range(1, 11)]
-        conn.executemany("INSERT OR IGNORE INTO odalar(oda_no,otel) VALUES(?,?)", leo + cv)
+        import config_loader as _cl
+        kisa_ad = _cl.get('otel.kisa_ad', 'OTEL')
+        odalar_seed = [(no, kisa_ad) for no in _cl.oda_araligi()]
+        conn.executemany("INSERT OR IGNORE INTO odalar(oda_no,otel) VALUES(?,?)", odalar_seed)
     # Migration: durum kolonu yoksa ekle
     cols = [r[1] for r in conn.execute("PRAGMA table_info(rezervasyonlar)").fetchall()]
     if 'checkin' not in cols:

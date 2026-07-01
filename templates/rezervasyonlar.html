@@ -46,9 +46,6 @@
     <span style="width:14px;height:14px;border-radius:50%;border:1.5px solid var(--text2);flex:none"></span>
     <input id="search" placeholder="Misafir, föy no, oda ara…" oninput="load()">
   </div>
-  <select class="filter" id="otel-filter" onchange="load()" style="border-radius:10px">
-    <option value="">Tüm Oteller</option><option>LEO</option><option>CV</option>
-  </select>
   <div class="rez-chip" id="chip-aktif" onclick="toggleChip('aktif')"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent2)"></span>Aktif</div>
   <div class="rez-chip" id="chip-tamam" onclick="toggleChip('tamam')"><span style="width:7px;height:7px;border-radius:50%;background:var(--pos)"></span>Tamamlandı</div>
   <input type="checkbox" id="cb-aktif" style="display:none">
@@ -103,26 +100,14 @@
         <label>Oda No</label>
         <select id="f-oda" onchange="onOdaChange()">
           <option value="">Seçin...</option>
-          <optgroup label="── Cunda Villa (1-10) ──">
-            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-            <option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
-          </optgroup>
-          <optgroup label="── Otel Leo (11-29) ──">
-            <option value="11">11</option><option value="12">12</option><option value="13">13</option>
-            <option value="14">14</option><option value="15">15</option><option value="16">16</option>
-            <option value="17">17</option><option value="18">18</option><option value="19">19</option>
-            <option value="20">20</option><option value="21">21</option><option value="22">22</option>
-            <option value="23">23</option><option value="24">24</option><option value="25">25</option>
-            <option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option>
-          </optgroup>
+          {% for o in oda_listesi %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
         </select>
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label>Otel</label>
-        <input type="text" id="f-otel" readonly value="LEO" style="background:var(--bg2,#1a1f29);opacity:.8;cursor:not-allowed;font-weight:700">
+        <input type="text" id="f-otel" readonly value="{{ otel_kisa_ad }}" style="background:var(--bg2,#1a1f29);opacity:.8;cursor:not-allowed;font-weight:700">
       </div>
       <div class="form-group">
         <label>Kanal (Acente)</label>
@@ -256,8 +241,7 @@ function initials(name){
 
 async function load() {
   const q = document.getElementById('search').value;
-  const otel = document.getElementById('otel-filter').value;
-  const data = await api(`/api/rezervasyonlar?q=${encodeURIComponent(q)}&otel=${otel}`);
+  const data = await api(`/api/rezervasyonlar?q=${encodeURIComponent(q)}`);
 
   // Durum checkbox filtreleri
   const showAktif = document.getElementById('cb-aktif').checked;
@@ -284,11 +268,11 @@ async function load() {
     const isHL = _urlQ && String(r.foy_no) === String(_urlQ);
     const rowId = isHL ? 'id="hl-row"' : '';
     const rowBg = isHL ? 'background:rgba(255,194,77,.12);box-shadow:inset 3px 0 0 var(--accent)' : '';
-    const HC = r.otel==='LEO' ? 'var(--leo)' : 'var(--cv)';
-    const HBG = r.otel==='LEO' ? 'rgba(84,182,255,.15)' : 'rgba(61,220,132,.15)';
+    const HC = 'var(--oda)';
+    const HBG = 'rgba(84,182,255,.15)';
     const gercekDurum = r.durum === 'Kapora Yandı' ? 'Kapora Yandı' : r.rez_bakiye <= 0 ? 'Tamamlandı' : 'Aktif';
     const durumBg = gercekDurum==='Aktif' ? 'rgba(84,182,255,.15)' : gercekDurum==='Tamamlandı' ? 'rgba(47,221,155,.15)' : 'rgba(255,210,63,.15)';
-    const durumC  = gercekDurum==='Aktif' ? 'var(--leo)' : gercekDurum==='Tamamlandı' ? 'var(--pos)' : 'var(--accent4)';
+    const durumC  = gercekDurum==='Aktif' ? 'var(--oda)' : gercekDurum==='Tamamlandı' ? 'var(--pos)' : 'var(--accent4)';
     const subParts = [];
     if (r.cocuk>0) subParts.push(r.cocuk+' çocuk');
     if (r.ek_yatak && r.ek_yatak!=='Yok') subParts.push(r.ek_yatak);
@@ -345,9 +329,7 @@ async function load() {
 }
 
 function onOdaChange() {
-  const oda = parseInt(document.getElementById('f-oda').value);
-  if (oda > 10) document.getElementById('f-otel').value = 'LEO';
-  else if (oda > 0) document.getElementById('f-otel').value = 'CV';
+  document.getElementById('f-otel').value = '{{ otel_kisa_ad }}';
 }
 
 function openEdit(foy_no) {
@@ -362,7 +344,7 @@ async function openModal(r = null) {
   const d = await api('/api/next-foy');
   document.getElementById('f-foy').value = d.foy_no;
   document.getElementById('f-oda').value = '';
-  document.getElementById('f-otel').value = 'LEO';
+  document.getElementById('f-otel').value = '{{ otel_kisa_ad }}';
   document.getElementById('f-kanal').value = '';
   document.getElementById('f-musteri').value = '';
   document.getElementById('f-yetiskin').value = 2;

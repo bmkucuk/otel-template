@@ -28,7 +28,7 @@
       <div class="form-group"><label>Tutar (₺)</label><input type="number" id="s-tutar" value="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value=='')this.value='0'"></div>
     </div>
     <div class="form-row single">
-      <div class="form-group"><label>Ödeme Hesabı</label><select id="s-hesap"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option><option value="500-FK">Fırat Nakit</option><option value="500-FK">Fırat KK</option><option value="500-LK">Levent Nakit</option><option value="500-LK">Levent KK</option><option value="500-BT">Burçin Nakit</option><option value="500-BT">Burçin KK</option></select></div>
+      <div class="form-group"><label>Ödeme Hesabı</label><select id="s-hesap"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option>{% for o in ortaklar %}<option value="500-{{ o.kod }}">{{ o.ad }} Nakit</option><option value="500-{{ o.kod }}">{{ o.ad }} KK</option>{% endfor %}</select></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Not</label><input type="text" id="s-not"></div>
@@ -80,7 +80,7 @@
     </div>
     <div class="form-row">
       <div class="form-group"><label>Durum</label><select id="v-durum"><option>Bekliyor</option><option>Ödendi</option></select></div>
-      <div class="form-group"><label>Ödeme Bankası</label><select id="v-banka"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option><option value="500-FK">Fırat Nakit</option><option value="500-FK">Fırat KK</option><option value="500-LK">Levent Nakit</option><option value="500-LK">Levent KK</option><option value="500-BT">Burçin Nakit</option><option value="500-BT">Burçin KK</option></select></div>
+      <div class="form-group"><label>Ödeme Bankası</label><select id="v-banka"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option>{% for o in ortaklar %}<option value="500-{{ o.kod }}">{{ o.ad }} Nakit</option><option value="500-{{ o.kod }}">{{ o.ad }} KK</option>{% endfor %}</select></div>
     </div>
     <div class="form-row single"><div class="form-group"><label>Açıklama</label><input type="text" id="v-aciklama"></div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
@@ -128,7 +128,7 @@
     </div>
     <div class="form-row">
       <div class="form-group"><label>Toplam (₺)</label><input type="number" id="d-toplam" value="0" readonly style="background:var(--bg);color:var(--accent2);font-weight:700"></div>
-      <div class="form-group"><label>Ödeme Hesabı</label><select id="d-hesap"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option><option value="500-FK">Fırat Nakit</option><option value="500-FK">Fırat KK</option><option value="500-LK">Levent Nakit</option><option value="500-LK">Levent KK</option><option value="500-BT">Burçin Nakit</option><option value="500-BT">Burçin KK</option></select></div>
+      <div class="form-group"><label>Ödeme Hesabı</label><select id="d-hesap"><option value="100">Nakit (Kasa)</option><option value="102-1">İş Bankası</option><option value="102-2">Ziraat Bankası</option><option value="102-3">Deniz Bank</option>{% for o in ortaklar %}<option value="500-{{ o.kod }}">{{ o.ad }} Nakit</option><option value="500-{{ o.kod }}">{{ o.ad }} KK</option>{% endfor %}</select></div>
     </div>
     <div class="form-row single">
       <div class="form-group"><label>Not</label><input type="text" id="d-not"></div>
@@ -185,7 +185,7 @@
       <div class="form-group"><label>Gelen Ödeme (₺)</label><input type="number" id="a-gelen" value="0"></div>
       <div class="form-group"><label>Ödeme Bankası</label><select id="a-odeme-banka"><option value="IS">İş Bankası</option><option value="ZRH">Ziraat Bankası</option><option value="DNZ">Deniz Bank</option></select></div>
     </div>
-    <div class="form-row single"><div class="form-group"><label>Otel</label><select id="a-otel"><option>LEO</option><option>CV</option></select></div></div>
+    <input type="hidden" id="a-otel" value="{{ otel_kisa_ad }}">
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-default" onclick="resetAce()">✕ Temizle</button>
       <button class="btn btn-primary" onclick="saveAce()">💾 Kaydet</button>
@@ -281,7 +281,7 @@ async function loadStok() {
   document.getElementById('stok-tbody').innerHTML = data.map(r => `<tr>
     <td>${r.tarih}</td><td>${r.aciklama}</td><td>${r.kategori||'—'}</td>
     <td class="red" style="text-align:right">${fmt(r.tutar)}</td>
-    <td>${({'100':'Nakit','102-1':'İş Bankası','102-2':'Ziraat','102-3':'Deniz Bank','500-FK':'Fırat (Kendi)','500-LK':'Levent (Kendi)','500-BT':'Burçin (Kendi)'})[r.odeme_hesap] || r.odeme_hesap || '—'}</td>
+    <td>${({'100':'Nakit','102-1':'İş Bankası','102-2':'Ziraat','102-3':'Deniz Bank'{% for o in ortaklar %},'500-{{ o.kod }}':'{{ o.ad }} (Kendi)'{% endfor %}})[r.odeme_hesap] || r.odeme_hesap || '—'}</td>
     <td>${r.fatura_var?'✅':'❌'}</td><td>${r.not_||'—'}</td>
     <td style="white-space:nowrap">
       <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="editStok(${r.id})">Düzenle</button>
@@ -468,7 +468,7 @@ async function loadDem() {
     <td style="text-align:right">${r.miktar||1}</td>
     <td style="text-align:right">${fmt(r.birim_fiyat)}</td>
     <td class="red" style="text-align:right">${fmt(r.toplam)}</td>
-    <td>${({'100':'Nakit','102-1':'İş Bankası','102-2':'Ziraat','102-3':'Deniz Bank','500-FK':'Fırat (Kendi)','500-LK':'Levent (Kendi)','500-BT':'Burçin (Kendi)'})[r.odeme_hesap] || r.odeme_hesap || '—'}</td>
+    <td>${({'100':'Nakit','102-1':'İş Bankası','102-2':'Ziraat','102-3':'Deniz Bank'{% for o in ortaklar %},'500-{{ o.kod }}':'{{ o.ad }} (Kendi)'{% endfor %}})[r.odeme_hesap] || r.odeme_hesap || '—'}</td>
     <td>${r.fatura_no||'—'}</td><td>${r.not_||'—'}</td>
     <td style="white-space:nowrap">
       <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px;background:var(--accent4);color:#000" onclick="editDem(${r.id})">Düzenle</button>
@@ -527,7 +527,7 @@ function onAceFoyChange() {
   if (rez) {
     document.getElementById('a-misafir').value = rez.musteri;
     document.getElementById('a-tutar').value = rez.toplam_fiyat||0;
-    document.getElementById('a-otel').value = rez.otel||'LEO';
+    document.getElementById('a-otel').value = rez.otel||'{{ otel_kisa_ad }}';
     calcAceKom();
   }
 }
@@ -631,7 +631,7 @@ function editAce(id) {
   document.getElementById('a-oran').value = r.komisyon_oran||15;
   document.getElementById('a-kom').value = r.komisyon_tl||0;
   document.getElementById('a-gelen').value = r.gelen_odeme||0;
-  document.getElementById('a-otel').value = r.otel||'LEO';
+  document.getElementById('a-otel').value = r.otel||'{{ otel_kisa_ad }}';
   document.getElementById('a-edit-bar').style.display = 'block';
   window.scrollTo({top:0, behavior:'smooth'});
 }

@@ -131,8 +131,7 @@
 }
 .gl-table tr:last-child td { border-bottom: none; }
 .gl-table tr:hover td { background: var(--card2); }
-.gl-table .otel-leo  { color: var(--accent);  font-weight:600; font-size:11px; }
-.gl-table .otel-cv   { color: var(--accent4); font-weight:600; font-size:11px; }
+.gl-table .gl-oda-tag { color: var(--accent);  font-weight:600; font-size:11px; }
 .gl-toplam {
   margin-top: 10px;
   padding: 8px 10px;
@@ -171,7 +170,7 @@
 <!-- Yazdırma başlığı (sadece print görünür) -->
 <div class="print-tarih" id="print-tarih-baslik"
   style="font-size:16px;font-weight:700;margin-bottom:16px;text-align:center">
-  🏨 Otel Leo & Cunda Villa — Günlük Liste
+  🏨 {{ otel_ad }} — Günlük Liste
 </div>
 
 {% endblock %}
@@ -213,7 +212,7 @@ function buildRows(data, type) {
   const cols = type === 'kahvalti' ? 4 : 5;
   if (!data.length) return `<tr><td colspan="${cols}" class="empty-msg">Kayıt yok</td></tr>`;
   return data.map(r => {
-    const otelCls = r.otel === 'LEO' ? 'otel-leo' : 'otel-cv';
+    const otelCls = 'gl-oda-tag';
     const kisiStr = r.cocuk > 0 ? `${r.yetiskin}+${r.cocuk}` : `${r.yetiskin}`;
     if (type === 'kahvalti') {
       return `<tr>
@@ -274,13 +273,8 @@ function buildRows(data, type) {
 
 function toplam(data, label) {
   if (!data.length) return `${label}: 0 oda`;
-  const leo = data.filter(r => r.otel === 'LEO').length;
-  const cv  = data.filter(r => r.otel === 'CV').length;
   const kisi = data.reduce((s, r) => s + (r.yetiskin||0) + (r.cocuk||0), 0);
-  let parts = [`${data.length} oda · ${kisi} kişi`];
-  if (leo) parts.push(`LEO: ${leo}`);
-  if (cv)  parts.push(`CV: ${cv}`);
-  return parts.join(' &nbsp;|&nbsp; ');
+  return `${data.length} oda · ${kisi} kişi`;
 }
 
 async function loadData() {
@@ -288,7 +282,7 @@ async function loadData() {
 
   // Yazdırma başlığını güncelle
   document.getElementById('print-tarih-baslik').textContent =
-    `🏨 Otel Leo & Cunda Villa — Günlük Liste · ${fmt(tarih)}`;
+    `🏨 {{ otel_ad }} — Günlük Liste · ${fmt(tarih)}`;
 
   try {
     const res = await fetch(`/api/gunluk-liste?tarih=${tarih}`);

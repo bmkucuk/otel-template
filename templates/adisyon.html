@@ -275,9 +275,9 @@ function renderTable() {
     return;
   }
   tbody.innerHTML = data.map((a) => {
-    const otel = (a.oda_no||0) > 10 ? 'LEO' : 'CV';
-    const avBg = otel==='LEO' ? 'rgba(84,182,255,.15)' : 'rgba(61,220,132,.15)';
-    const avC  = otel==='LEO' ? 'var(--leo)' : 'var(--cv)';
+    const otel = '{{ otel_kisa_ad }}';
+    const avBg = 'rgba(84,182,255,.15)';
+    const avC  = 'var(--oda)';
     const odendi = a.odendi === 1;
     const odenenTutar = a.odenen_tutar || 0;
     const kismi = !odendi && odenenTutar > 0;

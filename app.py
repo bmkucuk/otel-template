@@ -19,7 +19,15 @@ import config_loader as cl
 from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'otelleo2026x!9k')
+app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-production')
+
+@app.context_processor
+def _otel_context():
+    return {
+        'otel_ad': cl.get('otel.ad', 'Otel Yönetim'),
+        'otel_kisa_ad': cl.get('otel.kisa_ad', 'OTEL'),
+        'ortaklar': cl.get('ortaklar', []) or [],
+    }
 
 # Sunucu (Render) UTC'de çalışabilir; otelin gerçek "bugün"ü her zaman Türkiye saatine göre hesaplanır.
 TR_TZ = ZoneInfo('Europe/Istanbul')
@@ -250,12 +258,12 @@ def dashboard():
 @app.route('/rezervasyonlar')
 @login_required
 def rezervasyonlar():
-    return render_template('rezervasyonlar.html')
+    return render_template('rezervasyonlar.html', oda_listesi=cl.oda_araligi())
 
 @app.route('/rez-formu')
 @login_required
 def rez_formu():
-    return render_template('rez_formu.html')
+    return render_template('rez_formu.html', oda_listesi=cl.oda_araligi())
 
 @app.route('/oda-durumu')
 @login_required
@@ -560,8 +568,8 @@ def api_hk_durum():
 def api_dashboard():
     today = bugun().isoformat()
     girisler, cikislar, aktifler, kahvalti = db.get_dashboard(today)
-    leo_aktif = sum(1 for r in aktifler if r['otel'] == 'LEO')
-    cv_aktif  = sum(1 for r in aktifler if r['otel'] == 'CV')
+    dolu_oda = len(aktifler)
+    toplam_oda = len(cl.oda_araligi())
     toplam_alacak = sum((r.get('rez_bakiye') or 0) + (r.get('adis_bakiye') or 0)
                         for r in db.get_rezervasyonlar()
                         if r.get('durum') != 'Kapora Yandı')
@@ -570,8 +578,8 @@ def api_dashboard():
         'stats': {
             'bugun_giris':   len(girisler),
             'bugun_cikis':   len(cikislar),
-            'leo_aktif':     leo_aktif,
-            'cv_aktif':      cv_aktif,
+            'dolu_oda':      dolu_oda,
+            'toplam_oda':    toplam_oda,
             'kahvalti_kisi': kahvalti['toplam'],
             'kahvalti_normal': kahvalti['normal'],
             'kahvalti_super': kahvalti['super'],
@@ -766,7 +774,7 @@ def api_rez_yeni():
         foy_no = int(data.get('foy_no') or 0)
         yevmiye_rez_kaydet(
             foy_no, float(data.get('toplam_fiyat') or 0),
-            data.get('otel', 'LEO'), data.get('giris'),
+            data.get('otel', cl.get('otel.kisa_ad','OTEL')), data.get('giris'),
             data.get('musteri', ''),
             kapora=float(data.get('kapora') or 0),
             kapora_tarihi=data.get('kapora_tarihi')
@@ -774,7 +782,7 @@ def api_rez_yeni():
         acente_kod = KANAL_MAP.get(data.get('kanal', ''), data.get('kanal', ''))
         if acente_kod in ACENTE_OTO_KODLAR:
             acente_oto_kaydet(foy_no, float(data.get('toplam_fiyat') or 0),
-                              data.get('otel', 'LEO'),
+                              data.get('otel', cl.get('otel.kisa_ad','OTEL')),
                               data.get('giris') or bugun().isoformat(),
                               data.get('musteri', ''), acente_kod)
         else:
@@ -812,12 +820,12 @@ def api_checkin():
         if r.get('checkin'):
             return jsonify({'ok': False, 'error': 'Check-in zaten yapılmış'}), 400
 
-        otel = r.get('otel', 'LEO')
+        otel = r.get('otel', cl.get('otel.kisa_ad','OTEL'))
         musteri = r.get('musteri', '')
         toplam = float(r.get('toplam_fiyat') or 0)
         kapora = float(r.get('kapora') or 0)
         tarih = bugun().isoformat()
-        gelir_hesap = '600' if otel == 'LEO' else '601'
+        gelir_hesap = '600'
         aciklama = f'Föy#{foy_no} {musteri} check-in'
 
         # Check-in kaydını güncelle
@@ -849,12 +857,12 @@ def api_checkin_iptal():
         if not r or not r.get('checkin'):
             return jsonify({'ok': False, 'error': 'Check-in bulunamadı'}), 400
 
-        otel = r.get('otel', 'LEO')
+        otel = r.get('otel', cl.get('otel.kisa_ad','OTEL'))
         musteri = r.get('musteri', '')
         toplam = float(r.get('toplam_fiyat') or 0)
         kapora = float(r.get('kapora') or 0)
         tarih = bugun().isoformat()
-        gelir_hesap = '600' if otel == 'LEO' else '601'
+        gelir_hesap = '600'
         aciklama = f'Föy#{foy_no} {musteri} check-in iptal (storno)'
 
         # Check-in iptal
@@ -887,8 +895,8 @@ def api_kapora_yandi():
         kapora = float(r.get('kapora') or 0)
         if kapora <= 0:
             return jsonify({'ok': False, 'error': 'Kapora yok'}), 400
-        otel = r.get('otel', 'LEO')
-        gelir_hesap = '600' if otel == 'LEO' else '601'
+        otel = r.get('otel', cl.get('otel.kisa_ad','OTEL'))
+        gelir_hesap = '600'
         musteri = r.get('musteri', '')
         tarih = bugun().isoformat()
         # Yevmiye: Alınan Avanslar borç / Diğer Olağan Gelir alacak (340/649)
@@ -917,7 +925,7 @@ def api_rez_guncelle():
         foy_no = int(data.get('foy_no') or 0)
         yevmiye_rez_kaydet(
             foy_no, float(data.get('toplam_fiyat') or 0),
-            data.get('otel', 'LEO'), data.get('giris'),
+            data.get('otel', cl.get('otel.kisa_ad','OTEL')), data.get('giris'),
             data.get('musteri', ''),
             kapora=float(data.get('kapora') or 0),
             kapora_tarihi=data.get('kapora_tarihi'),
@@ -926,7 +934,7 @@ def api_rez_guncelle():
         acente_kod = KANAL_MAP.get(data.get('kanal', ''), data.get('kanal', ''))
         if acente_kod in ACENTE_OTO_KODLAR:
             acente_oto_kaydet(foy_no, float(data.get('toplam_fiyat') or 0),
-                              data.get('otel', 'LEO'),
+                              data.get('otel', cl.get('otel.kisa_ad','OTEL')),
                               data.get('giris') or bugun().isoformat(),
                               data.get('musteri', ''), acente_kod)
         else:
@@ -941,7 +949,7 @@ def yevmiye_rez_kaydet(foy_no, toplam_fiyat, otel, giris, musteri,
     """Rezervasyon konaklama geliri ve kaporayı yevmiyeye yazar."""
     try:
         tarih = giris or bugun().isoformat()
-        gelir_hesap = '600' if otel == 'LEO' else '601'
+        gelir_hesap = '600'
         aciklama_kon = f'Föy#{foy_no} {musteri} konaklama'
         aciklama_kap = f'Föy#{foy_no} {musteri} kapora'
         conn = mdb.get_conn()
@@ -1081,7 +1089,7 @@ def migrate_acente_otomatik():
             mconn.execute("DELETE FROM acente_cari WHERE foy_no=?", (foy_no,))
             mconn.commit()
             acente_oto_kaydet(
-                foy_no, float(r['toplam_fiyat'] or 0), r['otel'] or 'LEO',
+                foy_no, float(r['toplam_fiyat'] or 0), r['otel'] or cl.get('otel.kisa_ad','OTEL'),
                 r['giris'] or bugun().isoformat(), r['musteri'] or '', acente_kod
             )
             count += 1
@@ -1207,9 +1215,9 @@ def api_rez_tah():
             rez = db.get_rezervasyonlar()
             r = next((x for x in rez if x['foy_no'] == foy_no), None)
             tarih = d.get('tarih') or bugun().isoformat()
-            otel = r.get('otel', 'LEO') if r else 'LEO'
+            otel = r.get('otel', cl.get('otel.kisa_ad','OTEL')) if r else cl.get('otel.kisa_ad','OTEL')
             musteri = r.get('musteri', '') if r else ''
-            gelir_hesap = '600' if otel == 'LEO' else '601'
+            gelir_hesap = '600'
             conn = mdb.get_conn()
             mdb._yevmiye_ekle(conn, tarih, 'Rezervasyon Tahsilat - ' + odeme,
                               hesap_kodu, '120', tutar,
@@ -1237,7 +1245,7 @@ def api_adis_tah():
 
         rez = db.get_rezervasyonlar()
         r = next((x for x in rez if x['foy_no'] == foy_no), None)
-        otel = r.get('otel', 'LEO') if r else 'LEO'
+        otel = r.get('otel', cl.get('otel.kisa_ad','OTEL')) if r else cl.get('otel.kisa_ad','OTEL')
         musteri = r.get('musteri', '') if r else ''
 
         toplam_odeme = 0
@@ -1670,12 +1678,12 @@ def excel_yedek_olustur():
 
 
 def yedek_mail_gonder():
-    """Excel yedeğini oluşturup cundavilla@gmail.com'a gönderir."""
-    gmail_user = os.environ.get('GMAIL_USER', 'bmkucuk@gmail.com')
+    """Excel yedeğini oluşturup config'teki yedek_mail_alici adresine gönderir."""
+    gmail_user = os.environ.get('GMAIL_USER', '')
     gmail_pass = os.environ.get('GMAIL_APP_PASSWORD', '')
-    alici      = 'villa@cundavilla.com'
-    if not gmail_pass:
-        print('[YEDEK] GMAIL_APP_PASSWORD tanımlı değil, mail atlanıyor.')
+    alici      = cl.get('sistem.yedek_mail_alici', '')
+    if not gmail_pass or not gmail_user or not alici:
+        print('[YEDEK] GMAIL_USER/GMAIL_APP_PASSWORD/yedek_mail_alici tanımlı değil, mail atlanıyor.')
         return
     try:
         dosya_yolu = excel_yedek_olustur()
@@ -1686,7 +1694,7 @@ def yedek_mail_gonder():
         msg['To']      = alici
         msg['Subject'] = f"🏨 Otel Yönetim Günlük Yedek — {bugun().strftime('%d.%m.%Y')}"
         msg.attach(MIMEText(
-            f"Merhaba,\n\nOtel Leo & Cunda Villa yönetim sistemi günlük yedeği ektedir.\n"
+            f"Merhaba,\n\n{cl.get('otel.ad','Otel')} yönetim sistemi günlük yedeği ektedir.\n"
             f"Tarih: {bugun().strftime('%d.%m.%Y')}\n\n"
             f"Bu mail otomatik olarak gönderilmiştir.", 'plain', 'utf-8'))
 
@@ -1898,12 +1906,13 @@ def sadmin_sayfa():
 def sadmin_durum():
     if not _sadmin_kontrol():
         return jsonify({'ok': False, 'error': 'Yetkisiz'}), 403
+    otel_cfg = cl.otel_bilgi()
     return jsonify({
         'ok':    True,
         'durum': 'aktif',
         'kalan': 0,
         'config': {
-            'otel': {'ad': 'Otel Leo & Cunda Villa', 'kisa_ad': 'LEO', 'toplam_oda': 29, 'sehir': 'Ayvalık'},
+            'otel': otel_cfg,
             'sistem': {
                 'demo_baslangic': '',
                 'demo_sure_gun': 0,

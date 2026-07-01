@@ -184,13 +184,13 @@ def init_db():
         komisyon_oran   REAL,
         komisyon_tl     REAL,
         gelen_odeme     REAL DEFAULT 0,
-        otel            TEXT DEFAULT 'LEO'
+        otel            TEXT DEFAULT 'OTEL'
     );
 
     CREATE TABLE IF NOT EXISTS ortak_cari (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         tarih       TEXT NOT NULL,
-        ortak       TEXT NOT NULL,   -- LK / BT
+        ortak       TEXT NOT NULL,   -- Ortak kodu (config.json ortaklar listesi)
         belge_no    TEXT,
         aciklama    TEXT NOT NULL,
         gider_kategori TEXT,
@@ -204,7 +204,7 @@ def init_db():
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
         yil             INTEGER NOT NULL,
         ay              INTEGER NOT NULL,
-        otel            TEXT NOT NULL,   -- LEO / CV
+        otel            TEXT NOT NULL,   -- otel kısa adı
         konaklama       REAL DEFAULT 0,
         restoran        REAL DEFAULT 0,
         nakit_tahsilat  REAL DEFAULT 0,
@@ -241,11 +241,7 @@ def init_db():
         ("360",    "Ödenecek Vergi",             "Pasif",     "Vergi"),
         ("340",    "Alınan Avanslar (Kaparo)",              "Pasif",     "Kaparo"),
         ("649",    "Diğer Olağan Gelir ve Karlar",  "Gelir",     "Diğer"),
-        ("500-LK", "LK Cari (Levent Koçoğlu)",  "Ozkaynak",  "Ortak"),
-        ("500-BT", "BT Cari (Burçin Taşdelen)",  "Ozkaynak",  "Ortak"),
-        ("500-FK", "FK Cari (Fırat Koçoğlu)",   "Ozkaynak",  "Ortak"),
-        ("600",    "Konaklama Geliri - Leo",     "Gelir",     "Gelir"),
-        ("601",    "Konaklama Geliri - CV",      "Gelir",     "Gelir"),
+        ("600",    "Konaklama Geliri",           "Gelir",     "Gelir"),
         ("610",    "Adisyon Geliri",        "Gelir",     "Gelir"),
         ("720",    "Personel Maaşları",          "Gider",     "Gider"),
         ("730",    "Acente Komisyonları",        "Gider",     "Gider"),
@@ -266,28 +262,27 @@ def init_db():
         ("IS",    "İş Bankası",     ""),
         ("ZRH",   "Ziraat Bankası", ""),
         ("DNZ",   "Denizbank",     ""),
-        ("FK-NKT","Fırat Nakit",    ""),
-        ("FK-KK", "Fırat KK",       ""),
-        ("LK-NKT","Levent Nakit",   ""),
-        ("LK-KK", "Levent KK",      ""),
-        ("BT-NKT","Burçin Nakit",   ""),
-        ("BT-KK", "Burçin KK",      ""),
     ]
     for b in bankalar:
         c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)", b)
 
-    # Migration: BT hesap adı Barış Taşdelen'den Burçin Taşdelen'e düzeltildi
-    c.execute("UPDATE hesaplar SET ad='BT Cari (Burçin Taşdelen)' WHERE kod='500-BT'")
+    # Ortak hesapları config.json'daki 'ortaklar' listesine göre dinamik oluşturulur
+    import config_loader as _cl
+    ortaklar = _cl.get('ortaklar', []) or []
+    for o in ortaklar:
+        kod, kisalt, ad = o.get('kod', ''), o.get('kisalt', ''), o.get('ad', '')
+        if not kod:
+            continue
+        c.execute("INSERT OR IGNORE INTO hesaplar(kod,ad,tip,grup) VALUES(?,?,?,?)",
+                  (f"500-{kod}", f"{kisalt} Cari ({ad})", "Ozkaynak", "Ortak"))
+        c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)",
+                  (f"{kod}-NKT", f"{ad} Nakit", ""))
+        c.execute("INSERT OR IGNORE INTO bankalar(kod,ad,hesap_no) VALUES(?,?,?)",
+                  (f"{kod}-KK", f"{ad} KK", ""))
+
     # Migration: Booking.com -> Booking adı düzeltildi
     c.execute("UPDATE hesaplar SET ad='Booking Cari' WHERE kod='320-1'")
     c.execute("UPDATE acenteler SET ad='Booking' WHERE kod='BKG'")
-    # Migration: eski ayrı Burçin kişisel hesabı varsa resmi BT ortak hesabına birleştir
-    c.execute("SELECT 1 FROM hesaplar WHERE kod='500-BC'")
-    if c.fetchone():
-        c.execute("UPDATE yevmiye SET borc_hesap='500-BT' WHERE borc_hesap='500-BC'")
-        c.execute("UPDATE yevmiye SET alacak_hesap='500-BT' WHERE alacak_hesap='500-BC'")
-        c.execute("DELETE FROM hesaplar WHERE kod='500-BC'")
-        c.execute("DELETE FROM bankalar WHERE kod='BC-NKT' OR kod='BC-KK'")
 
     # Migration: acente_cari tablosuna fatura_no kolonu (sonradan eklendi)
     acente_cari_cols = [r[1] for r in c.execute("PRAGMA table_info(acente_cari)").fetchall()]
@@ -632,7 +627,7 @@ def ekle_vergi(donem_yil, donem_ay, vergi_turu, tutar, matrah=0,
     conn.commit(); conn.close()
 
 def ekle_acente_cari(tarih, acente_kod, rez_tutari, komisyon_oran,
-                      foy_no=None, rez_no="", misafir="", otel="LEO"):
+                      foy_no=None, rez_no="", misafir="", otel="OTEL"):
     conn = get_conn()
     t = tarih if isinstance(tarih, str) else tarih.isoformat()
     komisyon_tl = rez_tutari * komisyon_oran / 100
@@ -675,7 +670,7 @@ def kaydet_gelir_ozet(yil, ay, otel, konaklama, restoran,
     # Mevcut yevmiye kayıtlarını temizle (aynı ay/otel için)
     aciklama_prefix = f"[OTEL-AKTARIM] {yil}/{ay:02d} {otel}"
     conn.execute("DELETE FROM yevmiye WHERE aciklama LIKE ?", (f"%{aciklama_prefix}%",))
-    gelir_hesap = '600' if otel == 'LEO' else '601'
+    gelir_hesap = '600'
 
     if rezervasyonlar:
         # Gerçek tarihlerle her rezervasyonu ayrı kaydet
@@ -784,21 +779,18 @@ def get_mizan_ozet(yil):
         WHERE strftime('%Y',tarih)=?
     """, (str(yil),)).fetchone()[0] or 0
 
-    # Ortak cari toplamları (LK ve BT ayrı ayrı)
-    ortak_lk = conn.execute("""
-        SELECT COALESCE(SUM(tutar-iade),0) FROM ortak_cari
-        WHERE ortak='LK' AND strftime('%Y',tarih)=?
-    """, (str(yil),)).fetchone()[0] or 0
-
-    ortak_bt = conn.execute("""
-        SELECT COALESCE(SUM(tutar-iade),0) FROM ortak_cari
-        WHERE ortak='BT' AND strftime('%Y',tarih)=?
-    """, (str(yil),)).fetchone()[0] or 0
-
-    ortak_fk = conn.execute("""
-        SELECT COALESCE(SUM(tutar-iade),0) FROM ortak_cari
-        WHERE ortak='FK' AND strftime('%Y',tarih)=?
-    """, (str(yil),)).fetchone()[0] or 0
+    # Ortak cari toplamları (config.json'daki ortaklar listesine göre dinamik)
+    import config_loader as _cl
+    ortaklar_toplam = {}
+    for o in (_cl.get('ortaklar', []) or []):
+        kod = o.get('kod', '')
+        if not kod:
+            continue
+        tutar = conn.execute("""
+            SELECT COALESCE(SUM(tutar-iade),0) FROM ortak_cari
+            WHERE ortak=? AND strftime('%Y',tarih)=?
+        """, (kod, str(yil))).fetchone()[0] or 0
+        ortaklar_toplam[kod] = tutar
 
     conn.close()
     return {
@@ -806,7 +798,7 @@ def get_mizan_ozet(yil):
         'alacak':   {r['hesap']: r['toplam'] for r in alacak},
         'maas': maas, 'stok': stok, 'demirbaş': dem,
         'vergi': vergi, 'komisyon': komisyon,
-        'ortak_lk': ortak_lk, 'ortak_bt': ortak_bt, 'ortak_fk': ortak_fk,
+        'ortaklar': ortaklar_toplam,
         'gelir': [dict(r) for r in gelir],
     }
 

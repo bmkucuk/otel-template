@@ -5,6 +5,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, jsonify, session, redirect
 import muhasebe_db as mdb
 import database as db
+import config_loader as cl
 from functools import wraps
 
 def login_required(f):
@@ -123,8 +124,7 @@ def api_gosterge():
         if tip:    q += " AND islem_tipi=?";   p.append(tip)
         return conn.execute(q, p).fetchone()[0] or 0
 
-    leo_kon  = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel='LEO'", (yil,)).fetchone()[0] or 0
-    cv_kon   = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel='CV'", (yil,)).fetchone()[0] or 0
+    konaklama_kon = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması')", (yil,)).fetchone()[0] or 0
     restoran = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND islem_tipi='Adisyon Geliri'", (yil,)).fetchone()[0] or 0
     # Tüm nakit girişleri (tahsilat + kapora)
     nakit    = conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND borc_hesap='100'", (yil,)).fetchone()[0] or 0
@@ -145,9 +145,8 @@ def api_gosterge():
     vergi = mizan['vergi']
     stok  = mizan['stok']
     dem   = mizan.get('demirbaş', 0)
-    ortak_lk = mizan.get('ortak_lk', 0) or 0
-    ortak_bt = mizan.get('ortak_bt', 0) or 0
-    ortak_fk = mizan.get('ortak_fk', 0) or 0
+    ortaklar_toplam = mizan.get('ortaklar', {}) or {}
+    ortak_toplam = sum(ortaklar_toplam.values())
 
     # Acente komisyon toplamı
     _ac = mdb.get_conn()
@@ -156,8 +155,8 @@ def api_gosterge():
         (str(yil),)).fetchone()[0] or 0
     _ac.close()
 
-    toplam_gelir = leo_kon + cv_kon + restoran
-    toplam_gider = maas + stok + vergi + acente_kom + ortak_lk + ortak_bt + ortak_fk + dem
+    toplam_gelir = konaklama_kon + restoran
+    toplam_gider = maas + stok + vergi + acente_kom + ortak_toplam + dem
     net = toplam_gelir - toplam_gider
 
     # Aylık özet
@@ -174,26 +173,27 @@ def api_gosterge():
     aylik = []
     for i, ay_adi in enumerate(AYLAR):
         ay = i + 1
-        leo  = conn2.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND ay=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel='LEO'", (yil,ay)).fetchone()[0] or 0
-        cv_k = conn2.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND ay=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması') AND otel='CV'", (yil,ay)).fetchone()[0] or 0
+        kon  = conn2.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND ay=? AND islem_tipi IN ('Konaklama Geliri','Kapora Yanması')", (yil,ay)).fetchone()[0] or 0
         rest = conn2.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND ay=? AND islem_tipi='Adisyon Geliri'", (yil,ay)).fetchone()[0] or 0
-        gel  = leo + cv_k + rest
+        gel  = kon + rest
         pers = maas_ay.get(ay, 0) or 0
         vg   = vergi_ay.get(ay, 0) or 0
         n    = gel - pers - vg
-        aylik.append({'ay': ay_adi, 'leo': leo, 'cv': cv_k, 'rest': rest,
+        aylik.append({'ay': ay_adi, 'kon': kon, 'rest': rest,
                       'gel': gel, 'pers': pers, 'vergi': vg, 'net': n})
 
     conn2.close()
+    ortaklar_meta = cl.get('ortaklar', []) or []
     return jsonify({
         'kartlar': {
-            'leo_kon': leo_kon, 'cv_kon': cv_kon, 'restoran': restoran,
+            'konaklama_kon': konaklama_kon, 'restoran': restoran,
             'nakit': nakit, 'kk': kk, 'havale': havale,
             'tahsilat': nakit + kk + havale, 'acik': acik, 'kapora': kapora,
             'maas': maas, 'stok': stok, 'dem': dem, 'vergi': vergi, 'acente_kom': acente_kom,
-            'ortak_lk': ortak_lk, 'ortak_bt': ortak_bt, 'ortak_fk': ortak_fk,
+            'ortaklar': ortaklar_toplam, 'ortak_toplam': ortak_toplam,
             'toplam_gelir': toplam_gelir, 'toplam_gider': toplam_gider, 'net': net,
         },
+        'ortaklar_meta': ortaklar_meta,
         'aylik': aylik,
     })
 
@@ -590,19 +590,33 @@ def api_demirbas():
     conn.close()
     return jsonify(rows)
 
-# Banka adı → hesap kodu
-BANKA_AD_KODU = {
-    'Kasa TL': '100', 'İş Bankası': '102-1',
-    'Ziraat Bankası': '102-2', 'Denizbank': '102-3', 'Deniz Bank': '102-3',
-    'Fırat Nakit': '500-FK', 'Fırat KK': '500-FK',
-    'Levent Nakit': '500-LK', 'Levent KK': '500-LK',
-    'Burçin Nakit': '500-BT', 'Burçin KK': '500-BT',
-}
-BANKA_HESAP_KODU = {'100': '100', '102-1': '102-1', '102-2': '102-2', '102-3': '102-3',
-                    'KASA': '100', 'IS': '102-1', 'ZRH': '102-2', 'DNZ': '102-3',
-                    'FK-NKT': '500-FK', 'FK-KK': '500-FK',
-                    'LK-NKT': '500-LK', 'LK-KK': '500-LK',
-                    'BT-NKT': '500-BT', 'BT-KK': '500-BT'}
+# Banka adı → hesap kodu (sabit banka hesapları + config'teki ortaklar listesine göre dinamik)
+def _banka_ad_kodu():
+    d = {
+        'Kasa TL': '100', 'İş Bankası': '102-1',
+        'Ziraat Bankası': '102-2', 'Denizbank': '102-3', 'Deniz Bank': '102-3',
+    }
+    for o in (cl.get('ortaklar', []) or []):
+        kod, ad = o.get('kod', ''), o.get('ad', '')
+        if not kod:
+            continue
+        d[f'{ad} Nakit'] = f'500-{kod}'
+        d[f'{ad} KK'] = f'500-{kod}'
+    return d
+
+def _banka_hesap_kodu():
+    d = {'100': '100', '102-1': '102-1', '102-2': '102-2', '102-3': '102-3',
+         'KASA': '100', 'IS': '102-1', 'ZRH': '102-2', 'DNZ': '102-3'}
+    for o in (cl.get('ortaklar', []) or []):
+        kod = o.get('kod', '')
+        if not kod:
+            continue
+        d[f'{kod}-NKT'] = f'500-{kod}'
+        d[f'{kod}-KK'] = f'500-{kod}'
+    return d
+
+BANKA_AD_KODU = _banka_ad_kodu()
+BANKA_HESAP_KODU = _banka_hesap_kodu()
 
 
 @muh.route('/api/muhasebe/demirbas/ekle', methods=['POST'])
@@ -824,7 +838,7 @@ def api_acente_fatura_kes():
         foy_nolar = [str(x) for x in d.get('foy_nolar', [])]
         tarih = d.get('tarih') or date.today().isoformat()
         banka = d.get('odeme_banka', 'IS')
-        otel = d.get('otel', 'LEO')
+        otel = d.get('otel', cl.get('otel.kisa_ad','OTEL'))
         fatura_no = (d.get('fatura_no') or '').strip()
         hesap = ACENTE_HESAP.get(kod)
         if not hesap or not foy_nolar:
@@ -1056,7 +1070,7 @@ def api_acente_ekle():
             (tarih,acente_kod,foy_no,rez_no,misafir,rez_tutari,komisyon_oran,komisyon_tl,gelen_odeme,otel,fatura_no)
             VALUES (?,?,?,?,?,?,?,?,?,?,?)
         """, (d['tarih'], d['acente_kod'], None, '', 'Fatura Tahsilatı', 0, 0, 0,
-              gelen, d.get('otel', 'LEO'), fatura_no))
+              gelen, d.get('otel', cl.get('otel.kisa_ad','OTEL')), fatura_no))
         acente_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         if gelen > 0:
             banka = d.get('odeme_banka', 'IS')
@@ -1065,7 +1079,7 @@ def api_acente_ekle():
             aciklama = f"{d['acente_kod']} fatura tahsilatı" + (f" [FATURA:{fatura_no}]" if fatura_no else "")
             mdb._yevmiye_ekle(conn, d['tarih'], 'Acente Fatura Tahsilatı',
                               banka_hesap, acente_hesap, gelen,
-                              aciklama, d.get('otel','LEO'),
+                              aciklama, d.get('otel', cl.get('otel.kisa_ad','OTEL')),
                               kaynak_tablo='acente_cari', kaynak_id=acente_id)
         conn.commit(); conn.close()
         return jsonify({'ok': True})
@@ -1209,8 +1223,7 @@ def api_mizan():
     muc_bak = muc_borc - muc_alacak
 
     # ── GELİRLER ──
-    leo_kon = sum(_f(r['toplam_fiyat']) for r in rezler if r.get('otel')=='LEO')
-    cv_kon  = sum(_f(r['toplam_fiyat']) for r in rezler if r.get('otel')=='CV')
+    konaklama_kon = sum(_f(r['toplam_fiyat']) for r in rezler)
     adis_gel = adis_gelir
 
     # ── GİDERLER (yevmiyeden) ──
@@ -1219,7 +1232,7 @@ def api_mizan():
     vergi = mizan_yev.get('vergi', 0) or 0
     stok  = mizan_yev.get('stok', 0) or 0
     dem   = mizan_yev.get('demirbaş', 0) or 0
-    ortak = (mizan_yev.get('ortak_lk',0) or 0) + (mizan_yev.get('ortak_bt',0) or 0) + (mizan_yev.get('ortak_fk',0) or 0)
+    ortak = sum((mizan_yev.get('ortaklar') or {}).values())
     komisyon = muh_conn.execute("SELECT COALESCE(SUM(tutar),0) FROM yevmiye WHERE yil=? AND borc_hesap='730'", (yil,)).fetchone()[0] or 0
 
     otel.close(); muh_conn.close()
@@ -1244,8 +1257,7 @@ def api_mizan():
     satirlar.append({'tip':'bos'})
 
     satirlar.append({'tip':'baslik','kod':'━━','ad':'GELİRLER','borc':0,'alacak':0})
-    satir('600', 'Konaklama Geliri - Leo', 0, leo_kon, 'Gelir')
-    satir('601', 'Konaklama Geliri - CV',  0, cv_kon,  'Gelir')
+    satir('600', 'Konaklama Geliri', 0, konaklama_kon, 'Gelir')
     satir('610', 'Adisyon Geliri',         0, adis_gel,'Gelir')
     satirlar.append({'tip':'bos'})
 
@@ -1280,7 +1292,7 @@ def api_mizan():
     satirlar.append({'tip':'baslik','kod':'━━','ad':'ÖZKAYNAKLAR','borc':0,'alacak':0})
     satirlar.append({'tip':'bos'})
 
-    gelir_toplam = leo_kon + cv_kon + adis_gel
+    gelir_toplam = konaklama_kon + adis_gel
     # Gider toplamı: yevmiyedeki TÜM gider hesap borçları
     muh_conn3 = mdb.get_conn()
     gider_toplam_yev = muh_conn3.execute("""
@@ -1323,7 +1335,7 @@ def api_gelir_aktar():
             if not giris: continue
             if giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', 'LEO')
+            otel = r.get('otel', cl.get('otel.kisa_ad','OTEL'))
             key = (ay, otel)
             ozet[key]['konaklama'] += float(r.get('toplam_fiyat') or 0)
             ozet[key]['kapora']    += float(r.get('kapora') or 0)
@@ -1344,7 +1356,7 @@ def api_gelir_aktar():
             tarih = a.get('tarih')
             if not tarih or tarih[:4] != str(yil): continue
             ay = int(tarih[5:7])
-            otel = a.get('otel') or 'LEO'
+            otel = a.get('otel') or cl.get('otel.kisa_ad','OTEL')
             ozet[(ay, otel)]['restoran'] += float(a.get('tutar') or 0)
             ozet[(ay, otel)]['acik'] += float(a.get('tutar') or 0) - float(a.get('tutar') or 0)
 
@@ -1353,7 +1365,7 @@ def api_gelir_aktar():
             giris = r.get('giris')
             if not giris or giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', 'LEO')
+            otel = r.get('otel', cl.get('otel.kisa_ad','OTEL'))
             ozet[(ay, otel)]['acik'] += float(r.get('rez_bakiye') or 0) + float(r.get('adis_bakiye') or 0)
 
         # Rezervasyonları ay/otel bazında grupla (gerçek tarihler için)
@@ -1363,7 +1375,7 @@ def api_gelir_aktar():
             giris = r.get('giris')
             if not giris or giris[:4] != str(yil): continue
             ay = int(giris[5:7])
-            otel = r.get('otel', 'LEO')
+            otel = r.get('otel', cl.get('otel.kisa_ad','OTEL'))
             rez_gruplar[(ay, otel)].append(dict(r))
 
         mdb.temizle_gelir_ozet(yil)
@@ -1558,7 +1570,7 @@ def api_acente_tahsilat_al():
         fatura_no  = str(d.get('fatura_no') or d.get('foy_no') or '').strip()
         tarih      = d.get('tarih') or date.today().isoformat()
         banka      = d.get('odeme_banka', 'IS')
-        otel       = d.get('otel', 'LEO')
+        otel       = d.get('otel', cl.get('otel.kisa_ad','OTEL'))
         hesap      = ACENTE_HESAP.get(kod)
         if not hesap:
             return jsonify({'ok': False, 'error': 'Acente eksik'}), 400
@@ -1884,7 +1896,7 @@ def api_acente_guncelle():
         conn = mdb.get_conn()
         conn.execute("""UPDATE acente_cari SET tarih=?,acente_kod=?,gelen_odeme=?,otel=?,fatura_no=?
                      WHERE id=?""",
-            (d['tarih'], d['acente_kod'], gelen, d.get('otel','LEO'), fatura_no, d['id']))
+            (d['tarih'], d['acente_kod'], gelen, d.get('otel', cl.get('otel.kisa_ad','OTEL')), fatura_no, d['id']))
         # Yevmiye güncelle (tutar + hesap kodu, banka değişmiş olabilir)
         banka = d.get('odeme_banka', 'IS')
         banka_hesap = '102-2' if banka=='ZRH' else '102-3' if banka=='DNZ' else '102-1'

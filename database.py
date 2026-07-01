@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""SQLite veritabanı katmanı — Otel Leo & Cunda Villa Web"""
+"""SQLite veritabanı katmanı — Otel Yönetim Şablonu"""
 import sqlite3
 import os
 from datetime import date, datetime
@@ -30,7 +30,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS rezervasyonlar (
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
         oda_no          INTEGER NOT NULL,
-        otel            TEXT NOT NULL DEFAULT 'LEO',
+        otel            TEXT NOT NULL DEFAULT 'OTEL',
         foy_no          INTEGER UNIQUE NOT NULL,
         kanal           TEXT DEFAULT '',
         musteri         TEXT NOT NULL,
@@ -159,22 +159,18 @@ def init_db():
         except Exception:
             pass  # Kolon zaten var
 
-    # İlk kullanıcılar (yalnızca tablo boşsa eklenir)
+    # İlk kullanıcı (yalnızca tablo boşsa eklenir) — config'teki admin şifresiyle
+    # tek bir genel yönetici hesabı oluşturulur; ek kullanıcılar sisteme sonradan
+    # eklenebilir.
     if conn.execute("SELECT COUNT(*) FROM kullanicilar").fetchone()[0] == 0:
         import hashlib
-        ilk_kullanicilar = [
-            ('murre34',    'Murat',  'Mk192837+-',  'admin'),
-            ('LeventK',    'Levent', 'Lk415263+-',  'partner'),
-            ('FıratK',     'Fırat',  '415263',      'partner'),
-            ('BurcinT',    'Burçin', 'Bt415263+-',  'partner'),
-            ('resepsiyon', 'Resepsiyon', 'res708090/', 'resepsiyon'),
-        ]
-        for username, ad, pw, role in ilk_kullanicilar:
-            h = hashlib.sha256(pw.encode()).hexdigest()
-            conn.execute(
-                "INSERT INTO kullanicilar(username, ad, hash, role) VALUES (?,?,?,?)",
-                (username, ad, h, role)
-            )
+        import config_loader as _cl
+        admin_sifre = _cl.get('kullanicilar.admin_sifre', 'admin123')
+        h = hashlib.sha256(admin_sifre.encode()).hexdigest()
+        conn.execute(
+            "INSERT INTO kullanicilar(username, ad, hash, role) VALUES (?,?,?,?)",
+            ('admin', 'Yönetici', h, 'admin')
+        )
 
     conn.commit()
     conn.close()
@@ -561,6 +557,7 @@ def import_from_excel(excel_path):
     """Excel'den SQLite'a toplu aktarım."""
     from openpyxl import load_workbook
     from datetime import datetime, date, timedelta
+    import config_loader as _cl
 
     def _to_date(val):
         if val is None: return None
@@ -620,7 +617,7 @@ def import_from_excel(excel_path):
                  adisyon,adis_tahsilat,adis_odeme_sekli,adis_bakiye,aciklama)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (
-                col(0), str(col(1) or ('LEO' if (col(0) or 0)>10 else 'CV')),
+                col(0), str(col(1) or _cl.get('otel.kisa_ad', 'OTEL')),
                 col(2), str(col(3) or ''), str(col(4) or ''),
                 int(_f(col(5)) or 1), int(_f(col(6)) or 0),
                 str(col(7) or 'Yok'), gun_fiyat,

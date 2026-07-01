@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set active = "dashboard" %}
-{% block title %}Dashboard — Otel Leo{% endblock %}
+{% block title %}Dashboard{% endblock %}
 {% block page_title %}Genel Bakış{% endblock %}
 
 {% block content %}
@@ -69,9 +69,6 @@
 
 {% block scripts %}
 <script>
-const LEO_TOPLAM = 19;
-const CV_TOPLAM  = 10;
-
 async function load() {
   const d = await api('/api/dashboard');
 
@@ -86,8 +83,7 @@ async function load() {
   }
   document.getElementById('s-alacak').textContent = fmt(d.stats.toplam_alacak);
 
-  const leoDolu = d.stats.leo_aktif, cvDolu = d.stats.cv_aktif;
-  const toplamDolu = leoDolu + cvDolu, toplamOda = LEO_TOPLAM + CV_TOPLAM;
+  const toplamDolu = d.stats.dolu_oda, toplamOda = d.stats.toplam_oda;
   const bos = toplamOda - toplamDolu;
   document.getElementById('s-bos').textContent = bos;
   document.getElementById('occ-pct').innerHTML = Math.round(toplamDolu/toplamOda*100) + '<span style="font-size:11px">%</span>';
@@ -103,7 +99,7 @@ async function load() {
   girisBody.innerHTML = d.girisler.length ? d.girisler.map(r => `
     <tr>
       <td>${r.oda_no}</td>
-      <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.foy_no}</td>
+      <td class="oda-tag">${r.foy_no}</td>
       <td>${r.musteri}</td>
       <td>${r.toplam_gun} gün</td>
       <td>${r.kanal||'—'}</td>
@@ -118,7 +114,7 @@ async function load() {
     return `
     <tr${tikla?` style="cursor:pointer;${rowStyle}" onclick="window.location.href='/cari?foy='+${r.foy_no}"`:(ciktiMi?` style="${rowStyle}"`:'')}>
       <td>${r.oda_no}</td>
-      <td class="${r.otel=='LEO'?'leo-tag':'cv-tag'}">${r.foy_no}</td>
+      <td class="oda-tag">${r.foy_no}</td>
       <td>${r.musteri}${ciktiMi?' <span class="green" style="font-size:10px;font-weight:600">✓ Çıkış Yaptı</span>':''}</td>
       <td>${fmtDate(r.giris)}</td>
       <td class="${toplamBakiye>0?'red':'green'}">${fmt(toplamBakiye)}</td>

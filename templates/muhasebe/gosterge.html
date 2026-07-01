@@ -26,7 +26,7 @@
 <div class="table-wrap">
   <table>
     <thead>
-      <tr><th>Ay</th><th>Leo Kon.</th><th>CV Kon.</th><th>Adisyon</th><th>Toplam Gelir</th><th>Personel</th><th>Vergi</th><th>Net</th></tr>
+      <tr><th>Ay</th><th>Konaklama</th><th>Adisyon</th><th>Toplam Gelir</th><th>Personel</th><th>Vergi</th><th>Net</th></tr>
     </thead>
     <tbody id="aylik-tbody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span></td></tr></tbody>
   </table>
@@ -41,8 +41,7 @@ async function load() {
   const k = d.kartlar;
 
   document.getElementById('gelir-kartlar').innerHTML = `
-    <div class="stat-card"><div class="label">Leo Konaklama</div><div class="value leo-tag">${fmt(k.leo_kon)}</div></div>
-    <div class="stat-card"><div class="label">CV Konaklama</div><div class="value cv-tag">${fmt(k.cv_kon)}</div></div>
+    <div class="stat-card"><div class="label">Konaklama Geliri</div><div class="value oda-tag">${fmt(k.konaklama_kon)}</div></div>
     <div class="stat-card"><div class="label">Adisyon</div><div class="value yellow">${fmt(k.restoran)}</div></div>
     <div class="stat-card"><div class="label">Toplam Tahsilat</div><div class="value green">${fmt(k.tahsilat)}<div style="font-size:11px;color:var(--text2);margin-top:4px">Nakit:${fmt(k.nakit)} KK:${fmt(k.kk)}</div></div></div>
     <div class="stat-card"><div class="label">Toplam Kapora</div><div class="value green">${fmt(k.kapora)}</div></div>
@@ -56,9 +55,7 @@ async function load() {
     <div class="stat-card"><div class="label">Demirbaş</div><div class="value yellow">${fmt(k.dem)}</div></div>
     <div class="stat-card"><div class="label">Vergi</div><div class="value red">${fmt(k.vergi)}</div></div>
     <div class="stat-card"><div class="label">Acenteler</div><div class="value yellow">${fmt(k.acente_kom)}</div></div>
-    <div class="stat-card"><div class="label">Ortak Gideri LK</div><div class="value yellow">${fmt(k.ortak_lk)}</div></div>
-    <div class="stat-card"><div class="label">Ortak Gideri BT</div><div class="value yellow">${fmt(k.ortak_bt)}</div></div>
-    <div class="stat-card"><div class="label">Ortak Gideri FK</div><div class="value yellow">${fmt(k.ortak_fk)}</div></div>
+    ${(d.ortaklar_meta||[]).map(o => `<div class="stat-card"><div class="label">Ortak Gideri ${o.kisalt||o.kod}</div><div class="value yellow">${fmt((k.ortaklar||{})[o.kod]||0)}</div></div>`).join('')}
     <div class="stat-card"><div class="label">Toplam Gider</div><div class="value red">${fmt(k.toplam_gider)}</div></div>
     <div class="stat-card"><div class="label">NET KÂR</div><div class="value ${netRenk}" style="font-size:20px">${fmt(k.net)}</div></div>
   `;
@@ -68,8 +65,7 @@ async function load() {
     const netRenk = r.net > 0 ? 'green' : r.net < 0 ? 'red' : '';
     return `<tr>
       <td>${r.ay}</td>
-      <td>${r.leo > 0 ? fmt(r.leo) : '—'}</td>
-      <td>${r.cv > 0 ? fmt(r.cv) : '—'}</td>
+      <td>${r.kon > 0 ? fmt(r.kon) : '—'}</td>
       <td>${r.rest > 0 ? fmt(r.rest) : '—'}</td>
       <td>${r.gel > 0 ? fmt(r.gel) : '—'}</td>
       <td>${r.pers > 0 ? fmt(r.pers) : '—'}</td>

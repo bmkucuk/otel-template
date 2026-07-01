@@ -212,7 +212,7 @@
     <div class="kf-phead">
       <div>
         <div class="kf-ptitle">OTEL KONAKLAMA VE KAYIT FORMU</div>
-        <div class="kf-psub">Otel Leo &amp; Cunda Villa</div>
+        <div class="kf-psub">{{ otel_ad }}</div>
       </div>
     </div>
 
@@ -453,7 +453,7 @@
   <div class="kfp-head">
     <div>
       <div class="kfp-title">OTEL KONAKLAMA VE KAYIT FORMU</div>
-      <div class="kfp-sub">Otel Leo &amp; Cunda Villa</div>
+      <div class="kfp-sub">{{ otel_ad }}</div>
     </div>
   </div>
 
@@ -507,23 +507,20 @@
 {% block scripts %}
 <script>
 const today = new Date().toISOString().split('T')[0];
-const ODA_OTEL = {}; // oda_no -> 'CV' | 'LEO'
-for (let i=1;i<=10;i++)  ODA_OTEL[i] = 'CV';
-for (let i=11;i<=29;i++) ODA_OTEL[i] = 'LEO';
-const OTEL_ADI = {CV:'Cunda Villa', LEO:'Otel Leo'};
+const OTEL_KISA_AD = '{{ otel_kisa_ad }}';
+const OTEL_ADI_TAM = '{{ otel_ad }}';
+const ODA_LISTESI = [{{ oda_listesi|join(',') }}];
 
 function fillOdaSelect() {
   const sel = document.getElementById('kf-oda');
   let html = '<option value="">Seçin...</option>';
-  for (let i=1;i<=29;i++) html += `<option value="${i}">${i}</option>`;
+  for (const i of ODA_LISTESI) html += `<option value="${i}">${i}</option>`;
   sel.innerHTML = html;
   onOdaChange();
 }
 function onOdaChange() {
-  const oda = parseInt(document.getElementById('kf-oda').value);
-  const otel = ODA_OTEL[oda] || '';
-  document.getElementById('kf-otel').value = otel;
-  document.getElementById('kf-otel-readout').value = otel ? OTEL_ADI[otel] : '';
+  document.getElementById('kf-otel').value = OTEL_KISA_AD;
+  document.getElementById('kf-otel-readout').value = OTEL_ADI_TAM;
 }
 
 let kisiId = 1;
@@ -1038,7 +1035,7 @@ function fillPrintView(data, gun) {
   document.getElementById('kfp-cikis').textContent = fmtDate(data.cikis);
   document.getElementById('kfp-gun').textContent = gun + ' gün';
   document.getElementById('kfp-oda').textContent = data.oda_no || '—';
-  document.getElementById('kfp-otel-adi').textContent = data.otel === 'LEO' ? 'Otel Leo' : 'Cunda Villa';
+  document.getElementById('kfp-otel-adi').textContent = OTEL_ADI_TAM;
   document.getElementById('kfp-ad').textContent = data.musteri || '—';
   document.getElementById('kfp-tc').textContent = data.tc_kimlik || '—';
   document.getElementById('kfp-arac').textContent = data.arac_plaka || '—';

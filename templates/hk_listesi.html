@@ -94,8 +94,7 @@
 .hk-btn.active-step  { font-weight: 700; opacity: 1; }
 .hk-btn.done-step    { opacity: .35; cursor: pointer; }
 
-.otel-leo { color: var(--accent);  font-weight:700; font-size:12px; }
-.otel-cv  { color: var(--accent4); font-weight:700; font-size:12px; }
+.hk-oda-tag { color: var(--accent);  font-weight:700; font-size:12px; }
 
 .empty-msg { padding:30px; text-align:center; color:var(--text2); font-size:14px; }
 </style>
@@ -154,7 +153,7 @@ function renderTable(odalar) {
     return;
   }
   tbody.innerHTML = odalar.map(o => {
-    const otelCls = o.otel === 'LEO' ? 'otel-leo' : 'otel-cv';
+    const otelCls = 'hk-oda-tag';
     const saat    = o.teslim_zaman ? o.teslim_zaman.slice(11, 16) : '—';
     const durum   = o.hk_durum || 'bekliyor';
 

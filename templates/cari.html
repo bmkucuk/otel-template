@@ -224,16 +224,16 @@ async function load() {
 function renderCari(data) {
   const tbody = document.getElementById('cari-tbody');
   tbody.innerHTML = data.map(r => {
-    const otel = r.oda_no > 10 ? 'LEO' : 'CV';
-    const avBg = otel==='LEO' ? 'rgba(84,182,255,.15)' : 'rgba(61,220,132,.15)';
-    const avC  = otel==='LEO' ? 'var(--leo)' : 'var(--cv)';
+    const otel = '{{ otel_kisa_ad }}';
+    const avBg = 'rgba(84,182,255,.15)';
+    const avC  = 'var(--oda)';
     const ini = (r.musteri||'').split(' ').filter(Boolean).map(s=>s[0]).slice(0,2).join('').toUpperCase();
     const toplam = (r.toplam_fiyat||0) + (r.adisyon||0);
     const tahsil = (r.kapora||0) + (r.rez_tahsilat||0) + (r.adis_tahsilat||0);
     const kalan = (r.rez_bakiye||0) + (r.adis_bakiye||0);
     const durum = r.durum || 'Aktif';
     const durumBg = durum==='Kapora Yandı' ? 'rgba(255,210,63,.15)' : durum==='Tamamlandı' ? 'rgba(47,221,155,.15)' : 'rgba(84,182,255,.15)';
-    const durumC  = durum==='Kapora Yandı' ? 'var(--accent4)' : durum==='Tamamlandı' ? 'var(--pos)' : 'var(--leo)';
+    const durumC  = durum==='Kapora Yandı' ? 'var(--accent4)' : durum==='Tamamlandı' ? 'var(--pos)' : 'var(--oda)';
     const sel = selFoy===r.foy_no;
     return `<tr onclick="selectRow(${r.foy_no})" style="cursor:pointer${sel?';background:var(--card2);box-shadow:inset 3px 0 0 var(--accent)':''}" id="row-${r.foy_no}">
       <td>

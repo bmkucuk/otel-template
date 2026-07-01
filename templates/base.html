@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="{{ 'light' if request.cookies.get('theme') == 'light' else 'dark' }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,6 +29,27 @@
   --header:   #080f1f;
   --radius:   10px;
 }
+html[data-theme="light"] {
+  --bg:       #f4f6fb;
+  --sidebar:  #ffffff;
+  --card:     #ffffff;
+  --card2:    #eef2f9;
+  --border:   #dde4f0;
+  --accent:   #d98c1f;
+  --accent2:  #1c92c7;
+  --accent3:  #e0394a;
+  --accent4:  #b8790a;
+  --leo:      #2b7fd1;
+  --cv:       #1f9d5c;
+  --pos:      #1a9d6c;
+  --text:     #101828;
+  --text2:    #5b6b85;
+  --header:   #ffffff;
+}
+html[data-theme="light"] body{box-shadow:none}
+html[data-theme="light"] #sidebar{border-right:1px solid var(--border);box-shadow:1px 0 0 rgba(16,24,40,.02)}
+html[data-theme="light"] #topbar{box-shadow:0 1px 0 rgba(16,24,40,.03)}
+html[data-theme="light"] .panel,html[data-theme="light"] .stat-card,html[data-theme="light"] .table-wrap,html[data-theme="light"] .modal{box-shadow:0 1px 3px rgba(16,24,40,.05)}
 *{box-sizing:border-box;margin:0;padding:0}
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;border:2px solid var(--bg)}
@@ -262,6 +283,10 @@ select.filter{background:var(--card);border:1px solid var(--border);color:var(--
       </div>
       {% endif %}
       <div class="meta" id="date-display">—</div>
+      <a href="/tema/{{ 'dark' if request.cookies.get('theme') == 'light' else 'light' }}" class="btn btn-print-hide" id="theme-toggle-btn"
+        style="padding:5px 12px;font-size:12px;background:var(--card2);color:var(--text2);border:1px solid var(--border);text-decoration:none">
+        {% if request.cookies.get('theme') == 'light' %}☀️ Karanlık{% else %}🌙 Aydınlık{% endif %}
+      </a>
       <button class="btn btn-print-hide" onclick="window.print()"
         style="padding:5px 12px;font-size:12px;background:var(--card2);color:var(--text2);border:1px solid var(--border)">
         🖨️ Yazdır

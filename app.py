@@ -226,6 +226,12 @@ def _islem_logla(response):
             )
     except Exception:
         pass  # log yazımı asla asıl isteği bozmasın
+
+    # HTML sayfaları önbelleğe alınmasın: tema tercihi cookie'den okunup her istekte
+    # yeniden render edildiği için, tarayıcı eski (yanlış temalı) bir kopyayı göstermemeli.
+    if response.content_type and response.content_type.startswith('text/html'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+
     return response
 
 
@@ -624,6 +630,56 @@ def api_oda_durumu():
         grid.append({'otel': otel_label, 'oda_no': oda_no, 'cells': cells})
 
     return jsonify({'dates': [d.isoformat() for d in dates], 'today': today, 'grid': grid})
+
+@app.route('/api/oda-satislari')
+def api_oda_satislari():
+    # Seçilen yıl için her ay kaç oda-gecesi satıldığını (dolu geceler) döner.
+    # Şablon tek otel için olduğundan otel ayrımı yapılmaz.
+    from datetime import timedelta
+    bugun_yil = bugun().year
+    yil = request.args.get('yil', str(bugun_yil))
+    try:
+        yil = int(yil)
+    except:
+        yil = bugun_yil
+
+    rezervasyonlar = [r for r in db.get_rezervasyonlar() if r.get('durum') != 'Kapora Yandı']
+    aylik = {ay: 0 for ay in range(1, 13)}
+    yillar = set()
+
+    for r in rezervasyonlar:
+        g, c = r.get('giris'), r.get('cikis')
+        if not g or not c:
+            continue
+        try:
+            g_d = date.fromisoformat(g)
+            c_d = date.fromisoformat(c)
+        except:
+            continue
+        gece = g_d
+        while gece < c_d:
+            yillar.add(gece.year)
+            if gece.year == yil:
+                aylik[gece.month] += 1
+            gece += timedelta(days=1)
+
+    yillar.add(bugun_yil)
+    yillar.add(yil)
+
+    return jsonify({
+        'yil': yil,
+        'aylik': aylik,
+        'aylar': _TR_AYLAR,
+        'yillar': sorted(yillar),
+    })
+
+@app.route('/tema/<mod>')
+def set_tema(mod):
+    if mod not in ('light', 'dark'):
+        mod = 'dark'
+    resp = redirect(request.referrer or url_for('dashboard'))
+    resp.set_cookie('theme', mod, max_age=31536000, path='/', samesite='Lax')
+    return resp
 
 @app.route('/api/musaitlik')
 def api_musaitlik():

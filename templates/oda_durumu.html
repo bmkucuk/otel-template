@@ -30,6 +30,20 @@
 .ms-room-pill.leo{color:var(--leo)}
 .ms-room-pill.cv{color:var(--cv)}
 
+/* Oda Satışları paneli */
+.ms-mid{flex:0.5;min-width:180px;max-width:220px;border-left:1px solid var(--border);padding-left:16px;display:flex;flex-direction:column}
+.sales-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.sales-title{font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--accent)}
+.sales-yil-select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:7px;font-size:11.5px;font-weight:600;outline:none;cursor:pointer}
+.sales-yil-select:focus{border-color:var(--accent)}
+.sales-row{display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.sales-row:last-child{border-bottom:none}
+.sales-ay{font-size:13px;color:var(--text2);font-weight:500}
+.sales-sayi{font-family:'Geist Mono',monospace;font-size:18px;font-weight:700;color:var(--pos)}
+.sales-toplam{margin-top:6px;padding-top:10px;border-top:2px solid var(--border)}
+.sales-toplam .sales-ay{color:var(--text);font-weight:700}
+.sales-toplam .sales-sayi{color:var(--accent);font-size:20px}
+
 /* Sticky üst bölüm: sorgu paneli + tarih satırı */
 /* Üst sabit kısım */
 .oda-header{flex-shrink:0;padding:24px 28px 0;background:var(--bg)}
@@ -109,6 +123,16 @@
       <button id="clear-hl-btn" onclick="clearHighlight()" style="display:none;background:var(--card2);border:1px solid var(--accent2);color:var(--accent2);padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap">✕ İşareti Kaldır</button>
     </div>
   </div>
+  <div class="ms-mid">
+    <div class="sales-title-row">
+      <div class="sales-title">📊 Oda Satışları</div>
+      <select class="sales-yil-select" id="sales-yil" onchange="loadSatislar()"></select>
+    </div>
+    <div id="sales-rows">
+      <div class="sales-row"><span class="sales-ay">—</span><span class="sales-sayi">—</span></div>
+    </div>
+    <div class="sales-row sales-toplam"><span class="sales-ay">Toplam</span><span class="sales-sayi" id="sales-toplam-sayi">—</span></div>
+  </div>
   <div class="ms-right">
     <div id="ms-empty" style="color:var(--text2);font-size:13px;margin:auto">Tarih seçip sorgula'ya bas</div>
     <div id="ms-result" style="display:none">
@@ -177,6 +201,31 @@ async function reload(){
 async function load(){
   const d=await api(`/api/oda-durumu?start=${toISO(startDate)}`);
   render(d);
+  loadSatislar();
+}
+
+async function loadSatislar(){
+  const yilSel = document.getElementById('sales-yil');
+  const secilenYil = yilSel.value || '';
+  const d = await api('/api/oda-satislari' + (secilenYil ? `?yil=${secilenYil}` : ''));
+
+  // Yıl seçeneklerini (ilk yüklemede veya listede değişiklik olduysa) doldur
+  const mevcutDegerler = Array.from(yilSel.options).map(o=>o.value);
+  const gelenDegerler = (d.yillar || [d.yil]).map(String);
+  if (mevcutDegerler.length !== gelenDegerler.length || !gelenDegerler.every(v=>mevcutDegerler.includes(v))) {
+    yilSel.innerHTML = gelenDegerler.map(y=>`<option value="${y}">${y}</option>`).join('');
+    yilSel.value = String(d.yil);
+  }
+
+  const rowsEl = document.getElementById('sales-rows');
+  let toplam = 0;
+  rowsEl.innerHTML = d.aylar.map((ad, i)=>{
+    const no = i + 1;
+    const sayi = d.aylik ? (d.aylik[no] ?? d.aylik[String(no)] ?? 0) : 0;
+    toplam += sayi;
+    return `<div class="sales-row"><span class="sales-ay">${ad}</span><span class="sales-sayi">${sayi}</span></div>`;
+  }).join('');
+  document.getElementById('sales-toplam-sayi').textContent = toplam;
 }
 
 let lastDates = [];
